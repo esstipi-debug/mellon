@@ -25,6 +25,11 @@ class MeasurementCoverage:
     tracks_seen: int
     tracks_expected: int | None = None
     discarded_low_confidence: int = 0
+    # Puntos de una pista que `nearest_location` no pudo ubicar en el layout
+    # (mas alla de `max_distance_m`). Vive aca, junto al resto de lo que no se
+    # pudo medir, en vez de en un contador aparte -- ver `dwell_events` y
+    # `tracks_to_eventlog` en `tracks.py` (ronda de arreglo 2 de la tarea 6).
+    discarded_out_of_bounds: int = 0
 
     def __post_init__(self) -> None:
         """Valida coherencia de los contadores.
@@ -49,6 +54,10 @@ class MeasurementCoverage:
         if self.discarded_low_confidence < 0:
             raise ValueError(
                 f"discarded_low_confidence no puede ser negativo: {self.discarded_low_confidence}"
+            )
+        if self.discarded_out_of_bounds < 0:
+            raise ValueError(
+                f"discarded_out_of_bounds no puede ser negativo: {self.discarded_out_of_bounds}"
             )
         if self.tracks_expected is not None and self.tracks_expected < 0:
             raise ValueError(
@@ -109,6 +118,14 @@ class MeasurementCoverage:
                     partes.append(f"{self.track_pct}% de los viajes esperados")
         if self.discarded_low_confidence:
             partes.append(f"{self.discarded_low_confidence} tramos descartados por baja confianza")
+        if self.discarded_out_of_bounds:
+            # Un punto fuera de planta no es una visita al borde: es senal de
+            # que la homografia esta mal calibrada. Se nombra la causa, no
+            # solo el numero, porque el numero solo no dice a quien avisar.
+            partes.append(
+                f"{self.discarded_out_of_bounds} puntos descartados por caer fuera "
+                "de planta (posible homografia mal calibrada)"
+            )
         return (
             ", ".join(partes)
             + ". No tratar esta medicion como exhaustiva: lo que el marcador no "

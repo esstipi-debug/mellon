@@ -8,6 +8,7 @@ etapa 1 se puede terminar antes de comprar nada.
 import pandas as pd
 import pytest
 
+from fdekit.field.coverage import MeasurementCoverage
 from fdekit.field.homography import FloorHomography
 from fdekit.field.privacy import new_session_salt
 from fdekit.field.tracks import (
@@ -251,7 +252,7 @@ def test_tracks_to_eventlog_produce_algo_que_travel_report_ya_sabe_leer():
     puntos = [TrackPoint(0.0 + i, 3.0, 2.0) for i in range(6)]
     puntos += [TrackPoint(10.0 + i, 6.0, 3.0) for i in range(6)]
 
-    log = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
+    log, _ = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
     t = travel_report(log, LAY)
 
     assert len(t) == 1
@@ -262,8 +263,8 @@ def test_tracks_to_eventlog_produce_algo_que_travel_report_ya_sabe_leer():
 def test_tracks_to_eventlog_no_lee_el_reloj():
     """Regla 4: t0 es argumento. Dos llamadas con el mismo t0 dan lo mismo."""
     puntos = [TrackPoint(0.0 + i, 3.0, 2.0) for i in range(6)]
-    a = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
-    b = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
+    a, _ = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
+    b, _ = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
     assert a.df["timestamp"].tolist() == b.df["timestamp"].tolist()
 
 
@@ -271,57 +272,72 @@ def test_el_eventlog_no_lleva_identidad():
     from fdekit.field.privacy import assert_no_identity
 
     puntos = [TrackPoint(0.0 + i, 3.0, 2.0) for i in range(6)]
-    log = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
+    log, _ = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
     assert_no_identity(log.df.to_dict("records"))
 
 
 # --- Ronda de arreglo 1: el algoritmo del ancla fallaba en las dos
 # direcciones ante oscilaciones (ruido de deteccion normal, no excepcional).
 # M y E son dos ubicaciones bien separadas del layout: M es donde el carro se
-# queda, E es adonde "se escapa" el ruido de deteccion.
+# queda, E es la segunda ubicacion (a veces ruido, a veces una visita real).
 M_XY = LAY.xy("01-002-1")
 E_XY = LAY.xy("03-005-1")
 
 
+def _tramo(t0: float, xy: tuple[float, float], n: int, paso: float = 1.0) -> list[TrackPoint]:
+    """`n` puntos separados por `paso` segundos, arrancando en `t0`."""
+    return [TrackPoint(t0 + i * paso, *xy) for i in range(n)]
+
+
 def test_dwell_events_junta_excursiones_cortas_de_ruido_en_una_sola_parada():
-    # 21 s reales en M, con una excursion de 1 s a E cada 2 s. El algoritmo
-    # del ancla contaba cada segmento entre anclas (menor que min_dwell_s) y
-    # no detectaba ninguna parada. Agrupando por ubicacion asignada, las
-    # excursiones de 1 s quedan toleradas por max_gap_s (default 2.0) y el
-    # grupo entero cuenta como una sola parada.
-    puntos = [
-        TrackPoint(float(t), *(M_XY if t % 2 == 0 else E_XY))
-        for t in range(0, 21)
-    ]
-    resultado = dwell_events(puntos, LAY)
-    assert [loc for _, loc in resultado.stops] == ["01-002-1"]
-
-
-def test_dwell_events_no_duplica_la_parada_por_una_sola_interrupcion_corta():
-    # 12 s en M interrumpidos por una unica excursion de 1 s a E. El
-    # algoritmo del ancla cerraba el primer tramo (>= min_dwell_s), reiniciaba
-    # el ancla en la excursion y volvia a acumular desde ahi -- dos paradas
-    # para la misma ubicacion fisica. Con el grupo tolerando la interrupcion,
-    # es una sola.
-    puntos = [TrackPoint(float(t), *M_XY) for t in range(0, 6)]
-    puntos.append(TrackPoint(6.0, *E_XY))
-    puntos += [TrackPoint(float(t), *M_XY) for t in range(7, 12)]
+    # 7 visitas de 2 s a M, cada una separada por una excursion de 1 s a E.
+    # Los tramos de excursion miden 1 s < max_gap_s (2.0) y son ruido: se
+    # toleran, y los 7 tramos de M se fusionan en una sola parada.
+    puntos: list[TrackPoint] = []
+    t = 0.0
+    for _ in range(7):
+        puntos += _tramo(t, M_XY, 3)  # 3 puntos, 1 s de paso -> tramo de 2 s
+        t += 3.0
+        puntos += _tramo(t, E_XY, 2)  # 2 puntos -> tramo de 1 s (ruido)
+        t += 2.0
 
     resultado = dwell_events(puntos, LAY)
     assert [loc for _, loc in resultado.stops] == ["01-002-1"]
+
+
+def test_dwell_events_no_pierde_una_segunda_ubicacion_real_alternada():
+    # La regresion de la ronda 1: dos ubicaciones reales alternando cada 1 s
+    # durante 20 s. El tramo de CADA visita mide ~1 s < max_gap_s, asi que es
+    # ruido PARA LA OTRA ubicacion -- pero eso no le impide fusionarse con sus
+    # propios tramos anteriores. La ronda 1 tiraba el tramo tolerado entero,
+    # sin sumarlo a nada: la segunda ubicacion desaparecia sin dejar rastro.
+    # El resultado correcto son DOS paradas, una por ubicacion.
+    puntos: list[TrackPoint] = []
+    t = 0.0
+    for _ in range(10):
+        puntos += _tramo(t, M_XY, 2)  # tramo de 1 s
+        t += 1.0
+        puntos += _tramo(t, E_XY, 2)  # tramo de 1 s
+        t += 1.0
+
+    resultado = dwell_events(puntos, LAY)
+    ubicaciones = sorted(loc for _, loc in resultado.stops)
+    assert ubicaciones == ["01-002-1", "03-005-1"]
 
 
 def test_dwell_events_corta_el_grupo_ante_una_excursion_larga():
-    # Permanencia real en M (0-5 s), despues una excursion a E que dura mas
-    # que max_gap_s, y de nuevo M (11-19 s). Esto SI son dos visitas distintas
-    # -- separadas por un desplazamiento real, no por ruido -- y el resultado
-    # correcto son dos paradas, no una fusionada.
-    puntos = [TrackPoint(float(t), *M_XY) for t in range(0, 6)]
-    puntos.append(TrackPoint(10.0, *E_XY))
-    puntos += [TrackPoint(float(t), *M_XY) for t in range(11, 20)]
+    # Permanencia real en M (0-5 s, tramo de 5 s), despues una excursion a E
+    # que en si misma dura 4 s (>= max_gap_s: no es ruido), y de nuevo M
+    # (8 s). La excursion corta la fusion -- son dos visitas a M distintas --
+    # y ademas, si la excursion en si alcanza min_dwell_s, genera su propia
+    # parada: dos paradas en M mas una en E.
+    puntos = _tramo(0.0, M_XY, 6)  # 0..5, tramo de 5 s
+    puntos += _tramo(6.0, E_XY, 5)  # 6..10, tramo de 4 s (no es ruido)
+    puntos += _tramo(11.0, M_XY, 9)  # 11..19, tramo de 8 s
 
     resultado = dwell_events(puntos, LAY)
-    assert [loc for _, loc in resultado.stops] == ["01-002-1", "01-002-1"]
+    conteo = sorted(loc for _, loc in resultado.stops)
+    assert conteo == ["01-002-1", "01-002-1", "03-005-1"]
 
 
 def test_dwell_events_marca_el_timestamp_de_entrada_no_el_de_salida():
@@ -348,3 +364,53 @@ def test_dwell_events_cuenta_los_puntos_descartados_por_estar_fuera_de_planta():
 
     resultado = dwell_events(puntos, LAY, max_distance_m=5.0)
     assert resultado.discarded_out_of_bounds == 1
+
+
+# --- Ronda de arreglo 2, hallazgo 2: la cuenta de "cuanto no se pudo medir"
+# vive toda en `MeasurementCoverage`, no repartida entre ese objeto y un
+# contador aparte que se pierde en el unico llamador real.
+
+
+def test_tracks_to_eventlog_propaga_los_descartados_a_la_cobertura():
+    puntos = [TrackPoint(float(t), *M_XY) for t in range(0, 6)]
+    puntos.append(TrackPoint(6.0, 500.0, 500.0))  # fuera de planta
+
+    cobertura_previa = MeasurementCoverage(
+        frames_total=100, frames_with_marker=90, tracks_seen=1
+    )
+    _, cobertura = tracks_to_eventlog(
+        {"sub-abc123456789": puntos},
+        LAY,
+        t0=T0,
+        coverage=cobertura_previa,
+        max_distance_m=5.0,
+    )
+    assert cobertura.discarded_out_of_bounds == 1
+    # El resto de la cobertura recibida no se pierde: se actualiza, no se
+    # reemplaza por una nueva.
+    assert cobertura.frames_total == 100
+    assert cobertura.tracks_seen == 1
+
+
+def test_tracks_to_eventlog_sin_cobertura_previa_igual_reporta_los_descartados():
+    # Sin `coverage` (por ejemplo, un test que arma pistas a mano sin pasar
+    # por build_tracks) igual hay que poder ver cuantos puntos se descartaron.
+    puntos = [TrackPoint(float(t), *M_XY) for t in range(0, 6)]
+    puntos.append(TrackPoint(6.0, 500.0, 500.0))
+
+    _, cobertura = tracks_to_eventlog(
+        {"sub-abc123456789": puntos}, LAY, t0=T0, max_distance_m=5.0
+    )
+    assert cobertura.discarded_out_of_bounds == 1
+
+
+def test_la_nota_de_cobertura_menciona_los_puntos_fuera_de_planta():
+    c = MeasurementCoverage(
+        frames_total=100,
+        frames_with_marker=90,
+        tracks_seen=1,
+        discarded_out_of_bounds=3,
+    )
+    n = c.note()
+    assert "3 puntos descartados por caer fuera de planta" in n
+    assert "homografia" in n.lower()

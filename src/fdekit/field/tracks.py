@@ -16,6 +16,7 @@ para una tarea futura.
 from __future__ import annotations
 
 import csv
+import dataclasses
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -226,6 +227,30 @@ class DwellEvents(NamedTuple):
     discarded_out_of_bounds: int
 
 
+def _tramos_consecutivos(
+    points: list[TrackPoint], asignaciones: list[str | None]
+) -> list[tuple[str | None, float, float]]:
+    """Agrupa puntos consecutivos con la misma ubicacion asignada.
+
+    Cada tramo es (ubicacion, t_inicio, t_fin) -- una corrida maximal de
+    puntos seguidos con la misma asignacion, incluida la asignacion `None`
+    (puntos que `nearest_location` no pudo ubicar). Es el insumo crudo de
+    `dwell_events`: todavia no distingue ruido de parada real, solo junta lo
+    que ya vino junto en el tiempo.
+    """
+    tramos: list[tuple[str | None, float, float]] = []
+    loc_actual = asignaciones[0]
+    t_ini = t_fin = points[0].t_s
+    for p, loc in zip(points[1:], asignaciones[1:]):
+        if loc == loc_actual:
+            t_fin = p.t_s
+            continue
+        tramos.append((loc_actual, t_ini, t_fin))
+        loc_actual, t_ini, t_fin = loc, p.t_s, p.t_s
+    tramos.append((loc_actual, t_ini, t_fin))
+    return tramos
+
+
 def dwell_events(
     points: list[TrackPoint],
     layout: Layout,
@@ -240,30 +265,73 @@ def dwell_events(
     economico. El umbral de permanencia (`min_dwell_s`) es lo que separa
     "estuvo ahi" de "paso por ahi".
 
-    Algoritmo (ronda de arreglo 1, hallazgo 1 de la tarea 6): cada punto se
-    asigna a su ubicacion mas cercana, y los puntos consecutivos con la misma
-    ubicacion asignada se agrupan. El grupo tolera interrupciones de hasta
-    `max_gap_s` segundos con otra ubicacion asignada -- o ninguna -- sin
-    cortarse: eso es ruido de deteccion normal, no un desplazamiento real. Una
-    interrupcion mas larga que `max_gap_s` si corta el grupo.
+    Algoritmo, en cuatro pasos (ronda de arreglo 2 de la tarea 6; reemplaza
+    por completo el de la ronda 1, que tenia una regresion de la misma
+    familia -- ver mas abajo):
 
-    El algoritmo anterior reiniciaba un "ancla" cada vez que un punto se alejaba
-    del radio de ese ancla. Eso fallaba en las dos direcciones: una permanencia
-    real cortada por ruido de deteccion (el marcador visto en diagonal salta
-    unos centimetros entre cuadros) desaparecia porque cada segmento entre
-    anclas medio menos que `min_dwell_s`; y la misma oscilacion, con otro
-    fraseo, contaba dos paradas para la misma ubicacion fisica. Agrupar por
-    ubicacion asignada en vez de por distancia al ultimo punto visto arregla
-    ambos casos a la vez.
+    1. Cada punto se asigna a su ubicacion mas cercana (o `None` si cae fuera
+       de `max_distance_m`).
+    2. Se arman TRAMOS: corridas consecutivas maximales de puntos con la
+       misma ubicacion asignada. Cada tramo tiene ubicacion, inicio, fin y
+       duracion (`_tramos_consecutivos`).
+    3. Un tramo es RUIDO si su duracion es menor que `max_gap_s`. Los tramos
+       de una misma ubicacion separados unicamente por tramos de ruido (de
+       cualquier otra ubicacion, o sin ubicacion) se fusionan: un tramo
+       sustancial (no-ruido) de OTRA ubicacion si corta la fusion.
+    4. Se emite una parada por cada grupo fusionado cuya duracion TOTAL
+       (la suma de la duracion de sus propios tramos, sin contar el tiempo de
+       las interrupciones toleradas) llega a `min_dwell_s`, con el `t_s` del
+       primer punto del grupo.
 
-    `max_gap_s=2.0` por default: mas largo que el ruido de deteccion tipico
-    entre cuadros consecutivos, y mas corto que un desplazamiento real a otra
-    ubicacion. Subirlo mucho fusiona paradas vecinas en una sola; bajarlo a
-    cero vuelve al bug del ancla (cualquier interrupcion corta el grupo).
+    Por que el criterio de "ruido" es el mismo en los tres casos que importan:
+
+    - 20 s en una ubicacion con excursiones de 1 s cada 2 s: los tramos de
+      excursion miden 1 s < `max_gap_s` (2.0) y son ruido -> se toleran, y los
+      tramos de la ubicacion principal se fusionan en una sola parada.
+    - Dos ubicaciones reales alternando cada 1 s durante 20 s: el tramo de
+      CADA visita mide ~1 s < `max_gap_s`, asi que cada uno es ruido PARA LA
+      OTRA ubicacion -- pero eso no le impide fusionarse con sus propios
+      tramos anteriores. El resultado son dos grupos, uno por ubicacion, cada
+      uno acumulando ~10 s -> dos paradas. Este es el caso que la ronda 1
+      perdia: ahi, un punto de otra ubicacion tolerado no sumaba nada a su
+      propia ubicacion, asi que la segunda ubicacion desaparecia sin dejar
+      rastro (ni fusionada, ni corta, ni descartada).
+    - Una permanencia real interrumpida por una excursion de 20 s: ese tramo
+      mide 20 s >= `max_gap_s`, no es ruido, y corta la fusion. Ademas, si esa
+      excursion en si misma dura lo suficiente, genera su propia parada: dos
+      paradas en la ubicacion original mas una en la lejana.
+
+    `max_gap_s=2.0` por default es el umbral que separa ruido de parada real:
+    mas largo que el ruido de deteccion tipico entre cuadros consecutivos
+    (el marcador visto en diagonal salta unos centimetros), y mas corto que
+    un desplazamiento real a otra ubicacion. Subirlo mucho fusiona paradas
+    vecinas en una sola (dos visitas realmente distintas se cuentan como una);
+    bajarlo a cero cualquier interrupcion corta el grupo, y se vuelve al bug
+    original del algoritmo de ancla (una permanencia real cortada por ruido
+    de deteccion desaparece).
+
+    El algoritmo anterior (ancla que reinicia al alejarse de un radio) fallaba
+    en las dos direcciones: una permanencia real cortada por ruido
+    desaparecia, y la misma oscilacion contaba dos paradas para la misma
+    ubicacion. El de la ronda 1 (agrupar por ubicacion asignada, sin fusion
+    entre tramos no adyacentes de la misma ubicacion) arreglaba eso pero
+    introducia una regresion nueva de la misma familia: un punto de otra
+    ubicacion tolerado como ruido se descartaba entero, asi que una segunda
+    ubicacion real intercalada con la primera se perdia sin dejar rastro. La
+    fusion por tramos (este algoritmo) es la version que no pierde ninguna de
+    las dos: agrupa por ubicacion Y tolera interrupciones sin tirar
+    informacion de la ubicacion interrumpida.
+
+    `radius_m` ya no existe (se fue en la ronda 1): era una tolerancia
+    espacial continua, la distancia del punto al ultimo visto. La tolerancia
+    actual es de otro tipo, y no la reemplaza: en el espacio, la asigna la
+    grilla fija de `nearest_location`; en el tiempo, la controla `max_gap_s`.
+    Son dos ejes distintos (espacio vs. tiempo), asi que ese grado de libertad
+    espacial no se recupera con este cambio.
 
     El timestamp de la parada es el `t_s` del PRIMER punto del grupo (la
     entrada), no el del ultimo (la salida): usar el de salida sobreestima la
-    duracion en un intervalo de muestreo (ronda de arreglo 1, hallazgo 2).
+    duracion en un intervalo de muestreo.
     """
     if not points:
         return DwellEvents([], 0)
@@ -276,37 +344,38 @@ def dwell_events(
             descartados += 1
         asignaciones.append(loc)
 
+    tramos = _tramos_consecutivos(points, asignaciones)
+
     paradas: list[tuple[float, str]] = []
-    loc_actual: str | None = None
-    t_inicio = 0.0
-    t_ultimo_en_loc = 0.0
+    # Un grupo abierto por ubicacion: cuanto lleva acumulado y donde empezo.
+    abiertos: dict[str, dict[str, float]] = {}
 
-    def _cerrar_grupo() -> None:
-        if loc_actual is not None and (t_ultimo_en_loc - t_inicio) >= min_dwell_s:
-            paradas.append((t_inicio, loc_actual))
+    def _cerrar(loc: str) -> None:
+        grupo = abiertos.pop(loc, None)
+        if grupo is not None and grupo["duracion"] >= min_dwell_s:
+            paradas.append((grupo["t_primero"], loc))
 
-    for p, loc in zip(points, asignaciones):
-        if loc_actual is None:
-            if loc is not None:
-                loc_actual, t_inicio, t_ultimo_en_loc = loc, p.t_s, p.t_s
-            continue
+    for loc, t_ini, t_fin in tramos:
+        duracion = t_fin - t_ini
+        es_ruido = duracion < max_gap_s
 
-        if loc == loc_actual:
-            t_ultimo_en_loc = p.t_s
-            continue
-
-        # Punto con otra ubicacion, o sin ubicacion: puede ser ruido de
-        # deteccion (se tolera) o un desplazamiento real (corta el grupo).
-        if p.t_s - t_ultimo_en_loc <= max_gap_s:
-            continue
-
-        _cerrar_grupo()
         if loc is not None:
-            loc_actual, t_inicio, t_ultimo_en_loc = loc, p.t_s, p.t_s
-        else:
-            loc_actual = None
+            grupo = abiertos.get(loc)
+            if grupo is None:
+                abiertos[loc] = {"t_primero": t_ini, "duracion": duracion}
+            else:
+                grupo["duracion"] += duracion
 
-    _cerrar_grupo()
+        if not es_ruido:
+            # Interrupcion sustancial: corta la fusion de cualquier OTRA
+            # ubicacion que estuviera esperando (la propia, si la hay, sigue
+            # abierta y acumulando en la rama de arriba).
+            for otra_loc in [l for l in abiertos if l != loc]:
+                _cerrar(otra_loc)
+
+    for loc in list(abiertos):
+        _cerrar(loc)
+
     return DwellEvents(paradas, descartados)
 
 
@@ -314,8 +383,11 @@ def tracks_to_eventlog(
     tracks: dict[str, list[TrackPoint]],
     layout: Layout,
     t0: pd.Timestamp,
+    coverage: MeasurementCoverage | None = None,
     min_dwell_s: float = 4.0,
-) -> EventLog:
+    max_gap_s: float = 2.0,
+    max_distance_m: float | None = None,
+) -> tuple[EventLog, MeasurementCoverage]:
     """Pistas medidas -> el contrato de datos que el kit entero ya sabe leer.
 
     `t0` es argumento y no `pd.Timestamp.now()` (regla 4): una funcion que lee
@@ -326,10 +398,36 @@ def tracks_to_eventlog(
     viajes por cercania al DOCK necesita un CD real con dock; sobre la mesa el
     carro hace un solo viaje. Eso queda para la etapa 3, no esta implementado
     aca.
+
+    `coverage` es la que devolvio `build_tracks` para esta misma pista (ronda
+    de arreglo 2, hallazgo 2 de la tarea 6). El repo ya tiene un lugar para
+    "cuanto no se pudo medir" -- `MeasurementCoverage` -- y repartir esa
+    contabilidad entre ese objeto y un contador aparte es como se termina
+    reportando uno y olvidando el otro. Por eso esta funcion no descarta el
+    `discarded_out_of_bounds` de `dwell_events`: lo suma a la cobertura
+    recibida (con `dataclasses.replace`, porque `MeasurementCoverage` es
+    frozen) y devuelve la cobertura actualizada junto con el log. Si no se
+    pasa `coverage` (por ejemplo, en un test que arma pistas a mano sin pasar
+    por `build_tracks`), se construye una minima con lo unico que se sabe en
+    esta funcion: cuantas pistas hay.
     """
+    if coverage is None:
+        coverage = MeasurementCoverage(
+            frames_total=0, frames_with_marker=0, tracks_seen=len(tracks)
+        )
+
     filas = []
+    total_descartados = 0
     for subject, puntos in tracks.items():
-        for t_s, loc in dwell_events(puntos, layout, min_dwell_s=min_dwell_s).stops:
+        resultado = dwell_events(
+            puntos,
+            layout,
+            min_dwell_s=min_dwell_s,
+            max_gap_s=max_gap_s,
+            max_distance_m=max_distance_m,
+        )
+        total_descartados += resultado.discarded_out_of_bounds
+        for t_s, loc in resultado.stops:
             filas.append(
                 {
                     "case_id": subject,
@@ -339,6 +437,12 @@ def tracks_to_eventlog(
                     "location": loc,
                 }
             )
-    return EventLog(
+
+    log = EventLog(
         pd.DataFrame(filas, columns=["case_id", "activity", "timestamp", "resource", "location"])
     )
+    cobertura_final = dataclasses.replace(
+        coverage,
+        discarded_out_of_bounds=coverage.discarded_out_of_bounds + total_descartados,
+    )
+    return log, cobertura_final
