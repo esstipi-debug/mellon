@@ -41,12 +41,35 @@ XMR_BASELINE = 12
 
 
 def volume_gate(store: DecideStore) -> dict:
-    """La compuerta. Se consulta antes de publicar cualquier numero."""
-    n_d, n_m = len(store.decisions()), len(store.meetings())
+    """La compuerta. Se consulta antes de publicar cualquier numero.
+
+    Cuenta el **corpus de control**, no todo lo que hay en disco. La diferencia
+    no es cosmetica: `decide add` sin `--meeting` es una ruta legitima —la
+    decision de pasillo— pero por ahi no hay roster, no hay consentimiento, y el
+    techo de 7 ni se evalua. Medido: doce llamadas con `meeting_id=""` y un
+    dueno que no esta en ningun roster se escriben las doce, y la compuerta las
+    contaba las doce. La regla 5 se podia abrir entera con decisiones que nadie
+    valido.
+
+    Lo mismo del otro lado: quince cambios de turno en tres semanas satisfacian
+    el minimo de reuniones sin que se hubiera decidido nada.
+
+    **Migracion:** en un registro que ya tiene decisiones de pasillo, este numero
+    BAJA. Es correcto, y por eso va con `nota` al lado en vez de en silencio.
+    """
+    c = store.corpus()
+    n_d, n_m = len(c.decisions), len(c.meetings)
     ok = n_d >= MIN_DECISIONS and n_m >= MIN_MEETINGS
     return {
         "decisiones": n_d,
         "reuniones": n_m,
+        "decisiones_en_disco": c.total_decisions,
+        "reuniones_en_disco": c.total_meetings,
+        "fuera_del_corpus": {
+            "reuniones": c.meetings_fuera,
+            "decisiones": c.decisions_fuera,
+        },
+        "nota": c.nota(),
         "minimo_decisiones": MIN_DECISIONS,
         "minimo_reuniones": MIN_MEETINGS,
         "ok": ok,

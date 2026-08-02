@@ -19,6 +19,7 @@ from fdekit.decide import (
     Decision,
     Meeting,
     OpenQuestion,
+    PromotionBudgetExceeded,
 )
 from fdekit.decide.eventlog import (
     REWORK_ACTIVITIES,
@@ -27,6 +28,7 @@ from fdekit.decide.eventlog import (
     touches_to_decide,
 )
 from fdekit.decide.export import to_graphify, to_mermaid, write_graphify
+from fdekit.decide.schema import PROFILES
 from fdekit.decide.metrics import (
     freeze_baseline,
     MIN_DECISIONS,
@@ -527,3 +529,99 @@ def test_no_se_puede_congelar_ruido(tmp_path):
                  for i, n in enumerate([3, 2, 4])])
     with pytest.raises(ValueError, match="linea base"):
         freeze_baseline(st, date(2026, 8, 2))
+
+
+# ------------------------------------- el corpus: la pregunta transversal
+#
+# Cada hueco queria su propio filtro en `volume_gate`, `circular_minutes` y
+# `touches_to_decide`: tres reglas para una sola pregunta, escritas en cinco
+# lugares. El corpus la contesta una vez, y **publica lo que dejo afuera**.
+
+
+def _meet(st, mid, clase="COMITE", canal="SINCRONICO"):
+    st.add_meeting(Meeting(id=mid, date=date(2026, 8, 1), roster=_R, facilitator="Marcela",
+                           consent=_consent(), clase=clase, canal=canal))
+
+
+def _dec(st, mid, i, owner="Marcela", **kw):
+    return st.add_decision(Decision(
+        id="", statement=f"Consolidar el picking de Pudahuel en la ola {i}", owner=owner,
+        date_decided=date(2026, 8, 1), criteria="100% de los SKU clase A antes del 30-09",
+        rationale="cambio el mix de pedidos", meeting_id=mid, **kw))
+
+
+def test_la_decision_de_pasillo_no_abre_la_compuerta(tmp_path):
+    """El agujero medido: `decide add` sin `--meeting` es ruta legitima, pero
+    por ahi no hay roster, no hay consentimiento, y el techo de 7 **ni se
+    evalua** porque `add_decision` lo envuelve en `if decision.meeting_id:`.
+    Doce llamadas con dueno fuera de todo roster se escribian las doce, y la
+    compuerta de la regla 5 las contaba las doce."""
+    st = DecideStore(tmp_path / "decide")
+    _meet(st, "comite")
+    for i in range(12):
+        _dec(st, "", i, owner="NADIE QUE ESTE EN NINGUN ROSTER")
+    _dec(st, "comite", 100)
+
+    g = volume_gate(st)
+    assert g["decisiones_en_disco"] == 13   # siguen en disco: no se borra nada
+    assert g["decisiones"] == 1             # ...pero solo una es auditable
+    assert "pasillo" in g["nota"]
+
+
+def test_quince_cambios_de_turno_no_satisfacen_el_minimo_de_reuniones(tmp_path):
+    """Un HANDOVER no decide: deja compromisos. Quince dailies en tres semanas
+    abrian la compuerta sin que se hubiera decidido nada."""
+    st = DecideStore(tmp_path / "decide")
+    for i in range(15):
+        _meet(st, f"daily-{i:02d}", clase="HANDOVER")
+    g = volume_gate(st)
+    assert g["reuniones_en_disco"] == 15
+    assert g["reuniones"] == 0
+    assert "HANDOVER" in g["nota"]
+
+
+def test_el_techo_del_perfil_solo_puede_bajar_el_siete(tmp_path):
+    """La regla dura 7 no se suspende ni para INCIDENTE, que es donde el
+    documento de huecos pedia suspenderla. Un incidente con mas de siete
+    decisiones fueron dos incidentes."""
+    st = DecideStore(tmp_path / "decide")
+    _meet(st, "daily", clase="HANDOVER")
+    with pytest.raises(PromotionBudgetExceeded, match="techo es 0"):
+        _dec(st, "daily", 1)
+
+    _meet(st, "incidente", clase="INCIDENTE")
+    for i in range(7):
+        _dec(st, "incidente", i)
+    with pytest.raises(PromotionBudgetExceeded):
+        _dec(st, "incidente", 99)
+
+    assert all(p.promotion_budget <= 7 for p in PROFILES.values())
+
+
+def test_una_decision_impecable_colgada_de_un_daily_queda_afuera(tmp_path):
+    """Las dos condiciones, no una: auditable Y su sesion en el corpus."""
+    st = DecideStore(tmp_path / "decide")
+    _meet(st, "daily", clase="HANDOVER")
+    # El techo de HANDOVER la bloquea por el camino normal, asi que se fuerza:
+    # el caso que interesa es una decision *valida* colgada de una sesion que no
+    # es serie de decision.
+    st.add_decision(Decision(
+        id="", statement="Consolidar el picking de Pudahuel en una ola", owner="Marcela",
+        date_decided=date(2026, 8, 1), criteria="100% de los SKU clase A antes del 30-09",
+        rationale="cambio el mix", meeting_id="daily"), force=True)
+
+    c = st.corpus()
+    assert len(c.decisions) == 0
+    assert "cuelga de una sesion fuera del corpus" in c.decisions_fuera
+
+
+def test_la_nota_del_corpus_dice_de_que_universo_salio_el_numero(tmp_path):
+    """Una exclusion silenciosa es la misma mentira que un hueco: el numero sale
+    mas lindo y nadie sabe de que universo salio."""
+    st = DecideStore(tmp_path / "decide")
+    _meet(st, "comite")
+    _dec(st, "comite", 1)
+    assert "todas dentro del corpus" in st.corpus().nota()
+
+    _meet(st, "wa-w32", canal="ASINCRONICO")
+    assert "canal asincronico" in st.corpus().nota()

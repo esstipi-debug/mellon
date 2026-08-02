@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from dataclasses import dataclass
 from dataclasses import fields as dc_fields
 from datetime import date
 from pathlib import Path
@@ -30,6 +31,7 @@ from .schema import (
     Meeting,
     OpenQuestion,
     parse_date,
+    profile_of,
 )
 
 # Presupuesto duro de promociones por reunion. Treinta decisiones vuelven el
@@ -53,6 +55,61 @@ _DATE_FIELDS = {
     OpenQuestion: ("resolve_by",),
     Meeting: ("date",),
 }
+
+
+@dataclass(frozen=True)
+class Corpus:
+    """Que cuenta para las metricas de CONTROL. La pregunta transversal,
+    contestada una vez y en un solo lugar.
+
+    Sin esto, cada hueco agregaba su propio filtro: el canal asincronico queria
+    excluirse de tres funciones, la siembra de dos, y el perfil de reunion traia
+    un campo `cuenta_minutos_circulares` propio. Tres reglas para una sola
+    pregunta, escritas en cinco lugares, que se desincronizan el primer dia.
+
+    Lo que queda AFUERA de "reunion": la ventana de chat (ASINCRONICO) y el
+    cambio de turno (HANDOVER, techo cero). Lo que queda ADENTRO: la sesion de
+    siembra —el kickoff ocurrio de verdad— y la sesion sin audio, porque lo que
+    fallo ahi es la captura, no la sesion.
+
+    Las exclusiones **se publican**. Una exclusion silenciosa es la misma
+    mentira que un hueco: el numero sale mas lindo y nadie sabe de que universo
+    salio.
+    """
+
+    meetings: tuple
+    decisions: tuple
+    meetings_fuera: dict
+    decisions_fuera: dict
+    total_meetings: int
+    total_decisions: int
+
+    @property
+    def meeting_ids(self) -> set:
+        return {m.id for m in self.meetings}
+
+    @property
+    def decision_ids(self) -> set:
+        return {d.id for d in self.decisions}
+
+    def nota(self) -> str:
+        """La linea que va AL LADO del numero, siempre."""
+        if not self.meetings_fuera and not self.decisions_fuera:
+            return (
+                f"{self.total_meetings} reunion(es) y {self.total_decisions} decision(es), "
+                "todas dentro del corpus de control."
+            )
+        partes = []
+        for motivo, ids in sorted(self.meetings_fuera.items()):
+            partes.append(f"{len(ids)} reunion(es) fuera por {motivo}")
+        for motivo, ids in sorted(self.decisions_fuera.items()):
+            partes.append(f"{len(ids)} decision(es) fuera por {motivo}")
+        return (
+            f"corpus de control: {len(self.meetings)}/{self.total_meetings} reuniones y "
+            f"{len(self.decisions)}/{self.total_decisions} decisiones. "
+            + "; ".join(partes)
+            + "."
+        )
 
 
 class ValidationError(ValueError):
@@ -268,6 +325,48 @@ class DecideStore:
             return None
         return self.get_meeting(meeting_id).roster  # KeyError si no existe
 
+    def corpus(self) -> Corpus:
+        """El join. Vive aca porque el store es el unico que tiene todo.
+
+        Una decision entra si es auditable **y** su reunion es serie de
+        decision. Las dos condiciones, no una: una decision de siembra colgada
+        de un kickoff real sigue afuera, y una decision impecable colgada de un
+        daily tambien.
+        """
+        todas_m, todas_d = self.meetings(), self.decisions()
+        m_fuera: dict[str, list[str]] = {}
+        dentro_m = []
+        for m in todas_m:
+            if m.es_serie_de_decision:
+                dentro_m.append(m)
+            else:
+                motivo = (
+                    "canal asincronico" if m.canal != "SINCRONICO"
+                    else f"clase {m.clase} sin techo de decisiones"
+                )
+                m_fuera.setdefault(motivo, []).append(m.id)
+
+        ids_m = {m.id for m in dentro_m}
+        d_fuera: dict[str, list[str]] = {}
+        dentro_d = []
+        for d in todas_d:
+            if not d.auditable:
+                motivo = (
+                    "sin reunion (decision de pasillo)" if not d.meeting_id
+                    else f"origen {d.origen}"
+                )
+                d_fuera.setdefault(motivo, []).append(d.id)
+            elif d.meeting_id not in ids_m:
+                d_fuera.setdefault("cuelga de una sesion fuera del corpus", []).append(d.id)
+            else:
+                dentro_d.append(d)
+
+        return Corpus(
+            meetings=tuple(dentro_m), decisions=tuple(dentro_d),
+            meetings_fuera=m_fuera, decisions_fuera=d_fuera,
+            total_meetings=len(todas_m), total_decisions=len(todas_d),
+        )
+
     # ---------------------------------------------------------- escrituras
 
     def _next_id(self, prefix: str) -> str:
@@ -409,13 +508,25 @@ class DecideStore:
         self._check_roster(decision, decision.meeting_id, force, "Decision")
 
         if decision.meeting_id:
+            # El techo sale del perfil de la clase, que solo puede BAJAR el 7.
+            # Un HANDOVER tiene techo cero: un cambio de turno no decide, deja
+            # compromisos — y esos no tienen techo.
+            try:
+                clase = self.get_meeting(decision.meeting_id).clase
+            except (KeyError, ValidationError):
+                clase = "COMITE"  # ya lo reporto `_issues` como issue
+            techo = min(profile_of(clase).promotion_budget, MAX_PROMOTIONS_PER_MEETING)
             used = sum(1 for d in self.decisions() if d.meeting_id == decision.meeting_id)
-            if used >= MAX_PROMOTIONS_PER_MEETING and not force:
+            if used >= techo and not force:
+                extra = (
+                    f" La clase {clase} tiene techo {techo}"
+                    f" ({profile_of(clase).nota})." if techo != MAX_PROMOTIONS_PER_MEETING else ""
+                )
                 raise PromotionBudgetExceeded(
-                    f"la reunion {decision.meeting_id} ya tiene "
-                    f"{MAX_PROMOTIONS_PER_MEETING} decisiones. Treinta decisiones vuelven "
-                    "el registro ilegible: es la minuta hibrida otra vez. Si de verdad "
-                    "hacen falta mas, la reunion tenia que ser dos."
+                    f"la reunion {decision.meeting_id} ya tiene {used} decision(es) y su "
+                    f"techo es {techo}.{extra} Treinta decisiones vuelven el registro "
+                    "ilegible: es la minuta hibrida otra vez. Si de verdad hacen falta "
+                    "mas, la reunion tenia que ser dos."
                 )
         self._write_new("D", decision)
         return decision

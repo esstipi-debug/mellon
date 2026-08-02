@@ -25,6 +25,96 @@ QUESTION_STATUS = ("ABIERTA", "RESUELTA", "EXPIRADA")
 ANCHOR_SOURCE_STATE = ("VIVA", "CADUCADA")
 ALIAS_STATUS = ("VIGENTE", "EN_DISPUTA", "RETIRADO")
 
+# --------------------------------------------------- clase, canal y origen
+#
+# Los tres campos que contestan la pregunta transversal: **que cuenta como
+# reunion de decision y que decision entra a las metricas de control.** Sin
+# ellos, cada hueco agregaba su propio filtro en `volume_gate`,
+# `circular_minutes` y `touches_to_decide` — tres reglas para una sola pregunta,
+# escritas en cinco lugares, que se desincronizan el primer dia.
+
+MEETING_CHANNEL = ("SINCRONICO", "ASINCRONICO")
+MEETING_CLASS = ("COMITE", "UNO_A_UNO", "KICKOFF", "TERRENO", "HANDOVER", "INCIDENTE")
+# De donde salio una decision. Solo REUNION es auditable: tiene roster, fecha y
+# consentimiento detras.
+DECISION_ORIGIN = ("REUNION", "SIEMBRA", "ACTA_HISTORICA", "CHAT", "PASILLO")
+
+
+@dataclass(frozen=True)
+class MeetingProfile:
+    """Lo que una clase de reunion cambia. Tabla congelada, no entidad.
+
+    `promotion_budget` solo puede BAJAR el techo de 7, nunca subirlo ni
+    suspenderlo. El documento de huecos pide para INCIDENTE "presupuesto
+    suspendido", que es la regla dura 7 de frente. Se resuelve al reves: un
+    incidente que produce mas de siete DECISIONES fueron dos incidentes, o —lo
+    habitual— lo que produjo fueron compromisos, que no tienen techo. Suspender
+    el techo para el perfil donde mas presion hay es como el techo se muere en
+    todos los demas.
+    """
+
+    clase: str
+    promotion_budget: int
+    gate_agenda: bool = True
+    recording_allowed: bool = True
+    nota: str = ""
+
+    @property
+    def es_serie_de_decision(self) -> bool:
+        """Si esta clase aporta a las metricas de control.
+
+        Se DERIVA del techo, no se declara. Un campo aparte
+        (`cuenta_minutos_circulares`, que el diseno original proponia) se
+        desincroniza del techo el primer dia y significa exactamente lo mismo.
+        """
+        return self.promotion_budget > 0
+
+
+PROFILES = {
+    p.clase: p
+    for p in (
+        MeetingProfile("COMITE", 7),
+        MeetingProfile(
+            "UNO_A_UNO", 7, recording_allowed=False,
+            nota="nunca se graba: contenido sensible sobre terceros que no consintieron",
+        ),
+        MeetingProfile("KICKOFF", 7, nota="densidad maxima de supuestos y definiciones"),
+        MeetingProfile(
+            "TERRENO", 7, gate_agenda=False,
+            nota="sin sala, sin agenda: el gate no aplica porque no hay que gatear",
+        ),
+        MeetingProfile(
+            "HANDOVER", 0, gate_agenda=False,
+            nota="cambio de turno: cero decisiones, mucho compromiso. Fuera del corpus de control",
+        ),
+        MeetingProfile(
+            "INCIDENTE", 7, gate_agenda=False,
+            nota="el gate se desactiva; el techo NO. Mas de 7 decisiones fueron dos incidentes",
+        ),
+    )
+}
+
+
+def profile_of(clase: str) -> MeetingProfile:
+    if clase not in PROFILES:
+        raise ValueError(f"clase de reunion desconocida: {clase!r}. Validas: {MEETING_CLASS}")
+    return PROFILES[clase]
+
+
+def _check_profile_ceilings() -> None:
+    """Corre al importar. La regla 7 no se afloja por un default nuevo."""
+    malos = [p.clase for p in PROFILES.values() if p.promotion_budget > 7]
+    if malos:
+        raise RuntimeError(
+            f"perfiles con techo mayor a 7: {malos}. El presupuesto de decisiones por "
+            "reunion es una regla dura del kit y un perfil no puede levantarlo. "
+            "Va a haber presion permanente para hacerlo: no."
+        )
+
+
+_check_profile_ceilings()
+
+
 # Una decision muerta ya no gobierna nada; lo que cuelga de ella es trabajo
 # contra algo que no rige.
 DEAD_DECISION_STATUS = ("REVERTIDA", "SUPERADA")
@@ -240,9 +330,33 @@ class Decision:
     aliases: list[str] = field(default_factory=list)
     slots: dict[str, str] = field(default_factory=dict)
     anchor: Anchor = field(default_factory=Anchor)
+    # Default REUNION porque es lo que era todo el corpus antes de que el campo
+    # existiera. Lo que SI cambia de significado para lo ya persistido es
+    # `auditable`, y esta anunciado en el docstring de abajo.
+    origen: str = "REUNION"
+
+    @property
+    def auditable(self) -> bool:
+        """Si esta decision salio de una sesion con roster, fecha y consentimiento.
+
+        Exige `meeting_id` ademas del origen, y esa es la parte que no era
+        obvia: `decide add` sin `--meeting` es una ruta legitima y documentada
+        —la decision de pasillo— pero por ahi no hay roster (`roster_of`
+        devuelve None), no hay consentimiento, y el techo de 7 **ni se evalua**,
+        porque `add_decision` lo envuelve en `if decision.meeting_id:`. Medido:
+        doce llamadas con `meeting_id=""` y dueno fuera de todo roster se
+        escriben las doce, y `volume_gate` las cuenta las doce.
+
+        **Migracion:** una decision de pasillo ya persistida pasa a NO contar
+        para la compuerta. Es lo correcto y baja el numero: hay que decirlo, no
+        dejarlo pasar. `Corpus.nota()` lo publica.
+        """
+        return self.origen == "REUNION" and bool(self.meeting_id)
 
     def validate(self, roster: tuple[str, ...] | None = None) -> list[str]:
         issues: list[str] = []
+        if self.origen not in DECISION_ORIGIN:
+            issues.append(f"origen desconocido: {self.origen!r}. Validos: {DECISION_ORIGIN}")
 
         s = _norm(self.statement)
         if len(s) < 10:
@@ -522,6 +636,28 @@ class Meeting:
     # se resuelve. Sin el, un alias de un CD resolveria en otro.
     scope: str = ""
     transcript_sha256: str = ""
+    # Default COMITE/SINCRONICO a proposito: es lo que era TODO el corpus antes
+    # de que estos campos existieran, asi que un .md ya persistido no cambia de
+    # significado al cargarse. Cualquier otro default reinterpretaria el pasado.
+    clase: str = "COMITE"
+    canal: str = "SINCRONICO"
+
+    @property
+    def es_serie_de_decision(self) -> bool:
+        """Si esta sesion cuenta para las metricas de CONTROL.
+
+        Una ventana de chat no es una reunion, y un cambio de turno con techo
+        cero no aporta decisiones. Los dos inflan `volume_gate` —que cuenta
+        `len(store.meetings())`— y abren la compuerta de la regla 5 sin una sola
+        metrica real detras: quince dailies en tres semanas la satisfacen.
+
+        Ojo con lo que este predicado NO decide: **el tiempo circular.** Gente
+        sentada en una sala quema minutos-persona decida o no, asi que
+        `circular_minutes` filtra por `canal`, no por esto. Medido: filtrar los
+        dailies por aca borraba 2.400 minutos-persona de desperdicio real del
+        unico numero en pesos del sistema.
+        """
+        return self.canal == "SINCRONICO" and profile_of(self.clase).es_serie_de_decision
 
     def __post_init__(self):
         if self.consent is None:
@@ -540,6 +676,20 @@ class Meeting:
 
     def validate(self) -> list[str]:
         issues = list(self.consent.validate())
+        if self.clase not in MEETING_CLASS:
+            issues.append(f"clase de reunion desconocida: {self.clase!r}. Validas: {MEETING_CLASS}")
+        if self.canal not in MEETING_CHANNEL:
+            issues.append(f"canal desconocido: {self.canal!r}. Validos: {MEETING_CHANNEL}")
+        if self.canal == "ASINCRONICO" and self.clase != "COMITE":
+            issues.append(
+                "una ventana asincronica no tiene clase de reunion: es una ventana de "
+                "chat o de correo, no una sesion"
+            )
+        if self.clase in MEETING_CLASS and not profile_of(self.clase).recording_allowed                 and self.consent.recording_allowed:
+            issues.append(
+                f"la clase {self.clase} no admite grabacion ({profile_of(self.clase).nota}), "
+                "y el consentimiento la permite"
+            )
         if not self.facilitator:
             issues.append("sin facilitador: nadie va a decir la frase-marcador")
         elif self.facilitator not in self.roster:

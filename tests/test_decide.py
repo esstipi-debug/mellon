@@ -601,7 +601,11 @@ def test_un_archivo_ilegible_dice_cual_es(tmp_path):
     una version mas nueva no se puede leer a medias— pero el mensaje no nombraba
     el archivo. Y como no hay try por archivo, uno solo tumba `decisions()`
     entero y con el `agenda()`, `tick()`, `volume_gate()` y `rebuild_index()`.
-    Con trescientos archivos, "campos desconocidos: ['clase']" no alcanza.
+    Con trescientos archivos, "campos desconocidos: [...]" no alcanza.
+
+    El nombre del campo es deliberadamente sintetico: la primera version de este
+    test uso `clase`, y se rompio sola cuando `clase` paso a existir de verdad —
+    que es exactamente la migracion que el test simula.
 
     Sigue fallando: un registro que se lee a medias es peor que uno que no se
     lee, porque el que se lee a medias imprime un numero.
@@ -618,13 +622,14 @@ def test_un_archivo_ilegible_dice_cual_es(tmp_path):
     ))
     sano = (st.root / "decisions" / f"{d.id}.md").read_text(encoding="utf-8")
     (st.root / "decisions" / "D-099.md").write_text(
-        sano.replace(f'id: "{d.id}"', 'id: "D-099"\nclase: "INCIDENTE"'), encoding="utf-8"
+        sano.replace(f'id: "{d.id}"',
+                     'id: "D-099"\ncampo_de_una_version_futura: "x"'), encoding="utf-8"
     )
 
     with pytest.raises(ValidationError) as exc:
         st.decisions()
     assert "D-099.md" in str(exc.value)          # cual archivo
-    assert "clase" in str(exc.value)             # que campo
+    assert "campo_de_una_version_futura" in str(exc.value)   # que campo
     assert "version mas nueva" in str(exc.value)  # que hacer
 
 
@@ -723,7 +728,8 @@ def test_tick_sobrevive_a_una_reunion_ilegible(store):
     # la reunion se vuelve ilegible: exactamente el escenario de forward-incompat
     p = store.root / "meetings" / "2026-08-01-comite.md"
     p.write_text(p.read_text(encoding="utf-8").replace(
-        'id: "2026-08-01-comite"', 'id: "2026-08-01-comite"\nclase: "COMITE"'), encoding="utf-8")
+        'id: "2026-08-01-comite"',
+        'id: "2026-08-01-comite"\ncampo_de_una_version_futura: "x"'), encoding="utf-8")
 
     r = tick(store, today=HOY, apply=True)
     assert c.id in r["commitments_vencidos"]
