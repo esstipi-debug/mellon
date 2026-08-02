@@ -64,3 +64,41 @@ def test_puntos_colineales_fallan_con_mensaje_util():
     colineales = [(0.0, 0.0), (10.0, 0.0), (20.0, 0.0), (30.0, 0.0)]
     with pytest.raises(ValueError, match="colineales|degenerad"):
         FloorHomography.from_points(colineales, M)
+
+
+def test_rechaza_puntos_casi_colineales_a_0_001_px():
+    # Ataque del revisor: cuatro puntos a 0,001 px de una recta.
+    # Sin chequeo geometrico, no levanta; con chequeo, si.
+    casi_colineales = [
+        (0.0, 0.0),
+        (100.0, 0.0),
+        (100.0, 0.001),
+        (0.0, 0.001),
+    ]
+    m = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+    with pytest.raises(ValueError, match="casi colineales|degenerados"):
+        FloorHomography.from_points(casi_colineales, m)
+
+
+def test_acepta_cuadrilatero_delgado_pero_valido():
+    # Un rectangulo de 1000x50 px es delgado pero valido.
+    # El umbral de 1e-4 * diametro^2 es ~1025, area minima es ~25k.
+    # Debe pasar para que casos reales de camaras alejadas sigan funcionando.
+    px_delgado = [(0.0, 0.0), (1000.0, 0.0), (1000.0, 50.0), (0.0, 50.0)]
+    m_delgado = [(0.0, 0.0), (10.0, 0.0), (10.0, 0.5), (0.0, 0.5)]
+    h = FloorHomography.from_points(px_delgado, m_delgado)
+    # Debe proyectar el centro correctamente.
+    x, y = h.to_meters(500.0, 25.0)
+    assert x == pytest.approx(5.0, abs=1e-6)
+    assert y == pytest.approx(0.25, abs=1e-6)
+
+
+def test_rechaza_correspondencia_espejada():
+    # Si px y meters estan en orden opuesto (espejados), levanta.
+    # Primer conjunto: sentido horario.
+    # Segundo conjunto: sentido antihorario (invertido).
+    px = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
+    # Invertir el orden para que el area tenga signo opuesto.
+    m_espejado = [(0.0, 0.0), (0.0, 10.0), (10.0, 10.0), (10.0, 0.0)]
+    with pytest.raises(ValueError, match="sentidos opuestos"):
+        FloorHomography.from_points(px, m_espejado)
