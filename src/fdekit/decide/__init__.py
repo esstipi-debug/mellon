@@ -67,6 +67,11 @@ from .parse import (
     parse_due_date,
     resolve_owner,
 )
+# `register` es como `decide` se enchufa al CLI del kit. Es plomeria, no
+# dominio, pero es lo que `fdekit.cli` necesita del paquete — y la regla de
+# `tests/test_api_publica.py` no admite excepciones a proposito: un guardia
+# con una lista de perdonados deja de ser un guardia.
+from .cli import register
 from .store import MAX_PROMOTIONS_PER_MEETING, DecideStore, PromotionBudgetExceeded
 from .query import (
     Agenda,
@@ -122,4 +127,5 @@ __all__ = [
     "supersede",
     "safe_close",
     "tick",
+    "register",
 ]

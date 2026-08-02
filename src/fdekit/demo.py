@@ -15,17 +15,24 @@ import pandas as pd
 
 from .a3 import build_a3_from_findings
 from .baseline import BaselineSpec, diff_in_diff, pre_post
-from .baseline.design import required_days, sd_from_log
+from .baseline import required_days, sd_from_log
 from .dataquality import audit_master, audit_summary, link_defects_to_rework, sampling_plan, stratified_sample
 from .gemba import GembaSession, Observation
 from .layout import Layout
-from .probe.contracts import ContractCheck, check_payload, retry_idempotency_check, timezone_audit
+from .probe import ContractCheck, check_payload, retry_idempotency_check, timezone_audit
 from .probe.edi import smoke_report
-from .processmining import EventLog, bottlenecks, conformance, rework_summary, variants
-from .processmining.dfg import activity_durations, to_mermaid
-from .processmining.variants import pareto_coverage
+from .processmining import (
+    EventLog,
+    activity_durations,
+    bottlenecks,
+    conformance,
+    pareto_coverage,
+    rework_summary,
+    to_mermaid,
+    variants,
+)
 from .sim import calibrate_from_log, sizing_sweep
-from .spc.xmr import degradation_alarm, plot_xmr, compute_limits
+from .spc import compute_limits, degradation_alarm, plot_xmr
 from .standardwork import JobBreakdown, runbook_template
 from .synth import DCConfig, generate_dc
 from .timestudy.cycles import cycle_time_stats, operator_variation, standard_work_gap, takt_analysis
