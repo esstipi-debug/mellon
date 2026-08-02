@@ -275,6 +275,12 @@ __all__ = ["MeasurementCoverage"]
 Run: `python -m pytest tests/test_field_coverage.py -q && python -m pytest -q`
 Expected: PASS, y la suite completa sigue verde.
 
+> **Corrección post-review (commit `3184f24`).** El código de arriba conflaba
+> `tracks_expected=0` con `None` en `track_pct`, y `frame_pct` no validaba
+> coherencia (`150/100` devolvía `150.0`). La implementación real, que es la que
+> vale, agrega `__post_init__` con validaciones y distingue los casos en
+> `note()`. Ver `src/fdekit/field/coverage.py`.
+
 - [ ] **Step 5: Commit**
 
 ```bash
