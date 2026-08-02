@@ -135,6 +135,23 @@ def _try_import_numpy():
         return None
 
 
+def _is_namedtuple(obj: object) -> bool:
+    """Una tupla con `_fields` no es una tupla plana: es un registro."""
+    return (
+        isinstance(obj, tuple)
+        and isinstance(getattr(obj, "_fields", None), tuple)
+        and all(isinstance(campo, str) for campo in obj._fields)
+    )
+
+
+_NAMEDTUPLE_MSG = (
+    "un namedtuple ({tipo}) es un registro con nombres de campo, no una tupla "
+    "plana: recorrerlo como tupla mira los valores pero nunca los nombres, y "
+    "un campo que identifica pasaria sin verse. Convertir con `._asdict()` a "
+    "un dict antes de emitir."
+)
+
+
 def _is_field_name(label: object) -> bool:
     """Una etiqueta sirve como nombre de campo si es str, o tupla de str.
 
@@ -185,6 +202,12 @@ def _canonicalize_impl(obj: object, pd, np) -> object:
 
     if isinstance(obj, dict):
         return {clave: _canonicalize_impl(valor, pd, np) for clave, valor in obj.items()}
+
+    if _is_namedtuple(obj):
+        # Convertirlo a lista aca perderia los nombres de campo, que es el
+        # mismo defecto que hace rechazar la Series posicional. `._asdict()`
+        # es una linea del lado de quien lo tiene y conserva los nombres.
+        raise AnonymityError(_NAMEDTUPLE_MSG.format(tipo=type(obj).__name__))
 
     if isinstance(obj, (list, tuple, set, frozenset)):
         return [_canonicalize_impl(item, pd, np) for item in obj]
@@ -306,11 +329,24 @@ def _is_understood_scalar(val: object, pd, np) -> bool:
 def _check_mapping_items(items, visited_ids: set, keep_alive: list, pd, np) -> None:
     """Cada clave se revisa; el valor se valida o se recorre.
 
-    `items` es un iterable de pares (clave, valor). Cada clave se revisa
-    contra IDENTITY_FIELDS; si cae en PSEUDONYM_FIELDS se valida su forma en
-    vez de recorrerla; si no, se recursa.
+    `items` es un iterable de pares (clave, valor). Primero se exige que la
+    clave sea un nombre de campo (str, o tupla de str para el MultiIndex
+    aplanado): un dict con claves enteras es un mapeo posicional, y un valor
+    sin nombre de campo al lado no se puede verificar contra nada — el mismo
+    punto ciego que la Series posicional que rechaza `canonicalize`. Despues
+    la clave se revisa contra IDENTITY_FIELDS; si cae en PSEUDONYM_FIELDS se
+    valida la forma del valor en vez de recorrerlo; si no, se recursa.
     """
     for clave, valor in items:
+        if not _is_field_name(clave):
+            raise AnonymityError(
+                f"la clave {clave!r} (tipo {type(clave).__name__}) no es un nombre "
+                "de campo: assert_no_identity solo certifica estructuras "
+                "JSON-simples, donde las claves son strings (o tuplas de strings "
+                "para columnas MultiIndex aplanadas). Sin nombre de campo no hay "
+                "contra que verificar el valor. Rearmar el dict con nombres de "
+                "campo explicitos antes de emitir."
+            )
         _check_key_for_identity(clave)
         if _key_matches_pseudonym(clave):
             if not _is_valid_pseudonym_value(valor, pd):
@@ -356,9 +392,20 @@ def assert_no_identity(payload: object) -> None:
     porque EventLog rellena columnas opcionales ausentes con pd.NA, y prohibir
     el nulo rompe logs perfectamente validos. Todo lo demas levanta.
 
-    Las claves compuestas (tuplas, lo que produce `canonicalize` a partir de
-    columnas MultiIndex) se verifican elemento por elemento: `("meta",
-    "marker_id")` identifica igual que `"marker_id"`.
+    Dos limites que la coherencia con fallar cerrado exige (ronda 5):
+
+    - **Las claves de dict tienen que ser `str`, o tupla de `str`.** En una
+      estructura JSON-simple las claves de objeto son siempre strings; un dict
+      con claves enteras es un mapeo posicional, y un valor sin nombre de
+      campo al lado no se puede verificar contra nada. Es el mismo punto ciego
+      que hace rechazar la `Series` posicional en `canonicalize`. La tupla
+      sigue permitida porque es lo que produce `canonicalize` para columnas
+      MultiIndex, y se verifica elemento por elemento: `("meta", "marker_id")`
+      identifica igual que `"marker_id"`.
+    - **Un `namedtuple` se rechaza aunque sea una `tuple`.** Recorrerlo por la
+      rama de tupla mira los valores pero nunca los nombres de campo, asi que
+      `Ev(operator="OP-001", x=1)` pasaria limpio. Si no se pueden verificar
+      los nombres, no se certifica: hay que convertirlo con `._asdict()`.
 
     Una estructura demasiado profunda hace que Python levante RecursionError;
     esta funcion lo traduce a AnonymityError en vez de dejarlo propagarse
@@ -388,6 +435,9 @@ def _assert_no_identity_impl(payload: object, visited_ids: set, keep_alive: list
             return
         _check_mapping_items(payload.items(), visited_ids, keep_alive, pd, np)
         return
+
+    if _is_namedtuple(payload):
+        raise AnonymityError(_NAMEDTUPLE_MSG.format(tipo=type(payload).__name__))
 
     if isinstance(payload, (list, tuple, set, frozenset)):
         if _ya_visitado(payload, visited_ids, keep_alive):

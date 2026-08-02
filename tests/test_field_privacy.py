@@ -317,6 +317,67 @@ def test_canonicalize_rechaza_lo_que_no_sabe_convertir():
         canonicalize(Evento())
 
 
+# --- Ronda 5: coherencia con fallar cerrado --------------------------------
+#
+# Dos huecos que dejo la ronda 4 por listar `tuple` entre los contenedores
+# aceptados y no exigir nada de las claves de dict. Los dos tienen el mismo
+# fondo que la Series posicional: un valor sin nombre de campo al lado no se
+# puede verificar contra nada.
+
+
+def test_rechaza_namedtuple_pidiendo_asdict():
+    # Un namedtuple es un registro, no una tupla plana. Recorrerlo por la rama
+    # de tupla mira los valores pero nunca los nombres, y "operator" pasaria.
+    from collections import namedtuple
+
+    Ev = namedtuple("Ev", ["operator", "x"])
+    with pytest.raises(AnonymityError, match="_asdict"):
+        assert_no_identity(Ev(operator="OP-001", x=1))
+
+
+def test_namedtuple_convertido_con_asdict_pasa_por_el_camino_bueno():
+    # El camino que el mensaje de error recomienda tiene que funcionar, y el
+    # campo prohibido tiene que verse una vez convertido.
+    from collections import namedtuple
+
+    Ev = namedtuple("Ev", ["operator", "x"])
+    with pytest.raises(AnonymityError, match="operator"):
+        assert_no_identity(Ev(operator="OP-001", x=1)._asdict())
+
+    Medicion = namedtuple("Medicion", ["distance_m", "zona"])
+    assert assert_no_identity(Medicion(distance_m=41.2, zona="A")._asdict()) is None
+
+
+def test_canonicalize_rechaza_namedtuple():
+    # Convertirlo a lista perderia los nombres de campo: el mismo defecto que
+    # hace rechazar la Series posicional.
+    from collections import namedtuple
+
+    Ev = namedtuple("Ev", ["operator", "x"])
+    with pytest.raises(AnonymityError, match="_asdict"):
+        canonicalize(Ev(operator="OP-001", x=1))
+
+
+def test_rechaza_dict_con_claves_enteras():
+    # Un dict con claves enteras es un mapeo posicional disfrazado: sus
+    # valores se recorrerian sin ningun nombre de campo contra el cual
+    # verificarlos.
+    with pytest.raises(AnonymityError, match="nombre de campo"):
+        assert_no_identity({0: "MARKER-07", 1: "MARKER-08"})
+
+
+def test_rechaza_dict_con_clave_entera_anidado():
+    with pytest.raises(AnonymityError, match="nombre de campo"):
+        assert_no_identity({"zonas": [{"distance_m": 41.2}, {7: "MARKER-07"}]})
+
+
+def test_acepta_dict_con_clave_tupla_de_strings():
+    # La tupla sigue permitida: es lo que produce canonicalize para columnas
+    # MultiIndex, y se verifica elemento por elemento.
+    payload = {("meta", "distance_m"): 41.2, ("meta", "zona"): "A"}
+    assert assert_no_identity(payload) is None
+
+
 # --- "name" salio de IDENTITY_FIELDS ---------------------------------------
 
 
