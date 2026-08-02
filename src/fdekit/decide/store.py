@@ -72,16 +72,23 @@ class PromotionBudgetExceeded(ValueError):
 
 
 def _to_fm(obj) -> dict:
+    """Entidad -> front-matter.
+
+    `Anchor` y `Consent` se aplanan derivando sus campos del dataclass, no con
+    una tupla escrita a mano. La tupla estaba completa, pero era una lista de
+    nombres que hay que acordarse de actualizar: un campo nuevo en cualquiera de
+    las dos se perdia al escribir y volvia a su default al leer, **sin error**.
+    El registro seguia cargando y el campo simplemente no existia — la clase de
+    bug que este repo colecciona.
+    """
     data = {}
     dates = _DATE_FIELDS.get(type(obj), ())
     for f in dc_fields(obj):
         v = getattr(obj, f.name)
         if f.name in dates:
             v = v.isoformat()
-        elif isinstance(v, Anchor):
-            v = {k: getattr(v, k) for k in ("meeting_id", "t_start", "t_end", "cita_congelada", "transcript_sha256", "estado_fuente")}
-        elif isinstance(v, Consent):
-            v = {k: getattr(v, k) for k in ("granted", "granted_by", "basis", "recording_allowed", "retention_days", "note")}
+        elif isinstance(v, (Anchor, Consent)):
+            v = {sub.name: getattr(v, sub.name) for sub in dc_fields(v)}
         elif isinstance(v, tuple):
             v = list(v)
         data[f.name] = v

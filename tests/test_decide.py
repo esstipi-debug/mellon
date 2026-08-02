@@ -618,3 +618,47 @@ def test_un_archivo_ilegible_dice_cual_es(tmp_path):
     assert "D-099.md" in str(exc.value)          # cual archivo
     assert "clase" in str(exc.value)             # que campo
     assert "version mas nueva" in str(exc.value)  # que hacer
+
+
+def test_un_campo_nuevo_en_anchor_o_consent_sobrevive_al_disco(tmp_path):
+    """`_to_fm` aplanaba `Anchor` y `Consent` con tuplas de nombres escritas a
+    mano. Estaban completas, pero eran una lista que hay que acordarse de
+    actualizar: un campo nuevo se perdia al escribir y volvia a su default al
+    leer, sin un solo error. El registro seguia cargando y el campo no existia.
+
+    El test no fija los nombres de hoy —eso seria la misma lista otra vez— sino
+    la invariante: lo que el dataclass declara es lo que llega al disco.
+    """
+    from dataclasses import fields as dc_fields
+
+    from fdekit.decide.schema import Anchor
+    from fdekit.decide.store import _to_fm
+
+    st = DecideStore(tmp_path / "decide")
+    consent = Consent(
+        granted=True, granted_by=ROSTER[0], basis="interes_legitimo",
+        recording_allowed=True, retention_days=30, note="piloto",
+    )
+    st.add_meeting(Meeting(
+        id="m1", date=HOY, roster=ROSTER, facilitator=ROSTER[0], consent=consent,
+    ))
+    d = st.add_decision(Decision(
+        id="", statement="Consolidar el picking de Pudahuel en una sola ola",
+        owner=ROSTER[0], date_decided=HOY, criteria="100% de los SKU clase A antes del 30-09",
+        rationale="cambio el mix de pedidos", meeting_id="m1",
+        anchor=Anchor(meeting_id="m1", t_start=12.5, t_end=41.0,
+                      cita_congelada="lo consolidamos en una ola", transcript_sha256="abc123"),
+    ))
+
+    # Todo campo declarado por el dataclass viaja al front-matter...
+    fm_meeting = _to_fm(st.get_meeting("m1"))
+    assert set(fm_meeting["consent"]) == {f.name for f in dc_fields(Consent)}
+    fm_decision = _to_fm(st.get(d.id))
+    assert set(fm_decision["anchor"]) == {f.name for f in dc_fields(Anchor)}
+
+    # ...y vuelve del disco con su valor, no con su default.
+    vuelta = st.get(d.id)
+    assert vuelta.anchor.t_start == 12.5
+    assert vuelta.anchor.cita_congelada == "lo consolidamos en una ola"
+    assert st.get_meeting("m1").consent.retention_days == 30
+    assert st.get_meeting("m1").consent.note == "piloto"
