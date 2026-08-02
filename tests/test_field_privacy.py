@@ -58,6 +58,32 @@ def test_la_compuerta_nombra_que_bloqueo():
         AnonymityGate(k=3).check(1, "zona A")
 
 
+def test_k_cero_no_se_puede_construir_porque_apaga_la_compuerta():
+    """`allows(n)` es `n >= k`: con k=0 devuelve verdadero para todo n.
+
+    El dataclass no validaba `k` -- el unico de sus argumentos que viene del
+    usuario -- mientras `gate_output` si validaba `n_subjects`, que nadie
+    toca. Con k=0 la compuerta se vuelve un no-op y nada en la salida lo
+    registra.
+    """
+    with pytest.raises(ValueError, match=">= 1"):
+        AnonymityGate(k=0)
+
+
+def test_k_negativo_tampoco_se_puede_construir():
+    with pytest.raises(ValueError, match=">= 1"):
+        AnonymityGate(k=-1)
+
+
+def test_k_1_es_legitimo_y_el_mensaje_lo_dice():
+    """Bajar a 1 es una decision explicita, no un error: la maqueta de mesa
+    tiene un solo carro y el software no puede tomar esa decision por nadie."""
+    assert AnonymityGate(k=1).allows(1) is True
+    with pytest.raises(ValueError) as exc:
+        AnonymityGate(k=0)
+    assert "k=1 es el minimo" in str(exc.value)
+
+
 def test_ningun_campo_de_identidad_sobrevive_el_borde():
     ok = {"subject": "sub-a1b2c3d4e5f6", "distance_m": 41.2}
     assert_no_identity(ok) is None
@@ -552,6 +578,14 @@ def test_gate_output_emite_locations_al_llegar_al_umbral():
 def test_gate_output_respeta_un_k_explicito():
     salida = {"locations": ["01-003-1"]}
     assert gate_output(salida, n_subjects=1, gate=AnonymityGate(k=1))["locations"]
+
+
+def test_gate_output_echa_el_umbral_usado_en_la_salida():
+    """Con que k se emitio esto es parte del resultado, no del contexto perdido."""
+    assert gate_output({"stops": 2}, n_subjects=9)["anonymity_k"] == 3
+    con_uno = gate_output({"locations": ["01-003-1"]}, n_subjects=1, gate=AnonymityGate(k=1))
+    assert con_uno["anonymity_k"] == 1
+    assert con_uno["locations"] == ["01-003-1"]
 
 
 def test_gate_output_corre_assert_no_identity_sobre_todo_el_diccionario():

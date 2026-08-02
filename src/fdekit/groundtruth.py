@@ -70,6 +70,7 @@ FLAG_ESPERADO = "esperado"
 FLAG_SOSPECHOSO = "sospechoso"
 FLAG_SIN_MEDICION = "sin_medicion"
 FLAG_MODELO_NO_VIO_NADA = "modelo_no_vio_nada"
+FLAG_MEDICION_CONTAMINADA = "medicion_contaminada"
 
 _MOTIVO_POR_FLAG = {
     FLAG_ESPERADO: (
@@ -91,6 +92,26 @@ _MOTIVO_POR_FLAG = {
         "100% invisible al WMS, no un error de redondeo"
     ),
 }
+
+_MOTIVO_CONTAMINADA = (
+    "residual_pct NO SE PUEDE LEER: {n} punto(s) medido(s) cayeron fuera de "
+    "planta y `nearest_location` los descarto de las PARADAS, pero esos mismos "
+    "puntos IGUAL APORTARON METROS al numerador -- `track_distance_m` mide la "
+    "pista cruda, antes de que nada se descarte, asi que el salto entero esta "
+    "dentro de measured_m_in_window. El residual mezcla recorrido real con el "
+    "error de proyeccion, y por eso no se marca ni esperado ni sospechoso: "
+    "cualquiera de los dos seria una afirmacion sobre el modelo hecha con un "
+    "numero que no habla del modelo. Recalibrar la homografia (las cuatro "
+    "esquinas de referencia) y volver a medir antes de leer este numero; "
+    "revisar tambien max_distance_m y coverage_note."
+)
+
+
+def _motivo(flag: str, coverage: MeasurementCoverage) -> str:
+    """Texto del flag. Solo `medicion_contaminada` depende de la cobertura."""
+    if flag == FLAG_MEDICION_CONTAMINADA:
+        return _MOTIVO_CONTAMINADA.format(n=coverage.discarded_out_of_bounds)
+    return _MOTIVO_POR_FLAG[flag]
 
 
 def _dock_legs_m(modeled: EventLog, layout: Layout) -> float:
@@ -151,6 +172,26 @@ def compare_travel(
     distinto de `sin_medicion` (no hay pistas): el primero es el hallazgo mas
     fuerte posible -- recorrido invisible al WMS -- y antes de este arreglo
     se descartaba en silencio junto con el segundo.
+
+    POR QUE `medicion_contaminada` GANA sobre `esperado` y `sospechoso`
+    (arreglo final): cuando `coverage.discarded_out_of_bounds > 0`, el punto
+    fuera de planta esta descartado de las PARADAS pero sigue entero en el
+    numerador de metros -- `track_distance_m` suma la pista CRUDA, antes de
+    que `nearest_location` descarte nada. Medido sobre el mismo recorrido
+    real: limpio da residual -90,9% y flag "sospechoso"; con un salto de 500 m
+    por homografia mal calibrada da +2552,2% y flag "esperado". El flag SE DA
+    VUELTA justo por el defecto que `max_distance_m` existe para detectar, y
+    el motivo de "esperado" le explica al lector que el numero es coherente
+    con que el modelo sea un piso -- una afirmacion falsa, dicha con
+    confianza, en la linea de al lado de una cobertura que dice cuantos puntos
+    se descartaron. Los otros dos flags son lecturas del residual; la
+    contaminacion es una propiedad del numero mismo, que invalida cualquier
+    lectura. Un orden distinto (mirar primero el signo) produce honestidad
+    INVERTIDA, que es peor que honestidad incompleta: incompleta calla,
+    invertida afirma lo contrario de lo que pasa.
+
+    No gana sobre `sin_medicion` ni sobre `modelo_no_vio_nada` porque ninguno
+    de los dos publica un `residual_pct`: no hay numero que contaminar.
     """
     t = travel_report(modeled, layout)
     modelado_m = float(t["distance_m"].sum())
@@ -172,7 +213,15 @@ def compare_travel(
         flag = FLAG_MODELO_NO_VIO_NADA
     else:
         residual = round((medido_por_pedido / modelado_por_pedido - 1) * 100, 1)
-        flag = FLAG_ESPERADO if residual > MARGEN_SOSPECHOSO_PCT else FLAG_SOSPECHOSO
+        if coverage.discarded_out_of_bounds > 0:
+            # Precedencia deliberada -- ver el bloque "POR QUE
+            # medicion_contaminada GANA" del docstring. El signo del residual
+            # no se mira siquiera: con metros de un punto fuera de planta
+            # adentro del numerador, ni "esperado" ni "sospechoso" describen
+            # lo que paso.
+            flag = FLAG_MEDICION_CONTAMINADA
+        else:
+            flag = FLAG_ESPERADO if residual > MARGEN_SOSPECHOSO_PCT else FLAG_SOSPECHOSO
 
     cobertura = _con_pedidos_esperados(coverage, orders_modeled)
 
@@ -197,7 +246,7 @@ def compare_travel(
         ),
         "residual_pct": residual,
         "residual_flag": flag,
-        "residual_flag_reason": _MOTIVO_POR_FLAG[flag],
+        "residual_flag_reason": _motivo(flag, coverage),
         "orders_modeled": orders_modeled,
         "orders_measured": orders_measured,
         "dock_legs_m_in_window": round(dock_legs_m, 1),

@@ -96,6 +96,8 @@ def test_la_demo_de_mesa_produce_espagueti_y_residual(tmp_path):
     r = run_field(out=tmp_path / "out", log=tmp_path / "wms.csv", k=1, **comun)
 
     assert (tmp_path / "out" / "espagueti_medido.png").exists()
+    assert r["espagueti_path"].endswith("espagueti_medido.png")
+    assert r["espagueti_withheld_reason"] is None
     assert r["tracks"] == 1
     assert r["measured_m_in_window"] > 0
     assert "no tratar" in r["coverage_note"].lower()
@@ -344,6 +346,11 @@ def test_cli_field_end_to_end(tmp_path, capsys):
             "10",
             "--frames",
             str(FRAMES_TOTAL),
+            # Una sola taza sobre el escritorio: con el k=3 por defecto el PNG
+            # no se escribe, porque el grafico ES el itinerario de ese unico
+            # sujeto. --k 1 asume esa decision de forma explicita.
+            "--k",
+            "1",
             "--aisles",
             "4",
             "--bays",
@@ -493,6 +500,94 @@ def test_locations_no_se_emite_bajo_el_umbral_de_anonimato(tmp_path):
     # identificante, no la medicion entera.
     assert r["measured_m_in_window"] > 0
     assert r["stops"] == 2
+
+
+def test_el_png_no_se_escribe_bajo_el_umbral_de_anonimato(tmp_path):
+    """El PNG es salida a disco y tambien pasa por el borde.
+
+    Antes de este arreglo `plot_spaghetti` escribia el archivo ANTES de que se
+    armara `salida` y antes de `gate_output`: con k=3 y una sola pista el JSON
+    retenia `locations` con su motivo y en el mismo directorio quedaba el
+    grafico con el recorrido completo del unico sujeto. Retener la lista y
+    dibujarla al lado no retiene nada.
+    """
+    comun = _escribir_caso(tmp_path)
+
+    r = run_field(out=tmp_path / "out", log=tmp_path / "wms.csv", **comun)  # k=3
+
+    assert not (tmp_path / "out" / "espagueti_medido.png").exists()
+    assert r["espagueti_path"] is None
+    motivo = r["espagueti_withheld_reason"]
+    assert "1 sujeto" in motivo
+    assert "k=3" in motivo
+    assert "--k 1" in motivo
+    # El resto de la medicion sigue saliendo: la compuerta retiene lo
+    # identificante, no el numero.
+    assert r["locations"] is None
+    assert r["measured_m_in_window"] > 0
+    assert r["residual"]["residual_pct"] is not None
+
+
+def test_con_k_1_el_png_si_se_escribe(tmp_path):
+    """El contraste: bajar el umbral a proposito es una decision legitima."""
+    comun = _escribir_caso(tmp_path)
+
+    r = run_field(out=tmp_path / "out", k=1, **comun)
+
+    assert (tmp_path / "out" / "espagueti_medido.png").exists()
+    assert r["espagueti_path"] == str(tmp_path / "out" / "espagueti_medido.png")
+    assert r["espagueti_withheld_reason"] is None
+    assert r["locations"] == list(PARADAS_MESA)
+
+
+def test_la_salida_registra_el_k_con_el_que_se_emitio(tmp_path):
+    """Un resultado con k=1 y uno con k=3 no son el mismo resultado.
+
+    Sin `anonymity_k` en la salida, la decision de bajar el umbral es
+    invisible para quien lee el JSON despues.
+    """
+    comun = _escribir_caso(tmp_path)
+
+    con_default = run_field(out=tmp_path / "a", **comun)
+    con_uno = run_field(out=tmp_path / "b", k=1, **comun)
+
+    assert con_default["anonymity_k"] == 3
+    assert con_uno["anonymity_k"] == 1
+
+
+def test_el_parser_rechaza_k_cero_temprano_y_con_que_hacer(tmp_path, capsys):
+    """`--k 0` no baja el umbral: apaga la compuerta (allows(n) = n >= 0).
+
+    Falla en el parser para que el error salga antes de procesar el video, y
+    no recien al emitir.
+    """
+    parser = build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(
+            [
+                "field",
+                "--detections", str(tmp_path / "det.csv"),
+                "--refs", str(tmp_path / "refs.csv"),
+                "--k", "0",
+            ]
+        )
+    err = capsys.readouterr().err
+    assert "--k" in err
+    assert ">= 1" in err
+
+
+def test_el_parser_acepta_k_1(tmp_path):
+    """k=1 es el minimo legitimo, no un caso de borde a bloquear."""
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "field",
+            "--detections", str(tmp_path / "det.csv"),
+            "--refs", str(tmp_path / "refs.csv"),
+            "--k", "1",
+        ]
+    )
+    assert args.k == 1
 
 
 def test_toda_la_salida_pasa_por_assert_no_identity(tmp_path, monkeypatch):

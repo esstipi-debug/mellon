@@ -228,6 +228,88 @@ def test_modelo_no_vio_nada_con_medicion_positiva_es_el_hallazgo_mas_fuerte():
     assert r["residual_flag"] != "sin_medicion"
 
 
+# ------------------------------ arreglo final: medicion_contaminada (bloqueante)
+
+
+COV_CONTAMINADA = MeasurementCoverage(
+    frames_total=100, frames_with_marker=100, tracks_seen=1, discarded_out_of_bounds=100
+)
+
+
+def test_puntos_descartados_dan_medicion_contaminada_aunque_el_residual_sea_positivo():
+    """El caso que hoy decia "esperado" con confianza, y era falso.
+
+    El punto fuera de planta se descarta de las PARADAS pero sigue entero en
+    el NUMERADOR de metros (`track_distance_m` suma la pista cruda). Sobre el
+    mismo recorrido real, el salto de 500 m da un residual enorme y POSITIVO,
+    que sin este arreglo cae en "esperado" -- y el motivo le explica al lector
+    que el numero es coherente con que el modelo sea un piso. El flag se daba
+    vuelta justo por el defecto que `max_distance_m` existe para detectar.
+    """
+    # 500 m medidos contra 14 modelados: +3471%, muy por encima del margen.
+    puntos = [TrackPoint(0.0, 0.0, 0.0), TrackPoint(1.0, 0.0, 500.0)]
+    r = compare_travel(_log_modelado(), {"sub-a": puntos}, LAY, COV_CONTAMINADA, today=HOY)
+
+    assert r["residual_pct"] > 0
+    assert r["residual_flag"] == "medicion_contaminada"
+    assert r["residual_flag"] != "esperado"
+
+
+def test_puntos_descartados_ganan_tambien_sobre_sospechoso():
+    """La contaminacion tiene precedencia sobre LOS DOS flags de lectura.
+
+    Con residual negativo el flag "sospechoso" no seria falso, pero apunta a
+    la causa equivocada: manda a revisar cobertura cuando lo que hay es un
+    numerador con metros que no son recorrido.
+    """
+    puntos = [TrackPoint(0.0, 0.0, 0.0), TrackPoint(1.0, 0.0, 2.0)]
+    r = compare_travel(_log_modelado(), {"sub-a": puntos}, LAY, COV_CONTAMINADA, today=HOY)
+
+    assert r["residual_pct"] < 0
+    assert r["residual_flag"] == "medicion_contaminada"
+
+
+def test_el_motivo_de_contaminada_dice_cuantos_puntos_y_que_igual_sumaron_metros():
+    """Regla 3: el motivo no puede ser un rotulo, tiene que decir el defecto.
+
+    Tres cosas: cuantos puntos se descartaron, que esos puntos IGUAL aportaron
+    metros al numerador, y que por eso el residual no se lee hasta recalibrar
+    la homografia.
+    """
+    puntos = [TrackPoint(0.0, 0.0, 0.0), TrackPoint(1.0, 0.0, 500.0)]
+    r = compare_travel(_log_modelado(), {"sub-a": puntos}, LAY, COV_CONTAMINADA, today=HOY)
+
+    motivo = r["residual_flag_reason"]
+    assert "100 punto" in motivo
+    assert "METROS" in motivo
+    assert "homografia" in motivo
+    assert "measured_m_in_window" in motivo
+    # Y no se cuela el texto del flag que este reemplaza.
+    assert "coherente con que el modelo" not in motivo
+
+
+def test_sin_puntos_descartados_los_flags_de_siempre_siguen_saliendo():
+    """El flag nuevo no se come los dos existentes cuando la medicion esta limpia."""
+    limpia = [TrackPoint(0.0, 0.0, 0.0), TrackPoint(1.0, 0.0, 21.0)]
+    r = compare_travel(_log_modelado(), {"sub-a": limpia}, LAY, COV, today=HOY)
+    assert r["residual_flag"] == "esperado"
+
+
+def test_la_contaminacion_no_pisa_sin_medicion_ni_modelo_no_vio_nada():
+    """Ninguno de los dos publica un residual_pct: no hay numero que contaminar."""
+    sin_med = compare_travel(_log_modelado(), {}, LAY, COV_CONTAMINADA, today=HOY)
+    assert sin_med["residual_flag"] == "sin_medicion"
+
+    log_sin_picks = EventLog(
+        pd.DataFrame(
+            [{"case_id": "A", "activity": "ARRIVE", "timestamp": T0, "resource": None, "location": DOCK}]
+        )
+    )
+    puntos = [TrackPoint(0.0, 0.0, 0.0), TrackPoint(1.0, 0.0, 30.0)]
+    sin_modelo = compare_travel(log_sin_picks, {"sub-a": puntos}, LAY, COV_CONTAMINADA, today=HOY)
+    assert sin_modelo["residual_flag"] == "modelo_no_vio_nada"
+
+
 # --------------------------------------------------------------- bordes
 
 

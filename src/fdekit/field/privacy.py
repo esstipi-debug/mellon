@@ -103,6 +103,34 @@ class AnonymityGate:
 
     k: int = 3
 
+    def __post_init__(self) -> None:
+        """`k` tiene que ser al menos 1: con 0 la compuerta deja de existir.
+
+        `allows(n)` es `n >= self.k`. Con `k=0` da verdadero para TODO n,
+        incluido n=0, asi que la compuerta se vuelve un no-op silencioso: la
+        salida sale igual que sin compuerta y nada en el resultado registra
+        que se desactivo. `n_subjects` si se validaba (`gate_output` rechaza
+        negativos), y `k` -- el unico de los dos que viene del usuario, por
+        `--k` -- no; la asimetria protegia el argumento que nadie toca.
+
+        Bajar a `k=1` es una decision legitima y explicita: significa "asumo
+        que este agregado puede ser una sola persona y lo emito igual", que es
+        lo que hace falta en la maqueta de mesa, donde hay un solo carro.
+        Ponerlo en 0 no es bajar el umbral, es apagar la compuerta, y para eso
+        no hay caso de uso honesto: si se quiere emitir sin umbral, `k=1` ya
+        lo hace y ademas queda registrado en `anonymity_k`.
+        """
+        if self.k < 1:
+            raise ValueError(
+                f"el umbral de anonimato k tiene que ser >= 1 (llego {self.k}). "
+                "k=1 es el minimo y significa 'emito el agregado aunque cubra "
+                "una sola persona, asumiendo que ahi el agregado ES un "
+                "individuo'; k=0 no baja el umbral, apaga la compuerta y no "
+                "deja rastro. Usar k=1 si esa es la intencion (queda registrado "
+                "en anonymity_k), o subirlo hasta la cantidad minima de sujetos "
+                "que se acepte publicar."
+            )
+
     def allows(self, n_subjects: int) -> bool:
         return n_subjects >= self.k
 
@@ -547,6 +575,10 @@ def _assert_no_identity_impl(payload: object, visited_ids: set, keep_alive: list
 
 CAMPO_AGREGADO = "locations"
 CAMPO_MOTIVO = "locations_withheld_reason"
+# El umbral con el que se emitio ESTE resultado. Va en la salida porque un
+# resultado emitido con k=1 y uno emitido con k=3 no son el mismo resultado, y
+# sin el campo no hay forma de saber cual se esta leyendo un mes despues.
+CAMPO_UMBRAL = "anonymity_k"
 
 _MOTIVO_BAJO_UMBRAL = (
     "'{campo}' no se emite: el agregado cubre {n} sujeto(s) y el umbral de "
@@ -570,7 +602,7 @@ def gate_output(payload: dict, n_subjects: int, gate: AnonymityGate | None = Non
     una compuerta que no existe; el spec promete un borde, y un borde es un
     lugar por el que se pasa siempre, no una funcion disponible.
 
-    Hace dos cosas, en este orden:
+    Hace tres cosas, en este orden:
 
     1. `assert_no_identity` sobre el diccionario COMPLETO. No sobre los campos
        que uno sospecha: sobre todo, porque el campo que se escapa es siempre
@@ -580,6 +612,11 @@ def gate_output(payload: dict, n_subjects: int, gate: AnonymityGate | None = Non
        `locations_withheld_reason` -- un `None` explicito con su razon al lado,
        no la ausencia silenciosa del campo, que se lee como "no habia
        ubicaciones" en vez de "no se pueden mostrar".
+    3. Echa el umbral usado en `anonymity_k`. Un resultado emitido con k=1 y
+       uno emitido con k=3 no son el mismo resultado -- el primero asume que
+       el agregado puede ser una sola persona. Sin el campo, quien lee el JSON
+       un mes despues no tiene como saber cual de los dos tiene en la mano, y
+       la decision de bajar el umbral se vuelve invisible.
 
     `n_subjects` es el conteo de sujetos distintos que cubre el agregado. En
     `run_field` sale de la cantidad de PISTAS RECONSTRUIDAS: una pista es un
@@ -604,6 +641,7 @@ def gate_output(payload: dict, n_subjects: int, gate: AnonymityGate | None = Non
 
     gate = gate if gate is not None else AnonymityGate()
     salida = dict(payload)
+    salida[CAMPO_UMBRAL] = gate.k
     if CAMPO_AGREGADO in salida and not gate.allows(n_subjects):
         salida[CAMPO_AGREGADO] = None
         salida[CAMPO_MOTIVO] = _MOTIVO_BAJO_UMBRAL.format(

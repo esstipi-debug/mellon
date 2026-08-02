@@ -118,6 +118,32 @@ def cmd_travel(a):
 FACTOR_MAX_DISTANCE = 2.0
 
 
+def umbral_anonimato(valor: str) -> int:
+    """Tipo de `--k`: entero >= 1, validado en el parser y no aguas abajo.
+
+    `AnonymityGate.__post_init__` ya rechaza k<1, asi que esto no es la unica
+    defensa -- es la que hace que el error salga TEMPRANO, con el formato de
+    argparse ("argument --k: ...") y antes de leer un solo CSV. Con la
+    validacion solo en el dataclass, `--k 0` recorre todo el pipeline, procesa
+    el video y falla recien al emitir, que es el momento en que menos se
+    entiende que el problema estaba en la linea de comandos.
+    """
+    try:
+        k = int(valor)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"el umbral de anonimato tiene que ser un entero, llego '{valor}'"
+        ) from None
+    if k < 1:
+        raise argparse.ArgumentTypeError(
+            f"el umbral de anonimato tiene que ser >= 1, llego {k}. k=1 es el "
+            "minimo y significa 'emito el agregado aunque cubra una sola "
+            "persona'; k=0 no baja el umbral, apaga la compuerta. Usar --k 1 si "
+            "esa es la intencion (queda registrado en anonymity_k)."
+        )
+    return k
+
+
 def max_distance_por_defecto(layout) -> float:
     """Limite de confianza derivado de la geometria declarada.
 
@@ -184,6 +210,16 @@ def run_field(
     `k` es el umbral de anonimato de la regla 10, aplicado en el borde de
     salida (`privacy.gate_output`). El conteo de sujetos es la cantidad de
     PISTAS reconstruidas: un marcador, un carro, una persona.
+
+    EL PNG TAMBIEN ES SALIDA A DISCO, y por eso la decision de la compuerta se
+    calcula ANTES de dibujar. Antes de este arreglo `plot_spaghetti` escribia
+    el archivo mientras se armaba el diccionario, o sea antes de
+    `gate_output`: con k=3 y una sola pista, el JSON retenia `locations` con
+    su motivo y en el mismo directorio quedaba el PNG con el recorrido
+    completo del unico sujeto. El grafico ES el itinerario -- retener la lista
+    de ubicaciones y dibujarla al lado es no retener nada. Si el agregado no
+    llega al umbral no se escribe el archivo, y `espagueti_path` sale `None`
+    con su motivo, igual que `locations`.
     """
     import csv as _csv
     from pathlib import Path
@@ -234,7 +270,17 @@ def run_field(
     medido, cobertura = tracks_to_eventlog(
         tracks, lay, t0=t0, coverage=cobertura, max_distance_m=limite_m
     )
-    plot_spaghetti(medido, lay, path=str(out / "espagueti_medido.png"))
+
+    # La compuerta se resuelve ANTES de dibujar: el PNG es salida a disco.
+    compuerta = AnonymityGate(k=k)
+    if compuerta.allows(len(tracks)):
+        destino_png = out / "espagueti_medido.png"
+        plot_spaghetti(medido, lay, path=str(destino_png))
+        espagueti_path = str(destino_png)
+        espagueti_reason = None
+    else:
+        espagueti_path = None
+        espagueti_reason = _ESPAGUETI_RETENIDO.format(n=len(tracks), k=k)
 
     residual, residual_reason = _residual_contra_el_modelo(
         log, tracks, lay, cobertura, today=today
@@ -253,12 +299,28 @@ def run_field(
         "locations": sorted(medido.df["location"].dropna().unique().tolist()),
         "max_distance_m": round(limite_m, 3),
         "coverage_note": cobertura.note(),
+        # El grafico sigue la misma regla que `locations`: es el itinerario del
+        # sujeto dibujado, asi que bajo el umbral no se escribe y el campo dice
+        # por que en vez de desaparecer.
+        "espagueti_path": espagueti_path,
+        "espagueti_withheld_reason": espagueti_reason,
         "residual": residual,
         "residual_reason": residual_reason,
         "today": today.isoformat(),
     }
     # Borde unico (spec seccion 6): nada sale de esta funcion sin pasar por aca.
-    return gate_output(salida, n_subjects=len(tracks), gate=AnonymityGate(k=k))
+    return gate_output(salida, n_subjects=len(tracks), gate=compuerta)
+
+
+_ESPAGUETI_RETENIDO = (
+    "'espagueti_medido.png' no se escribio: el agregado cubre {n} sujeto(s) y "
+    "el umbral de anonimato es k={k}. El grafico de espagueti ES el itinerario "
+    "completo de esa persona, dibujado -- retener 'locations' en el JSON y "
+    "dejar el PNG al lado en el mismo directorio no retiene nada (spec seccion "
+    "6: toda salida a disco pasa por el borde). Para obtenerlo: ampliar la "
+    "ventana hasta tener al menos k sujetos, o bajar el umbral a proposito con "
+    "--k 1 asumiendo lo que eso significa."
+)
 
 
 _SIN_MODELO = (
@@ -548,10 +610,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     f.add_argument(
         "--k",
-        type=int,
+        type=umbral_anonimato,
         default=3,
-        help="umbral de anonimato (regla 10): con menos de k pistas "
-        "reconstruidas, la lista de ubicaciones no se emite",
+        help="umbral de anonimato (regla 10), minimo 1: con menos de k pistas "
+        "reconstruidas no se emiten ni la lista de ubicaciones ni el PNG del "
+        "espagueti. En la maqueta de mesa, con un solo carro, hace falta --k 1",
     )
     # Geometria: los defaults son los del CD. La maqueta de escritorio pasa la
     # suya (p.ej. --aisles 4 --bays 10 --aisle-pitch 3 --bay-pitch 1).

@@ -148,9 +148,24 @@ Procedimiento completo, sobre un escritorio, en menos de dos minutos:
 
    ```bash
    fdekit field --detections det.csv --refs refs.csv --out out --fps 30 \
-                --log data/event_log.csv \
+                --log data/event_log.csv --k 1 \
                 --aisles 4 --bays 10 --aisle-pitch 3 --bay-pitch 1
    ```
+
+   **Por qué `--k 1`, y por qué el software no lo pone solo.** El umbral por
+   defecto es `k=3`: bajo tres sujetos, un "agregado por zona" no es un
+   agregado, es una persona con otro nombre. Sobre un escritorio hay **una sola
+   taza** — un sujeto. Con el default, la lista de ubicaciones no se emite y el
+   PNG del espagueti **no se escribe**, porque ese gráfico *es* el itinerario
+   completo de esa persona, dibujado. Eso no es una limitación de la demo: es la
+   compuerta funcionando exactamente como funcionaría en planta el día que
+   alguien pida "el recorrido de la zona de picking" en un turno donde había un
+   solo operario. Pasar `--k 1` es asumir esa decisión de forma explícita — "sé
+   que este agregado puede ser un individuo y lo emito igual" — en vez de que el
+   software la tome por vos en silencio. Queda registrada: la salida trae
+   `anonymity_k` con el umbral usado, así que un JSON emitido con `--k 1` nunca
+   se confunde con uno emitido con el default. `--k 0` no existe: no baja el
+   umbral, apaga la compuerta, y el parser lo rechaza.
 
    Los cuatro flags de geometría describen la maqueta. Sin ellos se usa la del
    CD (12 pasillos × 50 módulos), y la taza sobre el escritorio quedaría
@@ -183,6 +198,16 @@ Procedimiento completo, sobre un escritorio, en menos de dos minutos:
    mirar cuando eso pasa: sobre un escritorio, la cámara nunca ve los tramos al
    muelle que el modelo sí cuenta.
 
+   Hay un tercer valor que gana sobre los otros dos: `medicion_contaminada`.
+   Aparece cuando la cobertura descartó puntos por caer **fuera de planta**.
+   Esos puntos salen de las paradas, pero sus metros **siguen contados** en
+   `measured_m_in_window` — `track_distance_m` mide la pista cruda. Un salto de
+   500 m por homografía mal calibrada da un residual enorme y *positivo*, que
+   leído por el signo caería en `"esperado"`: el flag se daría vuelta justo por
+   el defecto que `--max-distance` existe para detectar. Con puntos descartados,
+   el residual no se lee hasta recalibrar la homografía, y el flag lo dice en vez
+   de afirmar lo contrario.
+
    Otros dos flags con default deliberado:
 
    - `--max-distance` — metros máximos entre un punto medido y la ubicación más
@@ -191,18 +216,22 @@ Procedimiento completo, sobre un escritorio, en menos de dos minutos:
      límite y no un interruptor: sin él, un punto a 500 m —lo típico de una
      homografía mal calibrada— se pega en silencio a la esquina del layout,
      cuenta como parada real y la cobertura informa 100%.
-   - `--k` — umbral de anonimato (default 3). Con menos de *k* pistas
-     reconstruidas, la lista de ubicaciones **no se emite**: con un solo sujeto
-     no es un agregado, es el itinerario completo de una persona identificable.
-     En su lugar va `locations_withheld_reason`. Para la demo de mesa, donde hay
-     una sola taza, hace falta `--k 1` a propósito.
+   - `--k` — umbral de anonimato (default 3, mínimo 1). Con menos de *k* pistas
+     reconstruidas no se emiten **ni la lista de ubicaciones ni el PNG del
+     espagueti**: con un solo sujeto no son un agregado, son el itinerario
+     completo de una persona identificable — el JSON trae
+     `locations_withheld_reason` y `espagueti_withheld_reason` en su lugar, y
+     `espagueti_path` queda en `null`. Ver arriba por qué la maqueta de mesa
+     necesita `--k 1`.
 
    Si el CSV de detecciones no trae la línea `# frames_total=<int>` (por
    ejemplo, uno grabado antes de esta versión de `write_detections`), agregar
    `--frames <n>` con el total de cuadros del video. Sin ninguno de los dos,
    `fdekit field` falla en vez de adivinar el denominador de la cobertura.
 
-En `out/espagueti_medido.png` queda el recorrido real. La salida en consola trae
+En `out/espagueti_medido.png` queda el recorrido real —cuando el umbral de
+anonimato lo permite; si no, `espagueti_path` es `null` y el motivo lo explica.
+La salida en consola trae
 los metros medidos, el residual contra el modelo y la nota de cobertura — qué
 fracción de los cuadros vio efectivamente el marcador y, cuando hay `--log`, qué
 fracción de los **pedidos** (`track_pct`). **Un recorrido sin cobertura no se
@@ -215,6 +244,8 @@ verifica. Además, **toda** la salida pasa por un único borde
 (`field.privacy.gate_output`) que corre la verificación de identidad sobre el
 diccionario completo y aplica el umbral de anonimato antes de emitir. No es una
 función disponible por si alguien se acuerda de llamarla: es el camino de salida.
+El PNG del espagueti también: la decisión de la compuerta se calcula **antes** de
+dibujar, así que bajo el umbral el archivo no llega a existir.
 El sensor ve al operador; el archivo que sale, no.
 
 ---
