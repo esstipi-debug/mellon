@@ -82,8 +82,8 @@ class FloorHomography:
         detectarse desde adentro: cualquier emparejamiento ajusta exacto por construccion.
         Un orden equivocado produce una homografia perfectamente valida pero
         semanticamente falsa. Si necesitas verificar la correspondencia, pasa un quinto
-        punto en `verify` — un par (punto_px, punto_metros) que no esté entre los cuatro
-        de calibración.
+        punto en `verify` — un par (punto_px, punto_metros) que no este entre los cuatro
+        de calibracion.
 
         CONVENCION DE EJES: en una imagen el eje y crece hacia abajo; en el piso hacia
         arriba. El mismo recorrido visual de las esquinas da sentidos de giro opuestos.
@@ -93,10 +93,14 @@ class FloorHomography:
             px: Lista de cuatro puntos en pixeles.
             meters: Lista de cuatro puntos en metros.
             verify: Opcional, par (punto_px, punto_metros) para verificar la
-                correspondencia. Si el error supera tolerance_m, levanta.
+                correspondencia. Si el error supera tolerance_m, levanta. ADVERTENCIA:
+                no conviene elegir un punto en el centroide o sobre los ejes de simetria
+                del cuadrilatero de calibracion, porque puede ser punto fijo de una
+                permutacion equivocada y pasar la verificacion sin verificar nada.
+                Elegir un punto lejos del centroide y de los ejes de simetria.
             tolerance_m: Umbral de error permitido en metros (default 0.10). Es mayor
                 que el error de marcado esperable (5 cm) pero mucho menor que el error
-                de correspondencia equivocada (metros).
+                de correspondencia equivocada (metros). Debe ser positivo.
 
         Raises:
             ValueError: Si cantidades no coinciden, hay menos de 4 puntos,
@@ -109,6 +113,12 @@ class FloorHomography:
             )
         if len(px) != 4:
             raise ValueError(f"hacen falta exactamente cuatro correspondencias, llegaron {len(px)}")
+
+        if tolerance_m <= 0:
+            raise ValueError(
+                f"tolerance_m debe ser positivo (recibido {tolerance_m}). "
+                f"El rango razonable es [0.01, 1.0] metros."
+            )
 
         # Validar que cada conjunto de puntos forme un cuadrilatero valido.
         _validate_quadrilateral(px, "pixeles")
@@ -130,7 +140,14 @@ class FloorHomography:
                 "Pegar las marcas formando un cuadrilatero, no una linea."
             )
 
-        # Chequeo por numero de condicion: si es muy alto, el sistema es inestable.
+        # Chequeo por numero de condicion como respaldo. El DLT crudo mezcla
+        # magnitudes de pixeles (tipicamente 1e2-1e3) y metros (tipicamente 1e0-1e1)
+        # en la misma matriz sin normalizar, asi que este chequeo es conservador pero
+        # no es lo que hace el trabajo real de detectar degeneracion (lo hace el
+        # chequeo geometrico anterior). En casos irrealas (pixeles 1e7 mapeados a
+        # metros 1e3), este umbral puede rechazar un cuadrado perfecto, pero para
+        # camaras reales (resolucion tipica 1e3-1e4, distancia 1e0-1e2 m) no hay falsos
+        # positivos. Se deja por seguridad, no por alcance.
         cond = np.linalg.cond(amat)
         if cond > 1e8:
             raise ValueError(

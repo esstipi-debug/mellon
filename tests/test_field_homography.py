@@ -100,7 +100,7 @@ def test_acepta_camara_real_con_ejes_opuestos():
     px = [(120.0, 880.0), (1800.0, 910.0), (1650.0, 300.0), (300.0, 290.0)]
     metros = [(0.0, 0.0), (30.0, 0.0), (30.0, 20.0), (0.0, 20.0)]
     h = FloorHomography.from_points(px, metros)
-    # Debe proyectar correctamente las esquinas de calibración.
+    # Debe proyectar correctamente las esquinas de calibracion.
     for (xp, yp), (xm, ym) in zip(px, metros):
         actual = h.to_meters(xp, yp)
         assert actual[0] == pytest.approx(xm, abs=1e-4)
@@ -158,3 +158,22 @@ def test_verify_fuera_de_tolerancia_levanta():
     verify_point = ((50.0, 50.0), (5.15, 5.0))
     with pytest.raises(ValueError, match="verificacion fallo"):
         FloorHomography.from_points(px, m, verify=verify_point, tolerance_m=0.10)
+
+
+def test_tolerance_m_cero_levanta():
+    # tolerance_m=0 levanta con mensaje propio, distinto de verificacion fallo.
+    # Incluso una correspondencia perfecta tiene error ~1e-14 por punto flotante.
+    px = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
+    m = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+    verify_point = ((50.0, 50.0), (5.0, 5.0))
+    with pytest.raises(ValueError, match="debe ser positivo"):
+        FloorHomography.from_points(px, m, verify=verify_point, tolerance_m=0.0)
+
+
+def test_tolerance_m_negativo_levanta():
+    # tolerance_m negativo levanta con mensaje propio.
+    px = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
+    m = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+    verify_point = ((50.0, 50.0), (5.0, 5.0))
+    with pytest.raises(ValueError, match="debe ser positivo"):
+        FloorHomography.from_points(px, m, verify=verify_point, tolerance_m=-0.1)
