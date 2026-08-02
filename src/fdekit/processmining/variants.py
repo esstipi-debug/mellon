@@ -44,25 +44,93 @@ def _collapse(trace: tuple) -> tuple:
     return tuple(out)
 
 
-def rework_summary(log: EventLog, rework_activities: list[str] | None = None) -> pd.DataFrame:
+def _rework_consequences(
+    df: pd.DataFrame,
+    direct: list[str],
+    threshold: float,
+    min_occurrences: int = 5,
+) -> list[str]:
+    """Actividades que no se llaman reproceso pero solo existen por el.
+
+    El caso que motiva la regla: un `SHORT_PICK` cuesta 50 segundos de registro y
+    dispara un `REPLENISH` de ocho minutos que retiene al picker. El nombre no
+    matchea ningun patron de reproceso, asi que esas horas se caian enteras del
+    caso economico mientras la tabla mostraba el SHORT_PICK como un problema
+    menor. Es la clase de error que no falla: muestra un numero chico y creible.
+
+    La regla es general y no depende de la jerga del cliente: si casi todas las
+    ocurrencias de una actividad vienen inmediatamente despues de un reproceso
+    dentro del mismo caso, esa actividad es parte de la cadena. El umbral
+    discrimina bien porque una actividad de flujo normal aparece tambien en los
+    casos sanos — PACK sigue a CARTON_REWORK 246 veces sobre 1.046, o sea 0,24,
+    muy lejos del corte.
+
+    `min_occurrences` evita que una coincidencia sobre dos eventos arrastre una
+    actividad entera al caso economico. El 5 es el mismo criterio de celda minima
+    que usa `stats.risk_ratio_2x2`.
+    """
+    if not direct:
+        return []
+
+    prev = df.shift(1)
+    same = df["case_id"] == prev["case_id"]
+    chain = pd.DataFrame(
+        {
+            "activity": df["activity"],
+            "after_rework": same & prev["activity"].isin(direct),
+        }
+    )
+    chain = chain[~chain["activity"].isin(direct)]
+    if chain.empty:
+        return []
+
+    g = chain.groupby("activity")["after_rework"]
+    share, n = g.mean(), g.size()
+    return sorted(share.index[(share >= threshold) & (n >= min_occurrences)])
+
+
+def rework_summary(
+    log: EventLog,
+    rework_activities: list[str] | None = None,
+    consequence_threshold: float = 0.9,
+) -> pd.DataFrame:
     """Cuantifica el reproceso: cuantos casos lo sufren y cuanto cuesta.
 
-    Si no se pasa la lista, se infiere por nombre (REWORK/REPACK/REPICK/EXCEPTION/
-    SHORT/FAIL) mas cualquier actividad que se repita dentro del mismo caso mas
-    de lo esperado.
+    Si no se pasa la lista, se infiere en dos pasos:
+
+    1. **directa** — por nombre (REWORK/REPACK/REPICK/EXCEPTION/SHORT/FAIL/RETURN).
+    2. **consecuencia** — actividades que solo aparecen despues de una directa,
+       detectadas por `_rework_consequences`. Sin este paso el costo real de un
+       reproceso queda registrado bajo el nombre de su consecuencia y no llega a
+       ninguna palanca.
+
+    La columna `rework_kind` deja ver de cual de los dos pasos vino cada fila:
+    la de consecuencia es una inferencia y hay que poder discutirla en la sala.
+
+    Pasar `rework_activities` explicito desactiva la deteccion entera. Si el FDE
+    ya mapeo la taxonomia del cliente, adivinar encima seria peor.
+
+    Cuidado con la lectura de una consecuencia: su duracion es el retraso que
+    inserta en el caso. Es tiempo de operador perdido solo si el operador espera
+    —que es lo normal en un quiebre de picking— y no si se va a otra tarea.
     """
     df = log.df
     if rework_activities is None:
         pat = r"REWORK|REPACK|REPICK|EXCEPTION|SHORT|FAIL|RETURN"
-        rework_activities = [a for a in log.activities if pd.Series([a]).str.contains(pat).iloc[0]]
+        direct = [a for a in log.activities if pd.Series([a]).str.contains(pat).iloc[0]]
+        consequences = _rework_consequences(df, direct, consequence_threshold)
+    else:
+        direct, consequences = list(rework_activities), []
 
     rows = []
-    for act in rework_activities:
+    tagged = [(a, "directa") for a in direct] + [(a, "consecuencia") for a in consequences]
+    for act, kind in tagged:
         sub = df[df["activity"] == act]
         cases = sub["case_id"].nunique()
         rows.append(
             {
                 "activity": act,
+                "rework_kind": kind,
                 "occurrences": len(sub),
                 "cases_affected": cases,
                 "pct_cases": round(cases / log.n_cases * 100, 2),

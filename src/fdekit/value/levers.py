@@ -101,7 +101,7 @@ LEVER_CATALOG: dict[str, dict] = {
         "name": "Horas de operacion recuperadas",
         "unit": "h/ano",
         "cash_share": None,  # lo define labor_flex_share del arquetipo
-        "source": "gemba.pareto + timestudy.standard_work_gap + travel_stats",
+        "source": "gemba.value_input + timestudy.standard_work_gap + travel_stats",
     },
     "L2_reproceso": {
         "name": "Reproceso evitado",
@@ -172,6 +172,15 @@ def _reject_preannualized(findings: dict) -> None:
     if any("annual_hours_lost" in r and "hours_lost_in_window" not in r for r in findings.get("rework", [])):
         stale.append("rework[].annual_hours_lost (ahora hours_lost_in_window)")
 
+    # gemba tenia su propio 250 hardcodeado y ahora aporta a L1. Un archivo
+    # anterior al cambio trae `pareto[].hours_per_year` y no trae `value_input`:
+    # `.get("value_input", {})` daria cero y la contribucion de gemba
+    # desapareceria sin una linea de aviso, que es el modo de falla que esta
+    # funcion existe para impedir.
+    gemba = findings.get("gemba", {})
+    if gemba and "value_input" not in gemba:
+        stale.append("gemba sin value_input (antes: pareto[].hours_per_year con 250 fijo)")
+
     if stale:
         raise ValueError(
             "hallazgos.json en formato viejo (pre-anualizacion unica): "
@@ -224,9 +233,21 @@ def levers_from_findings(
 
     levers: list[Lever] = []
 
-    # --- L1: caminata excedente + brecha de trabajo estandar
+    # --- L1: caminata excedente + brecha de trabajo estandar + gemba fuera del log
     travel = findings.get("travel", {})
     sw = findings.get("standard_work_gap", {})
+    # gemba entra SOLO con las horas que el log del WMS no puede ver. El resto de
+    # lo que se observa en el pasillo ya esta contado por `travel` y por
+    # `rework`: "buscar un SKU que no esta" es PICK_EXCEPTION_LOCATION y
+    # "rehacer el carton" es CARTON_REWORK. Sumar el Pareto completo duplicaria
+    # L1 y L2 enteras, y el numero resultante seguiria pareciendo razonable —
+    # que es la unica forma en que un error de este tamano llega a una reunion.
+    #
+    # Su ventana es un TURNO, no una ventana de log: por eso anualiza contra
+    # `annual_shifts` y no contra `annual_orders`. El `* 250` que hacia esta
+    # cuenta dentro de `gemba` desaparecio; los dias siguen entrando una vez.
+    gemba = findings.get("gemba", {}).get("value_input", {})
+    gemba_h = float(gemba.get("hours_per_shift", 0.0)) * arch.annual_shifts
     # Cada bloque anualiza con SU propio denominador: `travel` cuenta los pedidos
     # con lineas de picking, que pueden ser menos que los casos del log.
     walk_h = _annualize(
@@ -240,7 +261,7 @@ def levers_from_findings(
         sw.get("cases_in_window", cases_observed),
         arch.annual_orders,
     )
-    l1_units = walk_h * slot_cut + sw_h
+    l1_units = walk_h * slot_cut + sw_h + gemba_h
     if l1_units > 0:
         levers.append(
             Lever(

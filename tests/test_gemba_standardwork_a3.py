@@ -19,7 +19,11 @@ def test_impacto_requiere_duracion_y_frecuencia():
         duration_s=60, frequency_per_shift=30, operators_affected=2,
     )
     assert con.impact_h_per_shift == pytest.approx(60 * 30 * 2 / 3600)
-    assert con.impact_h_per_year == pytest.approx(con.impact_h_per_shift * 250)
+    # La unidad de salida es el TURNO observado. El `* 250` que vivia aca era el
+    # ultimo resto de la anualizacion doble; los dias de operacion entran una
+    # sola vez, en `value/levers.py`, junto al resto de las palancas.
+    assert not hasattr(con, "impact_h_per_year")
+    assert "impact_h_per_year" not in con.to_dict()
 
 
 def test_sesion_persiste_y_recarga(tmp_path):
@@ -50,7 +54,48 @@ def test_pareto_ordenado_descendente(tmp_path):
                       duration_s=600, frequency_per_shift=50))
     par = s.pareto()
     assert par.loc[0, "waste_type"] == "ESPERA"
-    assert par["hours_per_year"].is_monotonic_decreasing
+    assert par["hours_per_shift"].is_monotonic_decreasing
+    assert "hours_per_year" not in par.columns
+
+
+def test_solo_lo_que_el_log_no_ve_entra_al_caso_economico(tmp_path):
+    """La guarda de doble conteo. Casi todo lo que se observa en el pasillo ya
+    esta en el log bajo otro nombre; sumar el Pareto completo a L1 duplicaria la
+    palanca entera y el numero seguiria pareciendo razonable."""
+    s = GembaSession(tmp_path / "g.jsonl")
+    # Ya esta en el log: es PICK_EXCEPTION_LOCATION con otro nombre.
+    s.add(Observation(area="a", activity="buscar sku", waste_type="MOVIMIENTO",
+                      description="x", duration_s=75, frequency_per_shift=40,
+                      in_event_log=True))
+    # No deja transaccion: es lo unico que gemba aporta.
+    s.add(Observation(area="a", activity="buscar carro", waste_type="MOVIMIENTO",
+                      description="y", duration_s=150, frequency_per_shift=20,
+                      in_event_log=False))
+
+    v = s.value_input()
+    # `value_input` redondea a 4 decimales a proposito —es el insumo de la
+    # anualizacion, no un campo de tabla—, asi que la tolerancia va ahi.
+    assert v["hours_per_shift"] == pytest.approx(150 * 20 / 3600, abs=1e-4)
+    assert v["observations"] == 1
+    assert v["pending_log_status"] == 0
+
+    # El Pareto completo sigue mostrando las dos: es la conversacion con el
+    # supervisor. Lo que cambia es cuanto de eso se puede cobrar.
+    fila = s.pareto().set_index("waste_type").loc["MOVIMIENTO"]
+    assert fila["hours_per_shift"] > fila["hours_per_shift_outside_log"]
+
+
+def test_sin_declarar_si_esta_en_el_log_la_observacion_no_suma_y_se_reporta(tmp_path):
+    """Regla 1 aplicada a un booleano: `None` es 'no se declaro', no 'no esta'.
+    Un default que decida solo si la observacion vale plata es justo lo que el
+    repo prohibe."""
+    s = GembaSession(tmp_path / "g.jsonl")
+    s.add(Observation(area="a", activity="b", waste_type="ESPERA", description="x",
+                      duration_s=300, frequency_per_shift=10))
+
+    v = s.value_input()
+    assert v["hours_per_shift"] == 0.0
+    assert v["pending_log_status"] == 1
 
 
 def test_twi_exige_una_razon_por_punto_clave():

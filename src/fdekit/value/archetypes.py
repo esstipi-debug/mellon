@@ -43,6 +43,13 @@ class Archetype:
     orders_per_day: float
     lines_per_order: float
     operating_days: int = 300
+    # Turnos por dia de operacion. Solo lo usa la anualizacion de `gemba`, que
+    # es la unica herramienta cuya ventana observada es un turno y no una
+    # ventana de log. Es un dato administrativo que el cliente conoce con
+    # exactitud — se pregunta, no se estima — y por eso vive aca y no como
+    # constante en el modulo de gemba, junto a `operating_days`, que es el
+    # unico lugar del repo donde los dias se multiplican.
+    shifts_per_day: float = 2.0
 
     # Trabajo
     labor_usd_h: float = 11.0  # costo cargado, LATAM
@@ -81,6 +88,11 @@ class Archetype:
     @property
     def annual_orders(self) -> float:
         return self.orders_per_day * self.operating_days
+
+    @property
+    def annual_shifts(self) -> float:
+        """Turnos al ano. Denominador de la anualizacion de `gemba`."""
+        return self.shifts_per_day * self.operating_days
 
     @property
     def annual_lines(self) -> float:

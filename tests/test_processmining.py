@@ -99,6 +99,33 @@ def test_reproceso_encuentra_las_actividades_esperadas(log):
     assert (r["pct_cases"] <= 100).all()
 
 
+def test_reproceso_atrapa_la_consecuencia_que_no_se_llama_reproceso(log):
+    """Un SHORT_PICK cuesta 50 s de registro y dispara un REPLENISH de ocho
+    minutos que retiene al picker. El nombre no matchea ningun patron, asi que
+    esas horas se caian enteras del caso economico mientras la tabla mostraba el
+    SHORT_PICK como un problema menor: no falla, muestra un numero chico."""
+    r = rework_summary(log).set_index("activity")
+
+    assert r.loc["REPLENISH", "rework_kind"] == "consecuencia"
+    assert r.loc["SHORT_PICK", "rework_kind"] == "directa"
+    # La consecuencia pesa mucho mas que el evento que la nombra.
+    assert r.loc["REPLENISH", "hours_lost_in_window"] > r.loc["SHORT_PICK", "hours_lost_in_window"]
+
+
+def test_el_flujo_normal_no_se_cuela_como_consecuencia(log):
+    """PACK sigue a CARTON_REWORK, pero tambien ocurre en los casos sanos. Si el
+    umbral dejara entrar una actividad de flujo normal, L2 se duplicaria."""
+    r = rework_summary(log)
+    assert not {"PACK", "QC", "PICK"} & set(r["activity"])
+
+
+def test_pasar_la_lista_explicita_desactiva_la_inferencia(log):
+    """Si el FDE ya mapeo la taxonomia del cliente, adivinar encima seria peor."""
+    r = rework_summary(log, rework_activities=["CARTON_REWORK"])
+    assert list(r["activity"]) == ["CARTON_REWORK"]
+    assert set(r["rework_kind"]) == {"directa"}
+
+
 def test_pareto_de_variantes(log):
     p = pareto_coverage(log, target_pct=80)
     assert 1 <= p["variants_needed"] <= p["total_variants"]
