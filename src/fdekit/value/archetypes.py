@@ -295,7 +295,7 @@ def build_archetype(
         base = ARCHETYPES[key]
     else:
         raise KeyError(f"calibracion desconocida: {calibration}. Opciones: chile, generico")
-    # Si se calibra a Chile y no se pide otro regimen, se usa el chileno: sería
+    # Si se calibra a Chile y no se pide otro regimen, se usa el chileno: seria
     # raro cotizar con costos chilenos y flexibilidad laboral de otro pais.
     if labor_regime is None and calibration == "chile":
         labor_regime = "chile"

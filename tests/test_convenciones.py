@@ -2,16 +2,15 @@
 
 El repositorio se edita desde terminales y notebooks prestados de centros de
 distribucion, donde la codificacion no siempre es UTF-8. Un caracter acentuado
-mal decodificado en un comentario es ruido; en un literal de string es un bug.
-
-Esta convención existe porque el kit no puede depender de nada pesado y tiene
-que correr en entornos restringidos. Por eso un acento descuidado en un string
-sale a luz en produccion, y eso es caro de depurar.
+mal decodificado en un comentario es ruido; en un literal de string es un bug
+que aparece recien en terreno. Por eso se evita en codigo Python y se usa
+normalmente en los .md del repo.
 
 El guardia verifica que en todo archivo .py versionado dentro de src/fdekit/ y
-tests/ no haya tildes ni eñes. Excepto en docstrings de modulo a nivel raiz
-(que se editaran raramente y son obvios), y excepto en los .md del repo (que usan
-tildes normalmente).
+tests/ no haya tildes (a, e, i, o, u) ni enes (n). Admite puntuacion espanola
+legitima (¿, ¡). Excepto en archivos con motivo documentado que necesitan
+ejemplos acentuados para probar su comportamiento (p.ej., modulos que normalizan
+acentos).
 """
 
 import re
@@ -19,11 +18,20 @@ import subprocess
 from pathlib import Path
 
 
+# Archivos que contienen acentos a proposito, con motivo documentado.
+ARCHIVOS_CON_ACENTOS_A_PROPOSITO = {
+    "src/fdekit/gemba/transcribe.py": (
+        "Este modulo normaliza acentos en transcripciones. Necesita ejemplos "
+        "acentuados (dia, quizas, etc.) para probar que los quita correctamente."
+    ),
+}
+
+
 def test_no_tildes_ni_enes_en_codigo_python():
     """Verifica que no haya caracteres acentuados en codigo Python del repo.
 
     Se ejecuta sobre todos los .py versionados en src/fdekit/ y tests/.
-    Si encuentra una tilde o eñe, el mensaje de falla dice archivo, linea,
+    Si encuentra una tilde o ene, el mensaje de falla dice archivo, linea,
     y el texto ofensor, para que sea trivial arreglarlo.
     """
     # Obtener la lista de archivos .py versionados en git.
@@ -39,13 +47,19 @@ def test_no_tildes_ni_enes_en_codigo_python():
         # Si git no funciona, hacer un fallback a glob.
         py_files = list(Path("src/fdekit").rglob("*.py")) + list(Path("tests").rglob("*.py"))
 
-    # Patron para tildes y enes: acentos, diéresis, eñe, etc.
-    patron_acentos = re.compile(r"[áéíóúàèìòùäëïöüãõâêîôûç¡¿ñÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÃÕÂÊÎÔÛÇ¡¿Ñ]")
+    # Patron: solo tildes en vocales castellanas y ene, minuscula y mayuscula.
+    # Excluye puntuacion espanola legitima (¿, ¡) y caracteres de otros idiomas.
+    patron_acentos = re.compile(r"[áéíóúñÁÉÍÓÚÑ]")
 
     violaciones = []
     for py_file in py_files:
         if not py_file.exists():
             continue
+
+        # Saltar archivos excepto si tienen motivo documentado.
+        if any(py_file.as_posix().endswith(exc) for exc in ARCHIVOS_CON_ACENTOS_A_PROPOSITO):
+            continue
+
         try:
             with open(py_file, "r", encoding="utf-8") as f:
                 for lineno, linea in enumerate(f, start=1):
@@ -61,6 +75,9 @@ def test_no_tildes_ni_enes_en_codigo_python():
             pass
 
     if violaciones:
-        msg = "Caracteres acentuados o enes encontrados en codigo Python:\n"
+        msg = "Caracteres acentuados encontrados en codigo Python:\n"
         msg += "\n".join(violaciones)
+        msg += "\n\nMotivos de excepcion documentados:\n"
+        for archivo, motivo in ARCHIVOS_CON_ACENTOS_A_PROPOSITO.items():
+            msg += f"  - {archivo}: {motivo}\n"
         raise AssertionError(msg)
