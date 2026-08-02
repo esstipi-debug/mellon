@@ -213,3 +213,44 @@ def test_idempotencia_detecta_duplicados():
     r = retry_idempotency_check(df, ["a", "b"])
     assert r["duplicate_rows"] == 2
     assert "no es idempotente" in r["verdict"]
+
+
+def test_calibrate_from_log_saca_los_parametros_del_log_real():
+    """Su propio docstring dice que sin este paso el simulador es ciencia
+    ficcion, y no tenia ningun test. La tasa de llegada y el horizonte se
+    derivan del log; los tiempos de servicio se reconstruyen desde el recurso."""
+    from fdekit.processmining import EventLog
+    from fdekit.sim import calibrate_from_log
+    from fdekit.synth import DCConfig, generate_dc
+
+    dc = generate_dc(DCConfig(seed=4, n_orders=300, n_pickers=5, n_packers=6))
+    log = EventLog(dc.events)
+    cfg = calibrate_from_log(log, n_pickers=5, n_packers=6)
+
+    assert (cfg.n_pickers, cfg.n_packers) == (5, 6)
+    cases = log.case_durations()
+    span_h = (cases["end"].max() - cases["start"].min()).total_seconds() / 3600
+    assert cfg.arrival_rate_per_h == pytest.approx(log.n_cases / span_h, rel=0.02)
+    assert cfg.horizon_h == pytest.approx(span_h, rel=0.02)
+    # Tiempos de servicio plausibles, no los defaults de la dataclass.
+    assert 30 < cfg.pick_time_median_s < 2000
+    assert 0.1 <= cfg.pick_time_sigma <= 1.2
+
+
+def test_calibrate_from_log_cae_a_los_defaults_sin_recursos():
+    """Un log sin columna de recurso no puede reconstruir el tiempo de servicio.
+    Cae al fallback en vez de reventar, porque el resto de la calibracion —tasa
+    de llegada y horizonte— sigue siendo util."""
+    import pandas as pd
+
+    from fdekit.processmining import EventLog
+    from fdekit.sim import calibrate_from_log
+
+    t0 = pd.Timestamp("2026-08-01 08:00")
+    df = pd.DataFrame([
+        {"case_id": f"o{i}", "activity": a, "timestamp": t0 + pd.Timedelta(minutes=i * 5 + j)}
+        for i in range(20) for j, a in enumerate(("ORDER_RELEASED", "PICK", "SHIP"))
+    ])
+    cfg = calibrate_from_log(EventLog(df), n_pickers=3, n_packers=2)
+    assert cfg.pick_time_median_s == 300.0  # el fallback declarado
+    assert cfg.arrival_rate_per_h > 0

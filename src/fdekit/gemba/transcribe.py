@@ -101,8 +101,23 @@ def strip_accents(text: str) -> str:
     return "".join(c for c in nfkd if not unicodedata.combining(c))
 
 
-def _norm(text: str) -> str:
-    return strip_accents(text).lower()
+def normalize(text: str) -> str:
+    """La normalizacion canonica del kit: sin acentos, en minusculas, con
+    espacios colapsados.
+
+    Es una sola definicion a proposito. Habia dos `_norm` con el mismo nombre y
+    semantica distinta —esta, y una en `decide/schema.py` que colapsaba espacios
+    pero NO quitaba acentos— y la segunda producia un error invisible en las dos
+    direcciones: `"quizas"` se rechazaba como decision pero `"quizás"` pasaba, y
+    `"a mas tardar"` valia como criterio pero `"a más tardar"` no. Los tests no
+    lo veian porque todas sus cadenas estaban sin acentos.
+    """
+    return " ".join(strip_accents(text).lower().split())
+
+
+# Alias interno historico. Se conserva porque lo usan varios modulos y renombrar
+# en todos no agrega nada.
+_norm = normalize
 
 
 def _number(token: str) -> float | None:

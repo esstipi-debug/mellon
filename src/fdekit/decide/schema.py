@@ -82,8 +82,10 @@ def _has_number(text: str) -> bool:
     return any(ch.isdigit() for ch in text)
 
 
-def _norm(text: str) -> str:
-    return " ".join(text.lower().split())
+# La normalizacion es una sola en todo el kit. Definirla aca otra vez —sin
+# quitar acentos— hacia que `HEDGES` y `VERIFIABLE_PREDICATES`, que estan
+# escritos sin tildes, fallaran contra el espanol real.
+from ..gemba.transcribe import normalize as _norm
 
 
 # ------------------------------------------------------------------ soporte

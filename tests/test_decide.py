@@ -547,3 +547,42 @@ def test_implementations_es_una_relacion_real(store):
                                     owner="Rodrigo", due=date(2026, 9, 1),
                                     evidence_of_done="reporte"))
     assert [c.id for c in implementations(store, "D-001")] == ["C-001"]
+
+
+# ---------------------------------------------- regresiones de la auditoria
+
+
+def test_el_acento_no_desactiva_la_validacion():
+    """Habia dos `_norm` con el mismo nombre y semantica distinta: el de
+    `decide/schema` colapsaba espacios pero NO quitaba acentos. El error era
+    invisible y cortaba en las dos direcciones — 'quizas' se rechazaba y
+    'quizás' pasaba; 'a mas tardar' valia como criterio y 'a más tardar' no.
+    Ningun test lo veia porque todas sus cadenas estaban sin tildes."""
+    def val(statement, criteria="a mas tardar el cierre"):
+        return Decision(
+            id="D-001", statement=statement, owner="Marcela", date_decided=HOY,
+            criteria=criteria, rationale="porque los numeros lo piden",
+        ).validate()
+
+    con = val("quizás reslotear la clase A a la zona dorada")
+    sin = val("quizas reslotear la clase A a la zona dorada")
+    assert any("intencion de decidir" in i for i in con)
+    assert any("intencion de decidir" in i for i in sin)
+
+    ok = val("Reslotear la clase A a la zona dorada", "a más tardar el cierre")
+    assert not any("numero" in i for i in ok)
+
+
+def test_un_meeting_id_inexistente_falla_en_vez_de_apagar_la_validacion(store):
+    """El roster es el scope lexico: la unica pieza de determinismo que el
+    diseno fabrica. Un `--meeting` mal tipeado devolvia None en silencio y con
+    eso desactivaba la validacion de dueno."""
+    with pytest.raises(KeyError, match="no existe la reunion"):
+        store.add_decision(mk_decision(meeting_id="comite-mal-tipeado", owner="Pepe"))
+
+
+def test_sin_meeting_id_la_decision_de_pasillo_sigue_entrando(store):
+    """El caso legitimo no se rompe: `decide add` sin `--meeting` registra una
+    decision de pasillo y no valida roster porque no hay ninguno declarado."""
+    d = store.add_decision(mk_decision(meeting_id="", owner="Alguien de afuera"))
+    assert d.id == "D-001"

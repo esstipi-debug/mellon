@@ -252,7 +252,7 @@ cambió, o caducó.
 
 ```bash
 fdekit decide resolve "lo del slotting" --meeting m1      # L0 -> L1 -> L2
-fdekit decide confirm "lo del slotting" --symbol D-001 --by "Marcela Perez"
+fdekit decide confirm "lo del slotting" --symbol D-001 --meeting m1 --by "Marcela Perez"
 fdekit decide unalias "lo del slotting" --reason "..."     # revierte y reprocesa
 ```
 

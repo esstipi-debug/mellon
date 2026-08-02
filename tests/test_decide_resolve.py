@@ -423,3 +423,37 @@ def test_la_mencion_guarda_procedencia_completa(env):
     assert m["tier"] == "AMBIGUOUS"
     assert m["candidatos_descartados"] == ["D-002"]
     assert m["confirmado_por"] == "Marcela Perez"
+
+
+def test_purge_borra_el_canal_hablada_vencido_y_la_cita_sobrevive(env, monkeypatch):
+    """Es la unica pieza de retencion del repo, atada a la Ley 21.719 (vigente
+    el 1-dic-2026), y no se ejecutaba en ningun test. Lo que tiene que probar no
+    es que borre: es que el canal DECIDIDA sobreviva al borrado, que es la razon
+    entera por la que la cita se copia en vez de enlazarse."""
+    import os
+    import time
+
+    st, ts = env
+    a = freeze(ts, 1)
+    assert "reslotear la clase A" in a.cita_congelada
+
+    # Envejecer el archivo 100 dias.
+    viejo = time.time() - 100 * 86400
+    os.utime(ts.path, (viejo, viejo))
+
+    assert ts.purge(date(2026, 8, 1), retention_days=90) is True
+    assert not ts.path.exists()
+    # La cita, que se copio, sigue entera.
+    assert "reslotear la clase A" in a.cita_congelada
+    ok, motivo = verify(a, ts)
+    assert not ok and "retencion" in motivo
+
+
+def test_purge_no_toca_lo_que_esta_dentro_de_la_ventana(env):
+    st, ts = env
+    assert ts.purge(date(2026, 8, 1), retention_days=90) is False
+    assert ts.path.exists()
+
+
+def test_purge_sobre_un_transcripto_que_no_existe_no_revienta(tmp_path):
+    assert TranscriptStore(tmp_path, "no-existe").purge(date(2026, 8, 1), 90) is False

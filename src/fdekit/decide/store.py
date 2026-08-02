@@ -213,10 +213,24 @@ class DecideStore:
         return _from_fm(Meeting, data)
 
     def roster_of(self, meeting_id: str) -> tuple[str, ...] | None:
-        try:
-            return self.get_meeting(meeting_id).roster
-        except KeyError:
+        """Roster de la reunion, o `None` si la entidad no declara ninguna.
+
+        Distingue tres casos que antes se confundian en uno:
+
+          - sin `meeting_id`  -> None, y la validacion de roster no aplica. Es
+            legitimo: `decide add` sin `--meeting` registra una decision de
+            pasillo.
+          - `meeting_id` que existe -> el roster, y se valida contra el.
+          - `meeting_id` que NO existe -> **error**.
+
+        El tercer caso devolvia `None` en silencio, con lo cual un `--meeting`
+        mal tipeado desactivaba la validacion de dueno sin decir nada. El roster
+        es el scope lexico del sistema: es la unica pieza de determinismo que el
+        diseno fabrica, y un typo no puede apagarla calladamente.
+        """
+        if not meeting_id:
             return None
+        return self.get_meeting(meeting_id).roster  # KeyError si no existe
 
     # ---------------------------------------------------------- escrituras
 
@@ -259,7 +273,9 @@ class DecideStore:
         return meeting
 
     def _check_roster(self, obj, meeting_id: str, force: bool, kind: str):
-        roster = self.roster_of(meeting_id) if meeting_id else None
+        # `roster_of` levanta si el meeting_id no existe. No se atrapa: un
+        # `--meeting` mal tipeado tiene que fallar, no desactivar la validacion.
+        roster = self.roster_of(meeting_id)
         issues = obj.validate(roster) if kind != "Assumption" else obj.validate()
         if issues and not force:
             raise ValidationError(kind, issues)
