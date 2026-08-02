@@ -18,19 +18,6 @@ import numpy as np
 _MIN_HOMOGRAPHY_COORD = 1e-6
 
 
-def _shoelace_area(points: list[tuple[float, float]]) -> float:
-    """Calcula el area con signo de un poligono usando la formula de Shoelace.
-
-    Positivo si los puntos estan en sentido antihorario, negativo si horario.
-    """
-    area = 0.0
-    for i in range(len(points)):
-        x1, y1 = points[i]
-        x2, y2 = points[(i + 1) % len(points)]
-        area += x1 * y2 - x2 * y1
-    return area / 2.0
-
-
 def _diameter(points: list[tuple[float, float]]) -> float:
     """Calcula la distancia maxima entre dos puntos del conjunto."""
     max_dist = 0.0
@@ -80,7 +67,10 @@ class FloorHomography:
 
     @staticmethod
     def from_points(
-        px: list[tuple[float, float]], meters: list[tuple[float, float]]
+        px: list[tuple[float, float]],
+        meters: list[tuple[float, float]],
+        verify: tuple[tuple[float, float], tuple[float, float]] | None = None,
+        tolerance_m: float = 0.10,
     ) -> "FloorHomography":
         """Construye una homografia a partir de cuatro pares de puntos correspondientes.
 
@@ -88,20 +78,29 @@ class FloorHomography:
         transformacion proyectiva. Los cuatro puntos de control definen completamente
         esta transformacion resolviendo ocho ecuaciones lineales.
 
-        px[i] corresponde a meters[i], y ambas listas recorren las esquinas en el
-        mismo sentido de giro (horario o antihorario).
+        px[i] corresponde a meters[i]. Con cuatro puntos, la correspondencia no puede
+        detectarse desde adentro: cualquier emparejamiento ajusta exacto por construccion.
+        Un orden equivocado produce una homografia perfectamente valida pero
+        semanticamente falsa. Si necesitas verificar la correspondencia, pasa un quinto
+        punto en `verify` — un par (punto_px, punto_metros) que no esté entre los cuatro
+        de calibración.
 
-        Detecta cuadrilateros degenerados (casi colineales) y correspondencias
-        invertidas (espejadas). Si la geometria es invalida, levanta con un mensaje
-        que explica que hacer en el piso.
+        CONVENCION DE EJES: en una imagen el eje y crece hacia abajo; en el piso hacia
+        arriba. El mismo recorrido visual de las esquinas da sentidos de giro opuestos.
+        Eso es normal y no es un error del usuario.
 
         Args:
             px: Lista de cuatro puntos en pixeles.
             meters: Lista de cuatro puntos en metros.
+            verify: Opcional, par (punto_px, punto_metros) para verificar la
+                correspondencia. Si el error supera tolerance_m, levanta.
+            tolerance_m: Umbral de error permitido en metros (default 0.10). Es mayor
+                que el error de marcado esperable (5 cm) pero mucho menor que el error
+                de correspondencia equivocada (metros).
 
         Raises:
             ValueError: Si cantidades no coinciden, hay menos de 4 puntos,
-                los puntos son degenerados, o las correspondencias estan invertidas.
+                los puntos son degenerados, o verify falla la tolerancia.
         """
         if len(px) != len(meters):
             raise ValueError(
@@ -114,16 +113,6 @@ class FloorHomography:
         # Validar que cada conjunto de puntos forme un cuadrilatero valido.
         _validate_quadrilateral(px, "pixeles")
         _validate_quadrilateral(meters, "metros")
-
-        # Detectar si las correspondencias estan invertidas (espejadas).
-        area_px = _shoelace_area(px)
-        area_m = _shoelace_area(meters)
-        if area_px * area_m < 0:  # Signos opuestos.
-            raise ValueError(
-                "px y meters recorren las esquinas en sentidos opuestos: la primera "
-                "esta en sentido horario y la segunda en antihorario, o viceversa. "
-                "Invertir el orden de una de las dos listas."
-            )
 
         a, b = [], []
         for (x, y), (bigx, bigy) in zip(px, meters):
@@ -152,7 +141,25 @@ class FloorHomography:
 
         h, *_ = np.linalg.lstsq(amat, np.asarray(b, dtype=float), rcond=None)
         m = np.append(h, 1.0).reshape(3, 3)
-        return FloorHomography(matrix=tuple(tuple(float(v) for v in fila) for fila in m))
+        homography = FloorHomography(matrix=tuple(tuple(float(v) for v in fila) for fila in m))
+
+        # Verificar con un quinto punto si se proporciona.
+        if verify is not None:
+            (x_px_verify, y_px_verify), (x_m_expected, y_m_expected) = verify
+            x_m_actual, y_m_actual = homography.to_meters(x_px_verify, y_px_verify)
+            error_x = abs(x_m_actual - x_m_expected)
+            error_y = abs(y_m_actual - y_m_expected)
+            error_total = (error_x**2 + error_y**2) ** 0.5
+            if error_total > tolerance_m:
+                raise ValueError(
+                    f"la verificacion fallo: el quinto punto se proyecta a "
+                    f"({x_m_actual:.3f}, {y_m_actual:.3f}) pero esperaba "
+                    f"({x_m_expected:.3f}, {y_m_expected:.3f}), error {error_total:.3f} m. "
+                    f"La correspondencia entre px y meters parece estar en distinto orden. "
+                    f"Verificar que px[i] y meters[i] sean la misma esquina fisica."
+                )
+
+        return homography
 
     def to_meters(self, x_px: float, y_px: float) -> tuple[float, float]:
         """Proyecta un pixel a coordenadas del piso en metros.

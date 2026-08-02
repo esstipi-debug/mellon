@@ -93,12 +93,68 @@ def test_acepta_cuadrilatero_delgado_pero_valido():
     assert y == pytest.approx(0.25, abs=1e-6)
 
 
-def test_rechaza_correspondencia_espejada():
-    # Si px y meters estan en orden opuesto (espejados), levanta.
-    # Primer conjunto: sentido horario.
-    # Segundo conjunto: sentido antihorario (invertido).
+def test_acepta_camara_real_con_ejes_opuestos():
+    # Caso del coordinador: camara real donde el eje y crece hacia abajo en imagen
+    # pero hacia arriba en piso. El mismo recorrido visual da areas con signo opuesto.
+    # Eso es normal y no es un error del usuario. Debe construir sin error.
+    px = [(120.0, 880.0), (1800.0, 910.0), (1650.0, 300.0), (300.0, 290.0)]
+    metros = [(0.0, 0.0), (30.0, 0.0), (30.0, 20.0), (0.0, 20.0)]
+    h = FloorHomography.from_points(px, metros)
+    # Debe proyectar correctamente las esquinas de calibración.
+    for (xp, yp), (xm, ym) in zip(px, metros):
+        actual = h.to_meters(xp, yp)
+        assert actual[0] == pytest.approx(xm, abs=1e-4)
+        assert actual[1] == pytest.approx(ym, abs=1e-4)
+
+
+def test_lista_rotada_sin_verify_construye_pero_proyecta_mal():
+    # Limite conocido: una lista rotada un lugar tiene el mismo sentido de giro,
+    # pasa todos los chequeos, pero proyecta mal. Sin un quinto punto (verify)
+    # es indetectable desde adentro. Esta en silencio es lo que el revisor
+    # habia reportado: to_meters(0,0) devuelve (10,0) en vez de (0,0).
     px = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
-    # Invertir el orden para que el area tenga signo opuesto.
-    m_espejado = [(0.0, 0.0), (0.0, 10.0), (10.0, 10.0), (10.0, 0.0)]
-    with pytest.raises(ValueError, match="sentidos opuestos"):
-        FloorHomography.from_points(px, m_espejado)
+    m = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+    # Rotar metros un lugar.
+    m_rotado = m[1:] + m[:1]
+    h = FloorHomography.from_points(px, m_rotado)
+    # Sin verify, la homografia se construye exitosamente pero proyecta mal.
+    # Esto es un limite conocido: la correspondencia no se puede verificar
+    # con solo cuatro puntos.
+    x, y = h.to_meters(0.0, 0.0)
+    # Deberia ser (10, 0) pero sin verify no hay proteccion.
+    assert not (x == pytest.approx(0.0, abs=1e-4) and y == pytest.approx(0.0, abs=1e-4))
+
+
+def test_lista_rotada_con_verify_correcto_levanta():
+    # El quinto punto detecta la rotacion. Usar un punto en una esquina donde
+    # la rotacion causa error mayor a la tolerancia.
+    px = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
+    m = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+    # Rotar metros un lugar: [(10,0), (10,10), (0,10), (0,0)].
+    m_rotado = m[1:] + m[:1]
+    # En una esquina, la rotacion causa error grande. Por ej, px[0]=(0,0)
+    # deberia proyectar a (0,0) pero la rotacion hace que vaya a (10,0).
+    verify_point = ((0.0, 0.0), (0.0, 0.0))
+    with pytest.raises(ValueError, match="verificacion fallo"):
+        FloorHomography.from_points(px, m_rotado, verify=verify_point)
+
+
+def test_verify_bien_puesto_en_calibracion_correcta_pasa():
+    # Un quinto punto sobre una calibracion correcta debe pasar.
+    px = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
+    m = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+    # Quinto punto en el centro.
+    verify_point = ((50.0, 50.0), (5.0, 5.0))
+    h = FloorHomography.from_points(px, m, verify=verify_point)
+    # Debe pasar y la homografia debe ser valida.
+    assert h.to_meters(50.0, 50.0) == pytest.approx((5.0, 5.0), abs=1e-6)
+
+
+def test_verify_fuera_de_tolerancia_levanta():
+    # Un quinto punto cuyo error supera la tolerancia levanta.
+    px = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
+    m = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+    # Quinto punto con valor esperado **muy** erroneo (15 cm de error).
+    verify_point = ((50.0, 50.0), (5.15, 5.0))
+    with pytest.raises(ValueError, match="verificacion fallo"):
+        FloorHomography.from_points(px, m, verify=verify_point, tolerance_m=0.10)
