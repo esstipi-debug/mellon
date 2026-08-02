@@ -204,9 +204,13 @@ def build_tracks(
 
     De donde sale este numero: `detect_markers` (la pieza que si toca cv2) lo
     devuelve junto con las detecciones, porque es quien recorrio el video
-    cuadro a cuadro. Quien solo tenga el CSV de detecciones grabado antes
-    tiene que anotar `frames_total` por separado en ese momento: el CSV en si
-    no lo guarda (ver limite conocido en el docstring del modulo).
+    cuadro a cuadro. `write_detections` lo persiste en la linea de metadatos
+    `# frames_total=<int>` del CSV, y `load_detections` lo devuelve junto con
+    las detecciones -- asi que quien tiene el CSV normalmente ya tiene el
+    numero (ver el contrato de metadatos en el docstring del modulo). Solo un
+    CSV grabado ANTES de que existiera esa linea obliga a anotar
+    `frames_total` aparte; en ese caso `load_detections` devuelve `None` y
+    quien llama tiene que proveerlo o fallar, nunca adivinarlo.
     """
     if fps <= 0:
         raise ValueError(f"fps tiene que ser positivo, llego {fps}")

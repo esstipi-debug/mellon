@@ -261,3 +261,42 @@ def test_frames_total_cero_no_rompe_el_calculo():
     r = compare_travel(_log_modelado(), {"sub-a": puntos}, LAY, cov_vacia, today=HOY)
     assert "no tratar" in r["coverage_note"].lower()
     assert r["residual_pct"] is not None
+
+
+# ------------------------------------------- arreglo final: track_pct computable
+
+
+def test_track_pct_deja_de_ser_none_cuando_hay_log_modelado():
+    """El criterio de exito de la etapa 3 del spec necesita un denominador de
+    PEDIDOS, y `compare_travel` lo tenia en la mano sin usarlo. Lo que se
+    reportaba era cobertura de CUADROS, que responde otra pregunta: el marcador
+    puede verse el 100% del tiempo y haberse capturado 2 de 100 viajes."""
+    assert COV.track_pct is None
+
+    modelado = _log_de_n_pedidos_identicos(10)
+    medido = {f"sub-{i}": _pista_realista_14m() for i in range(4)}
+    cov = MeasurementCoverage(frames_total=100, frames_with_marker=100, tracks_seen=4)
+
+    r = compare_travel(modelado, medido, LAY, cov, today=HOY)
+
+    assert r["orders_modeled"] == 10
+    # 4 pistas reconstruidas sobre 10 pedidos declarados por el WMS.
+    assert r["track_pct"] == pytest.approx(40.0)
+    assert "40.0% de los viajes esperados" in r["coverage_note"]
+
+
+def test_track_pct_queda_en_none_cuando_el_modelo_no_vio_nada():
+    """`tracks_expected=0` con pistas vistas es incoherente para
+    `MeasurementCoverage`, y con razon: "0% de 0 pedidos esperados" no describe
+    nada. Ese caso es el hallazgo `modelo_no_vio_nada`, y la respuesta honesta
+    para track_pct es None, no un porcentaje fabricado."""
+    log_sin_picks = EventLog(
+        pd.DataFrame(
+            [{"case_id": "A", "activity": "ARRIVE", "timestamp": T0, "resource": None, "location": DOCK}]
+        )
+    )
+    puntos = [TrackPoint(0.0, 0.0, 0.0), TrackPoint(1.0, 0.0, 30.0)]
+    r = compare_travel(log_sin_picks, {"sub-a": puntos}, LAY, COV, today=HOY)
+
+    assert r["residual_flag"] == "modelo_no_vio_nada"
+    assert r["track_pct"] is None

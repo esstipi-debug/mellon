@@ -17,6 +17,7 @@ un parametro explicito. Si no hay ninguno de los dos, falla con un mensaje que
 dice que hacer -- ver `test_avisa_si_falta_frames_total_en_todos_lados`.
 """
 
+import json
 from datetime import date
 
 import pandas as pd
@@ -54,24 +55,99 @@ def _detecciones_con_metadata() -> str:
     return f"# frames_total={FRAMES_TOTAL}\n" + _detecciones_sin_metadata()
 
 
-def test_la_demo_de_mesa_produce_espagueti_y_residual(tmp_path):
-    (tmp_path / "refs.csv").write_text(REFS, encoding="utf-8")
-    (tmp_path / "det.csv").write_text(_detecciones_con_metadata(), encoding="utf-8")
+# Las dos paradas de `_filas_deteccion` caen, con la geometria MESA, en
+# 01-003-1 (el punto (3,2) m) y 02-004-1 (el punto (6,3) m).
+PARADAS_MESA = ("01-003-1", "02-004-1")
 
-    r = run_field(
+# El log del WMS para esas dos paradas: un pedido, dos lineas de PICK. El
+# modelo rutea DOCK -> 01-003-1 -> 02-004-1 -> DOCK = 4,6 + 7,4 + 7,8 = 19,8 m.
+LOG_WMS = (
+    "case_id,activity,timestamp,resource,location\n"
+    "PED-1,PICK,2026-09-14 10:00:00,,01-003-1\n"
+    "PED-1,PICK,2026-09-14 10:00:30,,02-004-1\n"
+)
+
+
+def _escribir_caso(tmp_path, con_metadata=True):
+    (tmp_path / "refs.csv").write_text(REFS, encoding="utf-8")
+    contenido = _detecciones_con_metadata() if con_metadata else _detecciones_sin_metadata()
+    (tmp_path / "det.csv").write_text(contenido, encoding="utf-8")
+    (tmp_path / "wms.csv").write_text(LOG_WMS, encoding="utf-8")
+    return dict(
         detections=tmp_path / "det.csv",
         refs=tmp_path / "refs.csv",
-        out=tmp_path / "out",
         fps=10.0,
         t0=pd.Timestamp("2026-09-14 10:00:00"),
         today=date(2026, 9, 14),
         layout=MESA,
     )
 
+
+def test_la_demo_de_mesa_produce_espagueti_y_residual(tmp_path):
+    """El entregable del branch: no metros medidos, sino un RESIDUAL medido.
+
+    El README promete "la diferencia entre los dos es el hallazgo". Antes de
+    este arreglo, `run_field` devolvia metros, paradas, ubicaciones y cobertura
+    -- y ninguna comparacion contra el modelo. Este test se llamaba
+    "produce_espagueti_y_residual" y no asertaba ningun residual.
+    """
+    comun = _escribir_caso(tmp_path)
+
+    r = run_field(out=tmp_path / "out", log=tmp_path / "wms.csv", k=1, **comun)
+
     assert (tmp_path / "out" / "espagueti_medido.png").exists()
     assert r["tracks"] == 1
     assert r["measured_m_in_window"] > 0
     assert "no tratar" in r["coverage_note"].lower()
+
+    residual = r["residual"]
+    assert residual is not None
+    # El modelo rutea 19,8 m para el unico pedido; la camara midio el salto
+    # entre las dos paradas (~3,16 m) y ninguno de los dos tramos al muelle.
+    assert residual["modeled_m_per_order"] == pytest.approx(19.8, abs=0.1)
+    assert residual["measured_m_per_order"] == pytest.approx(3.2, abs=0.1)
+    assert residual["residual_pct"] == pytest.approx(-84.0, abs=1.0)
+    # Residual negativo: el modelo es un piso, asi que esto NO dice "el modelo
+    # sobreestima" -- dice que la medicion no cubre lo que el modelo si cuenta.
+    assert residual["residual_flag"] == "sospechoso"
+    assert residual["residual_flag_reason"]
+    # Y `dock_legs_pct_of_modeled` dice cuanto de esa brecha son los tramos al
+    # muelle, que la camara de mesa nunca ve.
+    assert residual["dock_legs_pct_of_modeled"] == pytest.approx(62.6, abs=1.0)
+    assert r["residual_reason"] == residual["residual_flag_reason"]
+
+
+def test_sin_log_el_residual_es_null_con_motivo_y_no_ausencia_silenciosa(tmp_path):
+    """Regla 3 aplicada al campo que falta.
+
+    Omitir la clave se lee como "no hubo residual". `None` con motivo al lado
+    se lee como lo que es: no se paso el modelo contra el cual comparar.
+    """
+    comun = _escribir_caso(tmp_path)
+
+    r = run_field(out=tmp_path / "out", k=1, **comun)
+
+    assert "residual" in r
+    assert r["residual"] is None
+    assert "--log" in r["residual_reason"]
+
+
+def test_el_residual_completa_track_pct_con_los_pedidos_del_modelo(tmp_path):
+    """El criterio de exito de la etapa 3 del spec es computable o no lo es.
+
+    "≥60% de los pedidos con marcador visible" necesita un denominador de
+    PEDIDOS. Nada en src/ seteaba `tracks_expected`, asi que `track_pct` era
+    siempre None y lo unico reportado era cobertura de cuadros, que responde
+    otra pregunta.
+    """
+    comun = _escribir_caso(tmp_path)
+
+    sin_log = run_field(out=tmp_path / "a", k=1, **comun)
+    con_log = run_field(out=tmp_path / "b", log=tmp_path / "wms.csv", k=1, **comun)
+
+    assert sin_log["residual"] is None
+    assert con_log["residual"]["track_pct"] == pytest.approx(100.0)
+    assert "viajes esperados" in con_log["residual"]["coverage_note"]
 
 
 def test_la_salida_no_lleva_identidad(tmp_path):
@@ -110,8 +186,12 @@ def test_la_geometria_se_respeta_y_no_se_fuerza_la_del_cd(tmp_path):
         t0=pd.Timestamp("2026-09-14 10:00:00"),
         today=date(2026, 9, 14),
     )
-    a = run_field(out=tmp_path / "a", layout=MESA, **comun)
-    b = run_field(out=tmp_path / "b", layout=Layout(), **comun)
+    # k=1: con una sola pista, el borde de salida retiene `locations` bajo el
+    # default k=3 -- que es justamente lo que verifica
+    # `test_locations_no_se_emite_bajo_el_umbral_de_anonimato`. Aca se baja a
+    # proposito porque lo que se prueba es la geometria, no la compuerta.
+    a = run_field(out=tmp_path / "a", layout=MESA, k=1, **comun)
+    b = run_field(out=tmp_path / "b", layout=Layout(), k=1, **comun)
 
     # Las paradas son las mismas dos; lo que cambia es a que ubicacion caen.
     assert a["stops"] == b["stops"] == 2
@@ -280,3 +360,154 @@ def test_cli_field_end_to_end(tmp_path, capsys):
     salida = capsys.readouterr().out
     assert "coverage_note" in salida
     assert (tmp_path / "out" / "espagueti_medido.png").exists()
+
+
+def test_cli_field_con_log_imprime_el_residual(tmp_path, capsys):
+    """De punta a punta con --log: el residual sale por stdout.
+
+    Es la prueba de que el entregable existe como PRODUCTO y no solo como
+    funcion importable: `compare_travel` estaba escrita y testeada desde la
+    tarea 8, y no la llamaba ninguna linea de codigo de produccion.
+    """
+    _escribir_caso(tmp_path)
+
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "field",
+            "--detections", str(tmp_path / "det.csv"),
+            "--refs", str(tmp_path / "refs.csv"),
+            "--log", str(tmp_path / "wms.csv"),
+            "--out", str(tmp_path / "out"),
+            "--fps", "10",
+            "--k", "1",
+            "--aisles", "4",
+            "--bays", "10",
+            "--aisle-pitch", "2.5",
+            "--bay-pitch", "0.7",
+        ]
+    )
+    assert args.func(args) == 0
+
+    salida = json.loads(capsys.readouterr().out)
+    assert salida["residual"]["residual_pct"] is not None
+    assert salida["residual"]["residual_flag"] in {"esperado", "sospechoso"}
+
+
+# ------------------------------------------- puntos fuera de planta (max_distance)
+
+
+def _detecciones_con_salto_fuera_de_planta() -> str:
+    """Las mismas dos paradas, mas un tramo que salta 500 m fuera de planta.
+
+    Las referencias mapean 0-100 px a 0-10 m, asi que 5000 px son 500 m: lo
+    tipico de una homografia mal calibrada.
+    """
+    filas = _filas_deteccion()
+    # Cuatro segundos a 10 fps: lo suficiente para que, SIN el limite, el
+    # punto pegado al borde del layout genere una parada real de mas.
+    filas += [f"M1,{f},5000.0,5000.0" for f in range(160, 205, 5)]
+    return f"# frames_total={FRAMES_TOTAL}\n" + "\n".join(filas) + "\n"
+
+
+def test_un_punto_fuera_de_planta_se_descarta_y_la_cobertura_lo_dice(tmp_path):
+    """`max_distance_m` deja de ser codigo inerte.
+
+    `run_field` nunca lo pasaba, y el default `None` DESACTIVA el chequeo
+    entero: el punto a 500 m se pegaba a la esquina del layout, contaba como
+    parada real y la cobertura no decia nada. Ahora el limite se deriva de la
+    geometria y siempre se pasa.
+    """
+    (tmp_path / "refs.csv").write_text(REFS, encoding="utf-8")
+    (tmp_path / "det.csv").write_text(
+        _detecciones_con_salto_fuera_de_planta(), encoding="utf-8"
+    )
+
+    r = run_field(
+        detections=tmp_path / "det.csv",
+        refs=tmp_path / "refs.csv",
+        out=tmp_path / "out",
+        fps=10.0,
+        t0=pd.Timestamp("2026-09-14 10:00:00"),
+        today=date(2026, 9, 14),
+        layout=MESA,
+        k=1,
+    )
+
+    # El limite sale de la geometria (2 x el mayor pitch de MESA = 5 m), no de
+    # un numero fijo ni de que alguien se acuerde de pasarlo.
+    assert r["max_distance_m"] == pytest.approx(5.0)
+    # El punto de 500 m no invento una ubicacion de borde...
+    assert set(r["locations"]) == set(PARADAS_MESA)
+    # ...y la cobertura lo declara nombrando la causa probable.
+    assert "fuera de planta" in r["coverage_note"]
+    assert "homografia mal calibrada" in r["coverage_note"]
+
+
+def test_sin_el_limite_el_punto_fuera_de_planta_se_pegaba_al_borde(tmp_path):
+    """El contraste que prueba que el chequeo hace algo.
+
+    Con `max_distance_m` grande (el equivalente al `None` de antes), el mismo
+    punto se mapea a una ubicacion del layout y la cobertura no menciona nada.
+    """
+    (tmp_path / "refs.csv").write_text(REFS, encoding="utf-8")
+    (tmp_path / "det.csv").write_text(
+        _detecciones_con_salto_fuera_de_planta(), encoding="utf-8"
+    )
+
+    r = run_field(
+        detections=tmp_path / "det.csv",
+        refs=tmp_path / "refs.csv",
+        out=tmp_path / "out",
+        fps=10.0,
+        t0=pd.Timestamp("2026-09-14 10:00:00"),
+        today=date(2026, 9, 14),
+        layout=MESA,
+        max_distance_m=10_000.0,
+        k=1,
+    )
+
+    assert len(r["locations"]) > len(PARADAS_MESA)
+    assert "fuera de planta" not in r["coverage_note"]
+
+
+# ----------------------------------------------- borde de salida (reglas 9 y 10)
+
+
+def test_locations_no_se_emite_bajo_el_umbral_de_anonimato(tmp_path):
+    """Regla 10, aplicada en el borde y no solo definida en un modulo.
+
+    Con un solo sujeto, `locations` es el itinerario completo de una persona
+    identificable. `AnonymityGate` existia, estaba testeada y exportada, y no
+    la invocaba ninguna linea de codigo de produccion.
+    """
+    comun = _escribir_caso(tmp_path)
+
+    r = run_field(out=tmp_path / "out", **comun)  # k=3 por defecto, 1 pista
+
+    assert r["locations"] is None
+    motivo = r["locations_withheld_reason"]
+    assert "1 sujeto" in motivo
+    assert "k=3" in motivo
+    # El resto de la salida sigue saliendo: la compuerta retiene el agregado
+    # identificante, no la medicion entera.
+    assert r["measured_m_in_window"] > 0
+    assert r["stops"] == 2
+
+
+def test_toda_la_salida_pasa_por_assert_no_identity(tmp_path, monkeypatch):
+    """El borde es un lugar por el que se pasa siempre, no una funcion util.
+
+    Si `run_field` emitiera sin pasar por `gate_output`, romper
+    `assert_no_identity` no cambiaria nada y este test pasaria igual.
+    """
+    from fdekit.field import privacy
+
+    def _explotar(payload):
+        raise privacy.AnonymityError("el borde se ejecuto")
+
+    monkeypatch.setattr(privacy, "assert_no_identity", _explotar)
+
+    comun = _escribir_caso(tmp_path)
+    with pytest.raises(privacy.AnonymityError, match="el borde se ejecuto"):
+        run_field(out=tmp_path / "out", k=1, **comun)

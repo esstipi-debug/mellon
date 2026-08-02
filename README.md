@@ -148,6 +148,7 @@ Procedimiento completo, sobre un escritorio, en menos de dos minutos:
 
    ```bash
    fdekit field --detections det.csv --refs refs.csv --out out --fps 30 \
+                --log data/event_log.csv \
                 --aisles 4 --bays 10 --aisle-pitch 3 --bay-pitch 1
    ```
 
@@ -156,20 +157,65 @@ Procedimiento completo, sobre un escritorio, en menos de dos minutos:
    reportada en el pasillo 2 módulo 2 — un número que sale, y que no quiere
    decir nada.
 
+   `--log` es el log del WMS: **el modelo contra el que se mide, y sin él no hay
+   hallazgo.** Con él, la salida trae un bloque `residual` completo:
+
+   ```json
+   "residual": {
+     "modeled_m_per_order": 19.8,
+     "measured_m_per_order": 3.2,
+     "residual_pct": -84.0,
+     "residual_flag": "sospechoso",
+     "residual_flag_reason": "el residual es negativo o esta cerca de cero; ...",
+     "dock_legs_pct_of_modeled": 62.6,
+     "track_pct": 100.0
+   }
+   ```
+
+   Sin `--log`, la salida dice `"residual": null` **y explica por qué** en
+   `residual_reason` — que no se pasó el modelo contra el cual comparar. La
+   ausencia silenciosa del campo se leería como "no hubo residual".
+
+   El `residual_flag` importa tanto como el porcentaje: el modelo es un **piso**
+   (no ve retrocesos, ni el tramo de la excepción, ni congestión), así que un
+   residual chico o negativo no dice "el modelo es preciso" — dice que la
+   medición es sospechosa. `dock_legs_pct_of_modeled` es lo primero que hay que
+   mirar cuando eso pasa: sobre un escritorio, la cámara nunca ve los tramos al
+   muelle que el modelo sí cuenta.
+
+   Otros dos flags con default deliberado:
+
+   - `--max-distance` — metros máximos entre un punto medido y la ubicación más
+     cercana antes de descartarlo por **caer fuera de planta**. Por defecto se
+     deriva de la geometría declarada: `2 × max(aisle-pitch, bay-pitch)`. Es un
+     límite y no un interruptor: sin él, un punto a 500 m —lo típico de una
+     homografía mal calibrada— se pega en silencio a la esquina del layout,
+     cuenta como parada real y la cobertura informa 100%.
+   - `--k` — umbral de anonimato (default 3). Con menos de *k* pistas
+     reconstruidas, la lista de ubicaciones **no se emite**: con un solo sujeto
+     no es un agregado, es el itinerario completo de una persona identificable.
+     En su lugar va `locations_withheld_reason`. Para la demo de mesa, donde hay
+     una sola taza, hace falta `--k 1` a propósito.
+
    Si el CSV de detecciones no trae la línea `# frames_total=<int>` (por
    ejemplo, uno grabado antes de esta versión de `write_detections`), agregar
    `--frames <n>` con el total de cuadros del video. Sin ninguno de los dos,
    `fdekit field` falla en vez de adivinar el denominador de la cobertura.
 
 En `out/espagueti_medido.png` queda el recorrido real. La salida en consola trae
-los metros medidos y la nota de cobertura — qué fracción de los cuadros vio
-efectivamente el marcador. **Un recorrido sin cobertura no se muestra a un
-cliente:** lo que la cámara no vio no está en el número, y callarlo sería el
-error más caro que puede cometer este kit.
+los metros medidos, el residual contra el modelo y la nota de cobertura — qué
+fracción de los cuadros vio efectivamente el marcador y, cuando hay `--log`, qué
+fracción de los **pedidos** (`track_pct`). **Un recorrido sin cobertura no se
+muestra a un cliente:** lo que la cámara no vio no está en el número, y callarlo
+sería el error más caro que puede cometer este kit.
 
 Ninguna identidad sale del proceso: el `marker_id` se hashea con una sal de
 sesión que nunca se escribe a disco, y `tests/test_field_privacy.py` lo
-verifica. El sensor ve al operador; el archivo que sale, no.
+verifica. Además, **toda** la salida pasa por un único borde
+(`field.privacy.gate_output`) que corre la verificación de identidad sobre el
+diccionario completo y aplica el umbral de anonimato antes de emitir. No es una
+función disponible por si alguien se acuerda de llamarla: es el camino de salida.
+El sensor ve al operador; el archivo que sale, no.
 
 ---
 

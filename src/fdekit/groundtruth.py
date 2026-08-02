@@ -46,6 +46,7 @@ familia que el bug de anualizacion, con otra ropa:
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import date
 
 from .field.coverage import MeasurementCoverage
@@ -173,6 +174,8 @@ def compare_travel(
         residual = round((medido_por_pedido / modelado_por_pedido - 1) * 100, 1)
         flag = FLAG_ESPERADO if residual > MARGEN_SOSPECHOSO_PCT else FLAG_SOSPECHOSO
 
+    cobertura = _con_pedidos_esperados(coverage, orders_modeled)
+
     dock_legs_m = _dock_legs_m(modeled, layout)
     dock_legs_pct = round(dock_legs_m / modelado_m * 100, 1) if modelado_m > 0 else None
 
@@ -200,6 +203,38 @@ def compare_travel(
         "dock_legs_m_in_window": round(dock_legs_m, 1),
         "dock_legs_pct_of_modeled": dock_legs_pct,
         # Regla 3: la cobertura viaja pegada al numero, no en otro archivo.
-        "coverage_note": coverage.note(),
+        "coverage_note": cobertura.note(),
+        # "que fraccion de los PEDIDOS vio la camara" -- ver
+        # `_con_pedidos_esperados`. Es None solo cuando no hay denominador.
+        "track_pct": cobertura.track_pct,
         "today": today.isoformat(),
     }
+
+
+def _con_pedidos_esperados(
+    coverage: MeasurementCoverage, orders_modeled: int
+) -> MeasurementCoverage:
+    """Completa `tracks_expected` con los pedidos que el modelo si conoce.
+
+    Nada en `src/` seteaba `tracks_expected`, asi que `track_pct` era siempre
+    `None` y el criterio de exito de la etapa 3 del spec -- "≥60% de los
+    pedidos con marcador visible" -- no era computable. Lo unico que se
+    reportaba era cobertura de CUADROS, que responde otra pregunta: un video
+    puede tener el marcador visible el 100% del tiempo y haber capturado dos
+    de los cien viajes del turno.
+
+    El denominador estaba en la mano de este modulo desde el principio:
+    `orders_modeled` son los pedidos que el WMS declara en la ventana. Con el,
+    `track_pct` pasa a ser "que fraccion de los pedidos vio la camara", que es
+    la pregunta que hace un gerente.
+
+    NO se completa cuando `orders_modeled` es 0 y hay pistas vistas: esa
+    combinacion es justamente el hallazgo `modelo_no_vio_nada` (la camara midio
+    recorrido que el WMS no registra), y `MeasurementCoverage` la rechaza como
+    incoherente -- con razon, porque "0% de 0 pedidos esperados" no describe
+    nada. En ese caso la cobertura viaja sin `tracks_expected` y `track_pct`
+    queda en `None`, que es la respuesta honesta.
+    """
+    if orders_modeled == 0 and coverage.tracks_seen > 0:
+        return coverage
+    return dataclasses.replace(coverage, tracks_expected=orders_modeled)

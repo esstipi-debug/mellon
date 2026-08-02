@@ -186,15 +186,57 @@ def canonicalize(obj: object) -> object:
     producia ese falso negativo era exactamente el que recomienda el mensaje de
     error de `assert_no_identity`, asi que la unica salida segura es no
     convertirla.
+
+    Una etiqueta REPETIDA (en `Series.index` o en las columnas del `DataFrame`
+    ya con el indice reseteado) tambien se rechaza, por la misma familia de
+    razones: el dict resultante se queda con un solo valor por clave, asi que
+    de `["ARUCO-CRUDO-7", "sub-0123456789ab"]` bajo la etiqueta `resource`
+    sobrevive uno solo -- y si el que sobrevive es el limpio, el crudo
+    desaparece ANTES de que la verificacion lo vea y la salida se certifica
+    limpia. Deduplicar en silencio seria borrar la evidencia; se falla en su
+    lugar, nombrando la etiqueta repetida.
     """
     pd = _try_import_pandas()
     np = _try_import_numpy()
     return _canonicalize_impl(obj, pd, np)
 
 
+_DUPLICADAS_MSG = (
+    "{que} tiene la etiqueta {etiqueta!r} repetida, y convertir a dict dejaria "
+    "un solo valor por etiqueta: el otro DESAPARECERIA antes de que "
+    "assert_no_identity pudiera verlo, y la salida se certificaria limpia sin "
+    "que nadie haya mirado el valor borrado. Una compuerta de privacidad que "
+    "borra la evidencia es peor que una que falla abierto, asi que esto se "
+    "rechaza en vez de deduplicarse en silencio. Causa tipica: un merge sin "
+    "sufijos, o un CSV con encabezados repetidos. Renombrar las etiquetas "
+    "repetidas antes de emitir."
+)
+
+
+def _rechazar_etiquetas_duplicadas(etiquetas, que: str) -> None:
+    """Falla si hay una etiqueta repetida, nombrando cual.
+
+    pandas mismo tolera indices y columnas con etiquetas repetidas; el que no
+    puede tolerarlas es `canonicalize`, porque su salida es un dict y un dict
+    se queda con el ultimo valor de cada clave.
+    """
+    vistas = set()
+    for etiqueta in etiquetas:
+        try:
+            if etiqueta in vistas:
+                raise AnonymityError(_DUPLICADAS_MSG.format(que=que, etiqueta=etiqueta))
+            vistas.add(etiqueta)
+        except TypeError:
+            # Etiqueta no hasheable: no puede ser clave de dict de todas formas,
+            # y `_is_field_name` la rechaza mas adelante con su propio mensaje.
+            continue
+
+
 def _canonicalize_impl(obj: object, pd, np) -> object:
     if pd is not None and isinstance(obj, pd.DataFrame):
-        registros = obj.reset_index().to_dict("records")
+        con_indice = obj.reset_index()
+        _rechazar_etiquetas_duplicadas(list(con_indice.columns), "el DataFrame")
+        registros = con_indice.to_dict("records")
         return [_canonicalize_impl(reg, pd, np) for reg in registros]
 
     if pd is not None and isinstance(obj, pd.Series):
@@ -235,6 +277,7 @@ def _canonicalize_series(serie, pd, np) -> dict:
     _check_key_for_identity(serie.name)
 
     etiquetas = list(serie.index)
+    _rechazar_etiquetas_duplicadas(etiquetas, "la Series")
     if not all(_is_field_name(etiqueta) for etiqueta in etiquetas):
         raise AnonymityError(
             "una pandas.Series posicional (indice sin nombres de campo) no se "
@@ -246,6 +289,40 @@ def _canonicalize_series(serie, pd, np) -> dict:
     return {etiqueta: _canonicalize_impl(valor, pd, np) for etiqueta, valor in serie.items()}
 
 
+def _normalizar_nombre_campo(label: object) -> object:
+    """Normaliza un nombre de campo antes de compararlo contra los conjuntos.
+
+    `casefold()` + `strip()` porque las cabeceras de un export de WMS vienen
+    en mayusculas la mitad de las veces, y con espacios pegados la otra mitad.
+    Comparando por igualdad exacta, `marker_id` se atrapaba pero `Marker_ID`,
+    `MARKER_ID` y `marker_id ` pasaban limpios; y en PSEUDONYM_FIELDS el bypass
+    era total, porque una clave `Resource` desactivaba tambien la validacion de
+    forma del seudonimo -- o sea que `{"Resource": "Juan Perez"}` se certificaba
+    limpio.
+
+    Lo que esta funcion NO hace, a proposito: unificar separadores. `MarkerID`
+    en camelCase sigue pasando. Eso es un paso aparte, con su propia matriz de
+    ataque (¿que pasa con `MarkerId` vs `Marker_Id` vs `marker-id`?), y
+    mezclarlo aca traeria falsos positivos que esta normalizacion no tiene.
+    """
+    if isinstance(label, str):
+        return label.strip().casefold()
+    return label
+
+
+def _pista(valor: object) -> str:
+    """Prefijo corto de un valor, para un mensaje de error que no lo revele.
+
+    La compuerta existe para que la identidad no cruce el borde. Un mensaje que
+    dice `(valor: 'Juan Perez RUT 12.345.678-9')` la escribe en una excepcion
+    que termina en stdout, en el log y en el ticket -- o sea que la compuerta
+    filtra exactamente lo que vino a contener. Tres caracteres alcanzan para
+    reconocer cual de las filas es, y no para identificar a nadie.
+    """
+    texto = str(valor)
+    return f"{texto[:3]}..." if len(texto) > 3 else "..."
+
+
 def _check_key_for_identity(key: object) -> None:
     """Revisa un nombre de campo (o una tupla de MultiIndex) contra IDENTITY_FIELDS.
 
@@ -254,12 +331,16 @@ def _check_key_for_identity(key: object) -> None:
     CADA ELEMENTO por separado. Comparar la tupla entera contra IDENTITY_FIELDS
     nunca matchea, porque el conjunto contiene strings sueltos: ese fue el
     agujero de la ronda 2.
+
+    La comparacion es sobre el nombre normalizado (ver
+    `_normalizar_nombre_campo`). El mensaje nombra el campo, que es un nombre
+    de columna y no un dato de la persona; el VALOR nunca entra al mensaje.
     """
     if key is None:
         return
     candidatos = key if isinstance(key, tuple) else (key,)
     for candidato in candidatos:
-        if candidato in IDENTITY_FIELDS:
+        if _normalizar_nombre_campo(candidato) in IDENTITY_FIELDS:
             raise AnonymityError(
                 f"el campo '{candidato}' identifica y no puede cruzar el borde "
                 "(regla 9). Pseudonimizar con privacy.pseudonymize antes de emitir."
@@ -270,7 +351,7 @@ def _key_matches_pseudonym(key: object) -> bool:
     if key is None:
         return False
     candidatos = key if isinstance(key, tuple) else (key,)
-    return any(candidato in PSEUDONYM_FIELDS for candidato in candidatos)
+    return any(_normalizar_nombre_campo(c) in PSEUDONYM_FIELDS for c in candidatos)
 
 
 def _is_valid_pseudonym_value(val: object, pd) -> bool:
@@ -340,7 +421,8 @@ def _check_mapping_items(items, visited_ids: set, keep_alive: list, pd, np) -> N
     for clave, valor in items:
         if not _is_field_name(clave):
             raise AnonymityError(
-                f"la clave {clave!r} (tipo {type(clave).__name__}) no es un nombre "
+                f"una clave de tipo {type(clave).__name__} (empieza con "
+                f"{_pista(clave)!r}) no es un nombre "
                 "de campo: assert_no_identity solo certifica estructuras "
                 "JSON-simples, donde las claves son strings (o tuplas de strings "
                 "para columnas MultiIndex aplanadas). Sin nombre de campo no hay "
@@ -351,9 +433,14 @@ def _check_mapping_items(items, visited_ids: set, keep_alive: list, pd, np) -> N
         if _key_matches_pseudonym(clave):
             if not _is_valid_pseudonym_value(valor, pd):
                 raise AnonymityError(
-                    f"el campo '{clave}' contiene un valor que no es seudonimo "
-                    f"valido (valor: {valor!r}). Pseudonimizar con "
-                    "privacy.pseudonymize antes de emitir."
+                    f"el campo '{clave}' contiene un valor de tipo "
+                    f"{type(valor).__name__} que no tiene forma de seudonimo "
+                    f"(esperado 'sub-<12 hex>'; el valor empieza con "
+                    f"{_pista(valor)!r} y no se transcribe entero a proposito: "
+                    "un mensaje de error va a stdout y al log, y escribir ahi la "
+                    "identidad seria filtrar justo lo que esta compuerta "
+                    "contiene). Pseudonimizar con privacy.pseudonymize antes de "
+                    "emitir."
                 )
         else:
             _assert_no_identity_impl(valor, visited_ids, keep_alive, pd, np)
@@ -456,6 +543,73 @@ def _assert_no_identity_impl(payload: object, visited_ids: set, keep_alive: list
         "Convertir con privacy.canonicalize() a una estructura simple antes de "
         "emitir."
     )
+
+
+CAMPO_AGREGADO = "locations"
+CAMPO_MOTIVO = "locations_withheld_reason"
+
+_MOTIVO_BAJO_UMBRAL = (
+    "'{campo}' no se emite: el agregado cubre {n} sujeto(s) y el umbral de "
+    "anonimato es k={k}. La lista de ubicaciones de un solo sujeto no es un "
+    "agregado, es el itinerario completo de una persona identificable (spec "
+    "seccion 6). El conteo de sujetos sale de la cantidad de pistas reconstruidas: "
+    "una pista, un sujeto. Para verlo: ampliar la ventana hasta tener al menos "
+    "k sujetos, o bajar el umbral a proposito con --k asumiendo lo que eso "
+    "significa."
+)
+
+
+def gate_output(payload: dict, n_subjects: int, gate: AnonymityGate | None = None) -> dict:
+    """El borde unico: toda salida a disco o a consola pasa por aca (spec seccion 6).
+
+    Antes de esta funcion, la regla 9 se cumplia POR CONSTRUCCION —
+    `build_tracks` seudonimiza, asi que nunca llegaba un identificador crudo a
+    la salida— y la regla 10 no se aplicaba en ningun lado: `AnonymityGate`
+    estaba definida, testeada y exportada, y ni una linea de codigo de
+    produccion la invocaba. Una compuerta que hay que acordarse de invocar es
+    una compuerta que no existe; el spec promete un borde, y un borde es un
+    lugar por el que se pasa siempre, no una funcion disponible.
+
+    Hace dos cosas, en este orden:
+
+    1. `assert_no_identity` sobre el diccionario COMPLETO. No sobre los campos
+       que uno sospecha: sobre todo, porque el campo que se escapa es siempre
+       el que nadie penso en revisar.
+    2. `AnonymityGate` sobre `locations`. Si el agregado no llega a k sujetos,
+       la lista NO se emite y en su lugar va el motivo en
+       `locations_withheld_reason` -- un `None` explicito con su razon al lado,
+       no la ausencia silenciosa del campo, que se lee como "no habia
+       ubicaciones" en vez de "no se pueden mostrar".
+
+    `n_subjects` es el conteo de sujetos distintos que cubre el agregado. En
+    `run_field` sale de la cantidad de PISTAS RECONSTRUIDAS: una pista es un
+    marcador, y un marcador es un carro que lleva una persona. No sale del
+    numero de detecciones ni de paradas, que son muchas por sujeto.
+
+    Devuelve un dict NUEVO; no muta el que recibio.
+    """
+    if not isinstance(payload, dict):
+        raise AnonymityError(
+            f"el borde de salida recibe un dict de resultados, no un "
+            f"{type(payload).__name__}: armar el dict con nombres de campo "
+            "explicitos antes de emitir."
+        )
+    if n_subjects < 0:
+        raise AnonymityError(
+            f"n_subjects no puede ser negativo (llego {n_subjects}); tiene que "
+            "ser la cantidad de sujetos distintos que cubre el agregado."
+        )
+
+    assert_no_identity(payload)
+
+    gate = gate if gate is not None else AnonymityGate()
+    salida = dict(payload)
+    if CAMPO_AGREGADO in salida and not gate.allows(n_subjects):
+        salida[CAMPO_AGREGADO] = None
+        salida[CAMPO_MOTIVO] = _MOTIVO_BAJO_UMBRAL.format(
+            campo=CAMPO_AGREGADO, n=n_subjects, k=gate.k
+        )
+    return salida
 
 
 def _ya_visitado(payload: object, visited_ids: set, keep_alive: list) -> bool:

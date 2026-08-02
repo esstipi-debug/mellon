@@ -12,6 +12,7 @@ from fdekit.field.privacy import (
     AnonymityGate,
     assert_no_identity,
     canonicalize,
+    gate_output,
     new_session_salt,
     pseudonymize,
 )
@@ -425,3 +426,139 @@ def test_legitimo_records_de_dataframe_con_resource_seudonimizado_sigue_pasando(
 
     df = pd.DataFrame({"resource": ["sub-a1b2c3d4e5f6"], "distance_m": [41.2]})
     assert assert_no_identity(df.to_dict("records")) is None
+
+
+# --- Arreglo final: comparacion de nombres de campo case/space-insensible ----
+
+
+@pytest.mark.parametrize(
+    "clave",
+    ["Marker_ID", "MARKER_ID", "marker_id ", " marker_id", "Operator", "RUT"],
+)
+def test_variantes_de_mayusculas_y_espacios_de_un_campo_que_identifica_se_atrapan(clave):
+    """Las cabeceras de un export de WMS vienen en mayusculas la mitad de las
+    veces. Comparando por igualdad exacta, solo `marker_id` se atrapaba."""
+    with pytest.raises(AnonymityError, match="identifica"):
+        assert_no_identity({clave: "ARUCO-CRUDO-7"})
+
+
+def test_resource_en_mayuscula_ya_no_desactiva_la_validacion_de_seudonimo():
+    """El bypass total que estaba parqueado: en PSEUDONYM_FIELDS, una clave con
+    otra capitalizacion no solo cambiaba la clasificacion del campo -- apagaba
+    la verificacion de FORMA del valor, y `{"Resource": "Juan Perez"}` se
+    certificaba limpio."""
+    with pytest.raises(AnonymityError, match="seudonimo"):
+        assert_no_identity({"Resource": "Juan Perez"})
+
+
+def test_la_normalizacion_no_unifica_separadores_a_proposito():
+    """`MarkerID` en camelCase sigue pasando: unificar separadores es un paso
+    aparte con su propia matriz de ataque, y mezclarlo aca traeria falsos
+    positivos que casefold()+strip() no tiene. Se documenta el limite en vez de
+    fingir que esta cubierto (regla 3)."""
+    assert assert_no_identity({"MarkerID": "ARUCO-CRUDO-7"}) is None
+
+
+def test_la_normalizacion_no_trae_falsos_positivos():
+    assert assert_no_identity({"Location": "01-003-1", "Distance_M": 41.2}) is None
+
+
+# --- Arreglo final: etiquetas duplicadas no borran la evidencia -------------
+
+
+def test_series_con_etiquetas_duplicadas_se_rechaza_en_vez_de_perder_un_valor():
+    """El peor modo de falla de una compuerta de privacidad: no falla abierta,
+    borra la prueba. Con el indice repetido, el dict se queda con un valor y el
+    identificador crudo desaparece ANTES de que la verificacion lo vea."""
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    serie = pd.Series(["ARUCO-CRUDO-7", "sub-0123456789ab"], index=["resource", "resource"])
+    with pytest.raises(AnonymityError, match="repetida"):
+        canonicalize(serie)
+
+
+def test_dataframe_con_columnas_duplicadas_se_rechaza():
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = pd.DataFrame([["ARUCO-CRUDO-7", "sub-0123456789ab"]], columns=["resource", "resource"])
+    with pytest.raises(AnonymityError, match="repetida"):
+        canonicalize(df)
+
+
+def test_series_con_etiquetas_distintas_sigue_convirtiendose():
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    serie = pd.Series(["sub-0123456789ab", 41.2], index=["resource", "distance_m"])
+    assert canonicalize(serie) == {"resource": "sub-0123456789ab", "distance_m": 41.2}
+
+
+# --- Arreglo final: el mensaje no escribe la identidad que atrapo -----------
+
+
+def test_el_mensaje_de_error_no_transcribe_el_valor_identificante():
+    """La compuerta existe para que la identidad no cruce el borde. Un mensaje
+    que la escribe entera va a stdout, al log y al ticket: filtra exactamente
+    lo que vino a contener."""
+    identidad = "Juan Perez RUT 12.345.678-9"
+    with pytest.raises(AnonymityError) as exc:
+        assert_no_identity({"resource": identidad})
+
+    mensaje = str(exc.value)
+    assert identidad not in mensaje
+    assert "Perez" not in mensaje
+    assert "12.345.678" not in mensaje
+    # Nombra el campo y el tipo de problema, y da una pista de tres caracteres.
+    assert "resource" in mensaje
+    assert "seudonimo" in mensaje
+    assert "'Jua...'" in mensaje
+
+
+def test_el_mensaje_de_clave_no_valida_tampoco_transcribe_el_valor():
+    # Una clave que no es nombre de campo (aca, bytes) puede traer identidad
+    # adentro: el mensaje nombra el tipo y da tres caracteres, no la transcribe.
+    with pytest.raises(AnonymityError) as exc:
+        assert_no_identity({b"Juan Perez RUT 12.345.678-9": "x"})
+    mensaje = str(exc.value)
+    assert "12.345.678" not in mensaje
+    assert "Perez" not in mensaje
+    assert "bytes" in mensaje
+
+
+# --- Regla 10 en el borde: gate_output --------------------------------------
+
+
+def test_gate_output_retiene_locations_bajo_el_umbral():
+    salida = {"locations": ["01-003-1", "02-004-1"], "stops": 2}
+    r = gate_output(salida, n_subjects=1)
+
+    assert r["locations"] is None
+    assert "1 sujeto" in r["locations_withheld_reason"]
+    assert r["stops"] == 2
+    # No muta el original.
+    assert salida["locations"] == ["01-003-1", "02-004-1"]
+
+
+def test_gate_output_emite_locations_al_llegar_al_umbral():
+    salida = {"locations": ["01-003-1"], "stops": 2}
+    r = gate_output(salida, n_subjects=3)
+
+    assert r["locations"] == ["01-003-1"]
+    assert "locations_withheld_reason" not in r
+
+
+def test_gate_output_respeta_un_k_explicito():
+    salida = {"locations": ["01-003-1"]}
+    assert gate_output(salida, n_subjects=1, gate=AnonymityGate(k=1))["locations"]
+
+
+def test_gate_output_corre_assert_no_identity_sobre_todo_el_diccionario():
+    with pytest.raises(AnonymityError, match="identifica"):
+        gate_output({"locations": [], "marker_id": "ARUCO-CRUDO-7"}, n_subjects=99)
+
+
+def test_gate_output_rechaza_lo_que_no_es_un_dict_de_resultados():
+    with pytest.raises(AnonymityError, match="dict de resultados"):
+        gate_output(["01-003-1"], n_subjects=99)

@@ -12,6 +12,7 @@ from .privacy import (
     AnonymityGate,
     assert_no_identity,
     canonicalize,
+    gate_output,
     new_session_salt,
     pseudonymize,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "AnonymityGate",
     "assert_no_identity",
     "canonicalize",
+    "gate_output",
     "new_session_salt",
     "pseudonymize",
     "Detection",

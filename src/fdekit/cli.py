@@ -107,7 +107,45 @@ def cmd_travel(a):
     return 0
 
 
-def run_field(detections, refs, out, fps, t0, today, layout=None, frames_total=None) -> dict:
+# Multiplo del paso mas grueso de la grilla que se acepta como distancia de un
+# punto medido a la ubicacion mas cercana. El default sale de la GEOMETRIA y no
+# de un numero fijo: en un CD de `aisle_pitch=3` un metro de error es ruido, y
+# en una maqueta de escritorio de `bay_pitch=0.1` es estar en la otra punta.
+# Dos pasos porque un punto entre dos ubicaciones vecinas dista a lo sumo medio
+# paso, y hace falta margen para el error de la homografia (criterio del spec:
+# 5 cm) mas el jitter del marcador; mas de dos pasos ya no es "cayo entre dos
+# ubicaciones", es "cayo afuera de la grilla".
+FACTOR_MAX_DISTANCE = 2.0
+
+
+def max_distance_por_defecto(layout) -> float:
+    """Limite de confianza derivado de la geometria declarada.
+
+    Existe porque `nearest_location` acepta `max_distance_m=None` y ese `None`
+    DESACTIVA el chequeo entero: un punto a 500 m fuera de planta se pega en
+    silencio a la esquina del layout, cuenta como parada real, aporta sus
+    metros al total y la cobertura informa 100%. Todo el trabajo de detectar
+    puntos fuera de planta existia y no se ejecutaba nunca en el pipeline real,
+    porque `run_field` no pasaba el parametro. Un chequeo que hay que acordarse
+    de activar es un chequeo que no existe: ahora siempre se pasa un numero, y
+    `--max-distance` sirve para SOBREESCRIBIRLO, no para habilitarlo.
+    """
+    return FACTOR_MAX_DISTANCE * max(layout.aisle_pitch, layout.bay_pitch)
+
+
+def run_field(
+    detections,
+    refs,
+    out,
+    fps,
+    t0,
+    today,
+    layout=None,
+    frames_total=None,
+    log=None,
+    max_distance_m=None,
+    k=3,
+) -> dict:
     """Demo de mesa: CSV de detecciones -> espagueti medido + residual.
 
     `t0` y `today` son argumentos (regla 4): esta funcion nunca mira el reloj,
@@ -131,12 +169,27 @@ def run_field(detections, refs, out, fps, t0, today, layout=None, frames_total=N
     cobertura -- el tramo sin detecciones desaparece del calculo en vez de
     contar como cuadros sin ver, y eso vacia el modulo de cobertura entero,
     que es la pieza que sostiene la honestidad de toda la medicion (regla 3).
+
+    `log` es el log del WMS: el modelo contra el que se compara. Con el, esta
+    funcion produce EL ENTREGABLE que el README promete -- "la diferencia entre
+    los dos es el hallazgo" -- llamando a `groundtruth.compare_travel` y
+    metiendo su resultado entero bajo la clave `residual`. Sin el, `residual`
+    es `None` y `residual_reason` dice POR QUE: que no se paso un modelo contra
+    el cual comparar. La ausencia silenciosa del campo se lee como "no hubo
+    residual"; un `None` con motivo se lee como lo que es.
+
+    `max_distance_m` es el limite de confianza espacial. Su default sale de la
+    geometria (`max_distance_por_defecto`), nunca es `None`: ver ahi por que.
+
+    `k` es el umbral de anonimato de la regla 10, aplicado en el borde de
+    salida (`privacy.gate_output`). El conteo de sujetos es la cantidad de
+    PISTAS reconstruidas: un marcador, un carro, una persona.
     """
     import csv as _csv
     from pathlib import Path
 
     from .field.homography import FloorHomography
-    from .field.privacy import new_session_salt
+    from .field.privacy import AnonymityGate, gate_output, new_session_salt
     from .field.tracks import build_tracks, load_detections, track_distance_m, tracks_to_eventlog
     from .layout import Layout
     from .timestudy.spaghetti import plot_spaghetti
@@ -173,25 +226,71 @@ def run_field(detections, refs, out, fps, t0, today, layout=None, frames_total=N
         )
 
     lay = layout or Layout()
+    limite_m = max_distance_m if max_distance_m is not None else max_distance_por_defecto(lay)
+
     tracks, cobertura = build_tracks(
         dets, homografia, fps=fps, salt=new_session_salt(), frames_total=frames_total_resuelto
     )
-    log, cobertura = tracks_to_eventlog(tracks, lay, t0=t0, coverage=cobertura)
-    plot_spaghetti(log, lay, path=str(out / "espagueti_medido.png"))
+    medido, cobertura = tracks_to_eventlog(
+        tracks, lay, t0=t0, coverage=cobertura, max_distance_m=limite_m
+    )
+    plot_spaghetti(medido, lay, path=str(out / "espagueti_medido.png"))
 
-    return {
+    residual, residual_reason = _residual_contra_el_modelo(
+        log, tracks, lay, cobertura, today=today
+    )
+
+    salida = {
         "tracks": len(tracks),
         "measured_m_in_window": round(
             sum(track_distance_m(p) for p in tracks.values()), 1
         ),
-        "stops": int(len(log)),
+        "stops": int(len(medido)),
         # Las ubicaciones dependen de la geometria que se paso, y por eso van
         # en la salida: son lo que deja ver si el layout declarado es el
-        # correcto.
-        "locations": sorted(log.df["location"].dropna().unique().tolist()),
+        # correcto. Con un solo sujeto son tambien su itinerario completo, y
+        # por eso el borde de salida las retiene bajo el umbral k (regla 10).
+        "locations": sorted(medido.df["location"].dropna().unique().tolist()),
+        "max_distance_m": round(limite_m, 3),
         "coverage_note": cobertura.note(),
+        "residual": residual,
+        "residual_reason": residual_reason,
         "today": today.isoformat(),
     }
+    # Borde unico (spec seccion 6): nada sale de esta funcion sin pasar por aca.
+    return gate_output(salida, n_subjects=len(tracks), gate=AnonymityGate(k=k))
+
+
+_SIN_MODELO = (
+    "no hay residual porque no se paso el modelo contra el cual comparar: "
+    "`fdekit field` mide el recorrido, y el hallazgo es la DIFERENCIA contra "
+    "lo que el WMS dice que deberia haber sido. Pasar el log del WMS con "
+    "--log <ruta.csv> para obtenerlo."
+)
+
+
+def _residual_contra_el_modelo(log, tracks, layout, coverage, today):
+    """Compara la medicion contra el log del WMS, si es que se paso uno.
+
+    Devuelve `(residual, motivo)`. `groundtruth.compare_travel` existia desde
+    la tarea 8 y no la llamaba nadie fuera de sus tests: el branch declaraba
+    que el entregable es un residual medido y ningun comando lo producia. Aca
+    se enchufa.
+
+    El resultado entra ENTERO -- `residual_pct`, `modeled_m_per_order`,
+    `measured_m_per_order`, `residual_flag`, `residual_flag_reason`,
+    `dock_legs_pct_of_modeled`, `track_pct` -- porque el porcentaje solo invita
+    a leerse al reves: el modelo es un piso, asi que un residual chico es una
+    medicion sospechosa, no un modelo preciso, y eso lo dice el flag, no el
+    numero.
+    """
+    if log is None:
+        return None, _SIN_MODELO
+
+    from .groundtruth import compare_travel
+
+    resultado = compare_travel(_load_log(log), tracks, layout, coverage, today=today)
+    return resultado, resultado["residual_flag_reason"]
 
 
 def cmd_field(a):
@@ -215,6 +314,9 @@ def cmd_field(a):
             aisles=a.aisles, bays=a.bays, aisle_pitch=a.aisle_pitch, bay_pitch=a.bay_pitch
         ),
         frames_total=a.frames,
+        log=a.log,
+        max_distance_m=a.max_distance,
+        k=a.k,
     )
     print(json.dumps(out, indent=2, ensure_ascii=False))
     return 0
@@ -428,6 +530,28 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="total de cuadros del video; solo hace falta si el CSV no trae "
         "la linea '# frames_total=<int>' (la que escribe write_detections)",
+    )
+    f.add_argument(
+        "--log",
+        default=None,
+        help="log del WMS: el modelo contra el que se mide. Sin el no hay "
+        "residual, y la salida lo dice explicitamente en vez de omitirlo",
+    )
+    f.add_argument(
+        "--max-distance",
+        dest="max_distance",
+        type=float,
+        default=None,
+        help="metros maximos entre un punto medido y la ubicacion mas cercana "
+        "antes de descartarlo por caer fuera de planta. Por defecto se deriva "
+        "de la geometria: 2 x el mayor de --aisle-pitch y --bay-pitch",
+    )
+    f.add_argument(
+        "--k",
+        type=int,
+        default=3,
+        help="umbral de anonimato (regla 10): con menos de k pistas "
+        "reconstruidas, la lista de ubicaciones no se emite",
     )
     # Geometria: los defaults son los del CD. La maqueta de escritorio pasa la
     # suya (p.ej. --aisles 4 --bays 10 --aisle-pitch 3 --bay-pitch 1).
