@@ -340,6 +340,91 @@ def test_dwell_events_corta_el_grupo_ante_una_excursion_larga():
     assert conteo == ["01-002-1", "01-002-1", "03-005-1"]
 
 
+# --- Ronda de arreglo 3: la ronda 2 definia la duracion de un grupo fusionado
+# como la SUMA de la duracion propia de cada uno de sus tramos. Con tramos de
+# UNA sola muestra (duracion propia cero) eso da una suma de cero, y la
+# permanencia real desaparecia -- justo el caso realista: cuando el carro
+# alterna entre dos ubicaciones a una frecuencia parecida a la de la camara,
+# cada tramo tiene exactamente una muestra. Los tests de arriba con tramos de
+# varias muestras (2-3 puntos por visita) siguen pasando sin cambios: ahi el
+# span y la suma coinciden porque cada grupo tiene un solo tramo propio
+# contribuyendo. Los tres tests de abajo repiten los mismos tres casos con
+# tramos de una sola muestra -- el caso que la ronda 2 no cubria -- mas un
+# cuarto caso nuevo, el hueco de deteccion.
+#
+# (El test de la ronda 1 "una sola interrupcion corta no duplica la parada"
+# se borro en la ronda 2 y no se repuso: bajo el criterio de tramo-ruido, una
+# interrupcion corta es exactamente un tramo con duracion propia menor que
+# max_gap_s, y ese comportamiento ya lo cubre
+# test_dwell_events_junta_excursiones_cortas_de_ruido_en_una_sola_parada de
+# arriba. Un test aparte para el mismo criterio no agregaria cobertura.)
+
+
+def _otras_ubicaciones_de_paso(n: int) -> list[tuple[float, float]]:
+    """`n` ubicaciones del layout, todas distintas entre si y de M_XY/E_XY.
+
+    Sirven para simular ruido de deteccion que "salta" a un lugar distinto
+    cada vez -- no siempre al mismo -- que es lo que hace una excursion
+    de una sola muestra sin que ninguna de esas ubicaciones de paso acumule
+    su propia permanencia.
+    """
+    return [LAY.xy(f"04-{b:03d}-1") for b in range(1, n + 1)]
+
+
+def test_dwell_events_junta_excursiones_de_una_sola_muestra_en_una_parada():
+    # Caso 1 (ronda 3): 20 s en M, con una excursion de una sola muestra cada
+    # 2 s (a una ubicacion de paso distinta cada vez, para que ninguna de esas
+    # excursiones acumule permanencia propia). El span de M -- de su primera a
+    # su ultima muestra -- llega a los ~18 s, y con eso alcanza min_dwell_s.
+    de_paso = _otras_ubicaciones_de_paso(10)
+    puntos: list[TrackPoint] = []
+    t = 0.0
+    for i in range(20):
+        puntos.append(TrackPoint(t, *M_XY))
+        t += 1.0
+        if i % 2 == 1:
+            puntos.append(TrackPoint(t, *de_paso[i // 2]))
+            t += 1.0
+
+    resultado = dwell_events(puntos, LAY)
+    assert [loc for _, loc in resultado.stops] == ["01-002-1"]
+
+
+def test_dwell_events_no_pierde_una_segunda_ubicacion_con_tramos_de_una_sola_muestra():
+    # Caso 2 (ronda 3), el que la ronda 2 todavia perdia: dos ubicaciones
+    # reales alternando cada 1 s durante 20 s, con tramos de una sola muestra
+    # (duracion propia cero). Con suma, cada tramo de M o de E aporta cero, y
+    # ninguna de las dos alcanza min_dwell_s -- la ronda 2 fallaba aca. Con
+    # span, M abarca de su primera a su ultima muestra (~18 s) y E lo mismo
+    # (~18 s): dos paradas.
+    puntos: list[TrackPoint] = []
+    t = 0.0
+    for i in range(20):
+        puntos.append(TrackPoint(t, *(M_XY if i % 2 == 0 else E_XY)))
+        t += 1.0
+
+    resultado = dwell_events(puntos, LAY)
+    ubicaciones = sorted(loc for _, loc in resultado.stops)
+    assert ubicaciones == ["01-002-1", "03-005-1"]
+
+
+def test_dwell_events_corta_el_grupo_por_hueco_de_deteccion_en_la_misma_ubicacion():
+    # Caso 4 (ronda 3), nuevo: el marcador se queda 5 s en M, desaparece 100 s
+    # (ningun punto registrado -- un hueco de deteccion, no una excursion a
+    # otra ubicacion) y reaparece en la MISMA M durante 6 s mas. Sin el corte
+    # por hueco, el span iria de la primera a la ultima muestra e inventaria
+    # 111 s de permanencia que nadie observo. Con el corte, son dos tramos de
+    # M separados, y cada uno se mide por su cuenta: dos paradas.
+    puntos = _tramo(0.0, M_XY, 6)  # 0..5, 5 s
+    puntos += _tramo(105.0, M_XY, 7)  # 105..111, 6 s, despues de un hueco de 100 s
+
+    resultado = dwell_events(puntos, LAY)
+    assert [loc for _, loc in resultado.stops] == ["01-002-1", "01-002-1"]
+    # El hueco no se cuenta como permanencia: la segunda parada arranca
+    # donde reaparece el marcador, no donde desaparecio.
+    assert resultado.stops[1][0] == 105.0
+
+
 def test_dwell_events_marca_el_timestamp_de_entrada_no_el_de_salida():
     # El timestamp de la parada tiene que ser el del primer punto del grupo
     # (la entrada), no el del ultimo punto que ya se habia ido (la salida) --
