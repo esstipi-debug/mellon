@@ -25,7 +25,7 @@ def _linea(marker: str, n: int, paso_px: float = 10.0) -> list[Detection]:
 
 def test_reconstruye_la_distancia_de_una_recta_conocida():
     # 10 frames avanzando 10 px = 90 px recorridos = 9 m.
-    tracks, _ = build_tracks(_linea("M1", 10), H, fps=10.0, salt=new_session_salt())
+    tracks, _ = build_tracks(_linea("M1", 10), H, fps=10.0, salt=new_session_salt(), frames_total=10)
     (puntos,) = tracks.values()
     assert track_distance_m(puntos) == pytest.approx(9.0, abs=0.02)
 
@@ -39,15 +39,17 @@ def test_la_distancia_no_depende_de_la_tasa_de_cuadros():
     lenta = _linea("M1", 10, paso_px=10.0)
     rapida = [Detection("M1", f, f * 5.0, 0.0) for f in range(19)]
 
-    d_lenta = track_distance_m(list(build_tracks(lenta, H, 10.0, new_session_salt())[0].values())[0])
+    d_lenta = track_distance_m(
+        list(build_tracks(lenta, H, 10.0, new_session_salt(), frames_total=10)[0].values())[0]
+    )
     d_rapida = track_distance_m(
-        list(build_tracks(rapida, H, 20.0, new_session_salt())[0].values())[0]
+        list(build_tracks(rapida, H, 20.0, new_session_salt(), frames_total=19)[0].values())[0]
     )
     assert d_lenta == pytest.approx(d_rapida, abs=0.02)
 
 
 def test_el_tiempo_sale_de_los_frames_y_del_fps():
-    tracks, _ = build_tracks(_linea("M1", 5), H, fps=10.0, salt=new_session_salt())
+    tracks, _ = build_tracks(_linea("M1", 5), H, fps=10.0, salt=new_session_salt(), frames_total=5)
     (puntos,) = tracks.values()
     assert puntos[0].t_s == pytest.approx(0.0)
     assert puntos[-1].t_s == pytest.approx(0.4)  # frame 4 a 10 fps
@@ -55,14 +57,14 @@ def test_el_tiempo_sale_de_los_frames_y_del_fps():
 
 def test_separa_marcadores_distintos_en_pistas_distintas():
     dets = _linea("M1", 5) + _linea("M2", 5)
-    tracks, cov = build_tracks(dets, H, 10.0, new_session_salt())
+    tracks, cov = build_tracks(dets, H, 10.0, new_session_salt(), frames_total=5)
     assert len(tracks) == 2
     assert cov.tracks_seen == 2
 
 
 def test_las_claves_son_seudonimos_y_no_el_marcador_crudo():
     # Regla 9: el marker_id no sale de esta funcion.
-    tracks, _ = build_tracks(_linea("MARKER-07", 5), H, 10.0, new_session_salt())
+    tracks, _ = build_tracks(_linea("MARKER-07", 5), H, 10.0, new_session_salt(), frames_total=5)
     (clave,) = tracks.keys()
     assert clave.startswith("sub-")
     assert "MARKER-07" not in clave
@@ -72,7 +74,7 @@ def test_una_pista_demasiado_corta_se_descarta_y_baja_la_cobertura():
     # Dos detecciones sueltas no son un viaje: son ruido. Descartarlas en
     # silencio seria mentir; van al contador de descartes.
     dets = _linea("M1", 10) + _linea("M2", 2)
-    tracks, cov = build_tracks(dets, H, 10.0, new_session_salt(), min_points=3)
+    tracks, cov = build_tracks(dets, H, 10.0, new_session_salt(), frames_total=10, min_points=3)
     assert len(tracks) == 1
     assert cov.discarded_low_confidence == 1
 
@@ -111,3 +113,43 @@ def test_load_detections_rechaza_un_csv_sin_las_columnas():
 
     with pytest.raises(ValueError, match="falta"):
         parse_detections(io.StringIO("marcador,cuadro\nM1,0\n"))
+
+
+def test_load_detections_lee_un_csv_con_bom():
+    # Ronda de arreglo 1, hallazgo 1: "CSV UTF-8" desde Excel en Windows lleva
+    # BOM. Sin utf-8-sig, DictReader deja '﻿marker_id' en fieldnames y
+    # el error dice "falta la columna" cuando en realidad esta ahi.
+    contenido = "marker_id,frame,x_px,y_px\nM1,0,10.5,20.5\n"
+
+    def _escribir_con_bom(ruta):
+        ruta.write_bytes(contenido.encode("utf-8-sig"))
+
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        ruta = Path(tmp) / "con_bom.csv"
+        _escribir_con_bom(ruta)
+        dets = load_detections(ruta)
+        assert dets == [Detection("M1", 0, 10.5, 20.5)]
+
+
+def test_parse_detections_fila_mas_corta_que_la_cabecera_da_valueerror():
+    # Ronda de arreglo 1, hallazgo 3: una fila corta hace que DictReader
+    # rellene con None, y float(None) revienta con TypeError -- inconsistente
+    # con el resto del modulo, que siempre informa con ValueError.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    with pytest.raises(ValueError, match="falta"):
+        parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,10.5\n"))
+
+
+def test_build_tracks_sin_frames_total_es_un_error_de_argumento():
+    # Ronda de arreglo 1, hallazgo 2: frames_total opcional reproducia la
+    # mentira que el campo existe para evitar (100% de cobertura siempre que
+    # se omitiera). Ahora es obligatorio: omitirlo es un TypeError de Python,
+    # no una cobertura falsa y silenciosa.
+    with pytest.raises(TypeError):
+        build_tracks(_linea("M1", 5), H, 10.0, new_session_salt())
