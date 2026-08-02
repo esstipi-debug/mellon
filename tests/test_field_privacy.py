@@ -11,6 +11,7 @@ from fdekit.field.privacy import (
     AnonymityError,
     AnonymityGate,
     assert_no_identity,
+    canonicalize,
     new_session_salt,
     pseudonymize,
 )
@@ -238,3 +239,135 @@ def test_acepta_resource_seudonimo_valido():
     # resource con un seudonimo bien formado debe pasar.
     d = {"resource": "sub-a1b2c3d4e5f6", "distance_m": 41.2}
     assert_no_identity(d) is None
+
+
+# --- Ronda de arreglo 3: fallar cerrado en vez de lista negra ---------------
+#
+# Las tres rondas anteriores cerraron, cada una, el caso que se le señalo y
+# dejaron abierta la variante vecina mas obvia (DataFrame, indice de Series,
+# ahora MultiIndex e indice de DataFrame). Los tests de abajo son ataques que
+# pasaban en silencio ANTES de esta ronda.
+
+
+def test_rechaza_dataframe_con_columnas_multiindex():
+    # Una columna MultiIndex tipo ("meta", "marker_id") no matchea IDENTITY_FIELDS
+    # si se compara la tupla entera. Hay que aplanar y revisar cada elemento.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    columnas = pd.MultiIndex.from_tuples([("meta", "marker_id"), ("meta", "distance_m")])
+    df = pd.DataFrame([["MARKER-07", 41.2]], columns=columnas)
+    with pytest.raises(AnonymityError, match="marker_id"):
+        assert_no_identity(df)
+
+
+def test_rechaza_series_con_indice_multiindex():
+    # Mismo ataque que el DataFrame, pero sobre el indice de una Series.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    indice = pd.MultiIndex.from_tuples([("meta", "operator_id"), ("meta", "distance_m")])
+    s = pd.Series(["OP-001", 41.2], index=indice)
+    with pytest.raises(AnonymityError, match="operator_id"):
+        assert_no_identity(s)
+
+
+def test_rechaza_dataframe_con_marker_id_como_indice_de_fila():
+    # df.set_index("marker_id") mueve el nombre de campo al indice: el VALOR
+    # de cada fila ya no es "marker_id", pero el NOMBRE del eje si lo es.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = pd.DataFrame({"marker_id": ["MARKER-07"], "distance_m": [41.2]}).set_index("marker_id")
+    with pytest.raises(AnonymityError, match="marker_id"):
+        assert_no_identity(df)
+
+
+def test_rechaza_dataframe_con_index_name_marker_id():
+    # Mismo hueco, via asignacion directa de index.name en vez de set_index.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = pd.DataFrame({"distance_m": [41.2]})
+    df.index.name = "marker_id"
+    with pytest.raises(AnonymityError, match="marker_id"):
+        assert_no_identity(df)
+
+
+def test_rechaza_objeto_con_slots_sin_dict():
+    # Un objeto con __slots__ no tiene __dict__: antes de esta ronda pasaba
+    # en silencio porque no matcheaba ningun isinstance conocido.
+    class Evento:
+        __slots__ = ("operator", "distance_m")
+
+        def __init__(self, operator, distance_m):
+            self.operator = operator
+            self.distance_m = distance_m
+
+    evt = Evento(operator="OP-001", distance_m=41.2)
+    with pytest.raises(AnonymityError, match="Evento"):
+        assert_no_identity(evt)
+
+
+def test_rechaza_tipo_arbitrario_no_reconocido():
+    # Cualquier tipo que la funcion no sepa leer se rechaza, no se ignora.
+    tipo_raro = iter([1, 2, 3])
+    with pytest.raises(AnonymityError, match="no reconocido"):
+        assert_no_identity(tipo_raro)
+
+
+def test_estructura_muy_profunda_da_anonymity_error_no_recursion_error():
+    # El contrato es "devuelve None o levanta AnonymityError". Un RecursionError
+    # crudo rompe a quien solo captura AnonymityError.
+    profundidad = 3000
+    estructura = {"distance_m": 1.0}
+    for _ in range(profundidad):
+        estructura = {"nested": estructura}
+
+    with pytest.raises(AnonymityError, match="profunda"):
+        assert_no_identity(estructura)
+
+
+def test_canonicalize_de_dataframe_con_indice_prohibido_se_atrapa_despues():
+    # canonicalize() hace reset_index() antes de to_dict("records"): el
+    # indice prohibido se convierte en columna comun, y assert_no_identity
+    # (que ya sabe leer dicts y listas) lo atrapa sin codigo especial.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = pd.DataFrame({"marker_id": ["MARKER-07"], "distance_m": [41.2]}).set_index("marker_id")
+    resultado = canonicalize(df)
+
+    assert isinstance(resultado, list)
+    with pytest.raises(AnonymityError, match="marker_id"):
+        assert_no_identity(resultado)
+
+
+# --- Re-confirmar los casos legitimos: esta ronda no debe romperlos --------
+
+
+def test_legitimo_resource_none_sigue_pasando():
+    assert assert_no_identity({"resource": None, "distance_m": 41.2}) is None
+
+
+def test_legitimo_resource_pd_na_sigue_pasando():
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    assert assert_no_identity({"resource": pd.NA, "distance_m": 41.2}) is None
+
+
+def test_legitimo_seudonimo_bien_formado_sigue_pasando():
+    assert assert_no_identity({"resource": "sub-a1b2c3d4e5f6", "distance_m": 41.2}) is None
+
+
+def test_legitimo_resource_no_esta_en_identity_fields():
+    assert "resource" not in IDENTITY_FIELDS
+
+
+def test_legitimo_dataframe_con_resource_seudonimizado_sigue_pasando():
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = pd.DataFrame({"resource": ["sub-a1b2c3d4e5f6"], "distance_m": [41.2]})
+    assert assert_no_identity(df) is None
