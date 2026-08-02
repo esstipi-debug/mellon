@@ -15,6 +15,13 @@ from .privacy import (
     new_session_salt,
     pseudonymize,
 )
+from .tracks import (
+    Detection,
+    TrackPoint,
+    build_tracks,
+    load_detections,
+    track_distance_m,
+)
 
 __all__ = [
     "FloorHomography",
@@ -25,4 +32,9 @@ __all__ = [
     "canonicalize",
     "new_session_salt",
     "pseudonymize",
+    "Detection",
+    "TrackPoint",
+    "build_tracks",
+    "load_detections",
+    "track_distance_m",
 ]
