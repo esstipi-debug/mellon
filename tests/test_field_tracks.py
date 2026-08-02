@@ -151,6 +151,96 @@ def test_load_detections_lee_la_linea_de_metadatos_de_frames_total(tmp_path):
     assert frames_total == 137
 
 
+# --- Ronda de arreglo 1 sobre esta tarea: la linea de metadatos nueva
+# (`# frames_total=<int>`) no tenia ni un caso adversarial cubierto, y el
+# int() sin envolver dejaba pasar el ValueError crudo de Python en vez del
+# mensaje con causa y que revisar que tiene el resto del modulo.
+
+
+def test_parse_detections_frames_total_no_numerico_da_valueerror_claro():
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    with pytest.raises(ValueError, match="no es un entero"):
+        parse_detections(
+            io.StringIO("# frames_total=abc\nmarker_id,frame,x_px,y_px\nM1,0,1.0,2.0\n")
+        )
+
+
+def test_parse_detections_frames_total_vacio_da_valueerror_claro():
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    with pytest.raises(ValueError, match="no es un entero"):
+        parse_detections(
+            io.StringIO("# frames_total=\nmarker_id,frame,x_px,y_px\nM1,0,1.0,2.0\n")
+        )
+
+
+def test_parse_detections_frames_total_negativo_da_valueerror_claro():
+    # Ronda de arreglo 1, hallazgo 2: sin este chequeo, un frames_total
+    # negativo pasaba sin quejarse en load_detections y recien explotaba mas
+    # tarde en MeasurementCoverage.__post_init__, lejos del CSV que lo causo.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    with pytest.raises(ValueError, match="negativo"):
+        parse_detections(
+            io.StringIO("# frames_total=-5\nmarker_id,frame,x_px,y_px\nM1,0,1.0,2.0\n")
+        )
+
+
+def test_parse_detections_frames_total_duplicado_da_valueerror_claro():
+    # Ronda de arreglo 1, hallazgo 3a: dos lineas de metadatos seguidas antes
+    # daban "falta la(s) columna(s)", que manda a revisar el lugar
+    # equivocado. Tiene que nombrar la metadata repetida explicitamente.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    with pytest.raises(ValueError, match="repetida"):
+        parse_detections(
+            io.StringIO(
+                "# frames_total=10\n# frames_total=20\n"
+                "marker_id,frame,x_px,y_px\nM1,0,1.0,2.0\n"
+            )
+        )
+
+
+def test_parse_detections_frames_total_despues_de_la_cabecera_da_valueerror_claro():
+    # Ronda de arreglo 1, hallazgo 3b: la linea de metadatos corrida a
+    # despues de la cabecera (en vez de antes) antes daba "falta(n)
+    # valor(es)", indirecto. Tiene que nombrar la metadata fuera de lugar.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    with pytest.raises(ValueError, match="fuera de lugar"):
+        parse_detections(
+            io.StringIO(
+                "marker_id,frame,x_px,y_px\n# frames_total=10\nM1,0,1.0,2.0\n"
+            )
+        )
+
+
+def test_parse_detections_ida_y_vuelta_normal_con_metadata_sigue_funcionando():
+    # Confirma que las validaciones nuevas no rompieron el camino feliz.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    dets, frames_total = parse_detections(
+        io.StringIO(
+            "# frames_total=42\nmarker_id,frame,x_px,y_px\nM1,0,1.0,2.0\nM1,1,1.5,2.5\n"
+        )
+    )
+    assert dets == [Detection("M1", 0, 1.0, 2.0), Detection("M1", 1, 1.5, 2.5)]
+    assert frames_total == 42
+
+
 def test_load_detections_rechaza_un_csv_sin_las_columnas():
     import io
 
@@ -317,9 +407,13 @@ def test_el_eventlog_no_lleva_identidad():
 
 
 # --- Ronda de arreglo 1: el algoritmo del ancla fallaba en las dos
-# direcciones ante oscilaciones (ruido de deteccion normal, no excepcional).
-# M y E son dos ubicaciones bien separadas del layout: M es donde el carro se
-# queda, E es la segunda ubicacion (a veces ruido, a veces una visita real).
+# direcciones ante interrupciones cortas (sea ruido de deteccion o una
+# ubicacion real, el criterio TEMPORAL de estos tests no distingue entre las
+# dos -- ver la ronda de arreglo 5, que agrega el criterio ESPACIAL que si
+# distingue). M y E son dos ubicaciones bien separadas del layout (6.71 m,
+# mucho mas que cualquier jitter real de un marcador ArUco): M es donde el
+# carro se queda, E es la segunda ubicacion, tratada como interrupcion corta
+# o como visita real segun el test.
 M_XY = LAY.xy("01-002-1")
 E_XY = LAY.xy("03-005-1")
 
@@ -523,6 +617,68 @@ def test_dwell_events_marca_el_timestamp_de_entrada_no_el_de_salida():
     resultado = dwell_events(puntos, LAY)
     (t_parada, _), = resultado.stops
     assert t_parada == puntos[0].t_s
+
+
+# --- Ronda de arreglo 5: el eje ESPACIAL que faltaba desde la ronda 2. Con
+# estanteria densa, dos ubicaciones vecinas separadas por centimetros pueden
+# tardar mas que max_gap_s en alternar (una postura repetitiva -- inclinarse
+# para alcanzar un nivel de arriba, no ruido de camara), y el criterio
+# TEMPORAL solo no distingue eso de un desplazamiento real: ninguna de las
+# dos ubicaciones llega a min_dwell_s por si sola, y la parada real
+# desaparece entera. noise_radius_m agrega el criterio de distancia entre
+# ubicaciones (via Layout.xy) que faltaba.
+LAY_DENSO = Layout(aisles=4, bays=10, levels=2, aisle_pitch=3.0, bay_pitch=0.4)
+V1_XY = LAY_DENSO.xy("01-002-1")
+V2_XY = LAY_DENSO.xy("01-003-1")  # vecina inmediata: a 0.4 m, bay_pitch
+
+
+def _alternar_vecinas(xy_a, xy_b, n: int, paso: float) -> list[TrackPoint]:
+    """`n` puntos alternando entre dos ubicaciones, separados por `paso` s.
+
+    Modela un operario parado cerca del borde entre dos ubicaciones,
+    inclinandose y enderezandose para alcanzar un nivel de arriba: cada
+    "vuelta" completa (una ubicacion, despues la otra) dura `2 * paso`
+    segundos.
+    """
+    return [TrackPoint(i * paso, *(xy_a if i % 2 == 0 else xy_b)) for i in range(n)]
+
+
+def test_dwell_events_absorbe_dos_ubicaciones_vecinas_en_estanteria_densa():
+    # El caso del revisor: bay_pitch=0.4 m, las dos ubicaciones vecinas estan
+    # a 0.4 m < noise_radius_m (0.75 por defecto). 12 puntos alternando cada
+    # 1.25 s (una vuelta completa de la postura cada 2.5 s) -> se absorben
+    # una a la otra sin importar que cada tramo individual dure menos que
+    # max_gap_s: UNA parada, no cero.
+    puntos = _alternar_vecinas(V1_XY, V2_XY, 12, paso=1.25)
+
+    resultado = dwell_events(puntos, LAY_DENSO)
+    assert [loc for _, loc in resultado.stops] == ["01-002-1"]
+
+
+def test_dwell_events_no_absorbe_ubicaciones_lejanas_aunque_alternen_igual():
+    # El mismo patron de alternancia, pero con M_XY/E_XY (6.71 m de
+    # distancia, muy por encima de noise_radius_m). Sin regresion: sigue
+    # cortando y da dos paradas, una por ubicacion -- exactamente
+    # test_dwell_events_no_pierde_una_segunda_ubicacion_real_alternada, con
+    # otro periodo de muestreo.
+    puntos = _alternar_vecinas(M_XY, E_XY, 12, paso=1.25)
+
+    resultado = dwell_events(puntos, LAY)
+    ubicaciones = sorted(loc for _, loc in resultado.stops)
+    assert ubicaciones == ["01-002-1", "03-005-1"]
+
+
+def test_dwell_events_noise_radius_m_cero_vuelve_al_comportamiento_viejo():
+    # noise_radius_m=0 desactiva el criterio espacial: ninguna distancia es
+    # "menor que cero", asi que nunca absorbe por cercania. Con eso, el caso
+    # de estanteria densa vuelve a partirse en dos paradas -- el
+    # comportamiento de antes de la ronda 5. Fija el default como una
+    # decision (0.75, no cero) y no como un accidente de implementacion.
+    puntos = _alternar_vecinas(V1_XY, V2_XY, 12, paso=1.25)
+
+    resultado = dwell_events(puntos, LAY_DENSO, noise_radius_m=0.0)
+    ubicaciones = sorted(loc for _, loc in resultado.stops)
+    assert ubicaciones == ["01-002-1", "01-003-1"]
 
 
 def test_nearest_location_con_max_distance_devuelve_none_fuera_de_planta():

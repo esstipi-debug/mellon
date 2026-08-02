@@ -50,6 +50,21 @@ def detect_markers(
     tramo que el marcador no mostro desapareceria en silencio. Quien llame
     tiene que pasarle este numero a `write_detections` para que no se pierda
     al guardar el CSV.
+
+    Dos limites de este conteo, sin cobertura de test en este repo porque
+    ninguno se puede ejercitar sin OpenCV y un video real:
+
+    - El loop corta ante el primer `cap.read()` que devuelve `ok=False`: se
+      asume que eso es fin de stream. Un video con un cuadro corrupto o
+      ilegible EN EL MEDIO (no al final) trunca `frame_idx` ahi mismo en vez
+      de saltear ese cuadro y seguir contando los que siguen -- y un
+      `frames_total` truncado infla la cobertura reportada despues, porque el
+      denominador de `MeasurementCoverage` queda mas chico de lo real.
+    - Si `ids` viene `None` en todos los cuadros (la camara grabo pero nunca
+      vio ningun marcador), esta funcion devuelve `([], frame_idx)` con
+      `frame_idx` igual al total real de cuadros recorridos. Eso es correcto:
+      no es un error, es el caso de cobertura cero -- distinto de un video
+      que no se pudo abrir, que si levanta `ValueError` mas abajo.
     """
     try:
         import cv2
@@ -60,12 +75,12 @@ def detect_markers(
     detector = cv2.aruco.ArucoDetector(aruco_dict, cv2.aruco.DetectorParameters())
 
     cap = cv2.VideoCapture(str(video_path))
-    if not cap.isOpened():
-        raise ValueError(f"no se pudo abrir el video: {video_path}")
-
-    detecciones: list[Detection] = []
-    frame_idx = 0
     try:
+        if not cap.isOpened():
+            raise ValueError(f"no se pudo abrir el video: {video_path}")
+
+        detecciones: list[Detection] = []
+        frame_idx = 0
         while True:
             ok, frame = cap.read()
             if not ok:
@@ -84,6 +99,10 @@ def detect_markers(
                     )
             frame_idx += 1
     finally:
+        # try/finally envuelve tambien el chequeo de isOpened(): antes solo
+        # cubria el loop de lectura, y si isOpened() daba falso, ValueError
+        # se levantaba sin liberar el VideoCapture -- inconsistente con el
+        # manejo de recursos del resto de esta funcion.
         cap.release()
 
     return detecciones, frame_idx

@@ -58,6 +58,32 @@ class TrackPoint:
 _PREFIJO_METADATA = "# frames_total="
 
 
+def _parse_frames_total_metadata(linea: str) -> int:
+    """Interpreta la linea de metadatos `# frames_total=<int>`.
+
+    Mismo estandar de mensaje que el resto del modulo (BOM, fila corta, fila
+    larga, frame negativo): nombra la causa y dice que revisar, en vez de
+    dejar pasar el `ValueError` crudo de `int()`.
+    """
+    valor = linea[len(_PREFIJO_METADATA) :].strip()
+    try:
+        frames_total = int(valor)
+    except ValueError as e:
+        raise ValueError(
+            "la primera linea del CSV de detecciones declara el total de "
+            f"cuadros del video con '{_PREFIJO_METADATA}<int>', pero el "
+            f"valor encontrado no es un entero: {valor!r}; revisar como se "
+            "genero esa linea (deberia venir de vision.write_detections)"
+        ) from e
+    if frames_total < 0:
+        raise ValueError(
+            "la primera linea del CSV de detecciones declara "
+            f"frames_total={frames_total}, y un total de cuadros no puede "
+            "ser negativo; revisar el valor que le paso a write_detections"
+        )
+    return frames_total
+
+
 def parse_detections(handle: IO[str]) -> tuple[list[Detection], int | None]:
     """Lee detecciones de un handle de texto CSV.
 
@@ -65,14 +91,29 @@ def parse_detections(handle: IO[str]) -> tuple[list[Detection], int | None]:
     `# frames_total=<int>` -- ver el contrato de metadatos en el docstring
     del modulo. Si esta, se saltea y su valor se devuelve junto con las
     detecciones; si no esta, se devuelve `None` en su lugar, sin adivinar.
+
+    Esa linea tiene que ser la PRIMERA y UNICA del archivo: repetida, o
+    corrida a despues de la cabecera, es un error explicito aca -- no un
+    "falta la columna" o "falta el valor" indirecto que manda a revisar el
+    lugar equivocado (el mismo defecto que ya se arreglo para el BOM).
     """
     primera_linea = handle.readline()
     if primera_linea.startswith(_PREFIJO_METADATA):
-        frames_total = int(primera_linea[len(_PREFIJO_METADATA) :].strip())
-        fuente = handle
+        frames_total = _parse_frames_total_metadata(primera_linea)
+        segunda_linea = handle.readline()
+        if segunda_linea.startswith(_PREFIJO_METADATA):
+            raise ValueError(
+                "el CSV de detecciones tiene la linea de metadatos "
+                f"'{_PREFIJO_METADATA}<int>' repetida; tiene que aparecer una "
+                "sola vez, como la primera linea del archivo, antes de la "
+                "cabecera 'marker_id,frame,x_px,y_px'"
+            )
+        fuente = itertools.chain([segunda_linea], handle)
+        primera_fila_de_datos = 3
     else:
         frames_total = None
         fuente = itertools.chain([primera_linea], handle)
+        primera_fila_de_datos = 2
 
     reader = csv.DictReader(fuente)
     fieldnames = reader.fieldnames or []
@@ -95,8 +136,10 @@ def parse_detections(handle: IO[str]) -> tuple[list[Detection], int | None]:
         raise ValueError(f"al CSV de detecciones le falta(n) la(s) columna(s): {faltan}")
 
     detecciones = []
-    # Arranca en 2: la fila 1 es la cabecera, la primera fila de datos es la 2.
-    for numero_fila, r in enumerate(reader, start=2):
+    # primera_fila_de_datos ya contempla si hubo linea de metadatos antes de
+    # la cabecera (fila 3) o no (fila 2, el caso de siempre: la fila 1 es la
+    # cabecera).
+    for numero_fila, r in enumerate(reader, start=primera_fila_de_datos):
         sobrantes = r.get(None)
         if sobrantes:
             raise ValueError(
@@ -104,6 +147,14 @@ def parse_detections(handle: IO[str]) -> tuple[list[Detection], int | None]:
                 f"{len(sobrantes)} valor(es) de mas respecto de la cabecera; "
                 "causa probable: un campo con una coma sin comillas que corrio "
                 "las columnas siguientes, revisar esa fila en el archivo original"
+            )
+        primer_campo = r.get(_COLUMNAS[0])
+        if isinstance(primer_campo, str) and primer_campo.startswith(_PREFIJO_METADATA):
+            raise ValueError(
+                f"fila {numero_fila} del CSV de detecciones parece la linea "
+                f"de metadatos '{_PREFIJO_METADATA}<int>' fuera de lugar; "
+                "tiene que ir como la primera linea del archivo, antes de la "
+                "cabecera 'marker_id,frame,x_px,y_px', no despues"
             )
         faltantes = [c for c in _COLUMNAS if r.get(c) is None]
         if faltantes:
@@ -293,12 +344,25 @@ def _tramos_consecutivos(
     return tramos
 
 
+def _distancia_ubicaciones(layout: Layout, a: str, b: str) -> float:
+    """Distancia en metros entre dos ubicaciones del layout, via `Layout.xy`.
+
+    Es la distancia entre las COORDENADAS de las ubicaciones, no entre
+    puntos crudos del track: dos puntos crudos asignados a la misma
+    ubicacion tienen distancia 0 aca, aunque el marcador haya saltado unos
+    centimetros entre cuadros.
+    """
+    (ax, ay), (bx, by) = layout.xy(a), layout.xy(b)
+    return math.dist((ax, ay), (bx, by))
+
+
 def dwell_events(
     points: list[TrackPoint],
     layout: Layout,
     min_dwell_s: float = 4.0,
     max_gap_s: float = 2.0,
     max_distance_m: float | None = None,
+    noise_radius_m: float = 0.75,
 ) -> DwellEvents:
     """Paradas reales: ni lugares por los que se paso, ni ruido de deteccion.
 
@@ -326,11 +390,17 @@ def dwell_events(
          ubicacion): el track se quedo sin muestras por mas de `max_gap_s`, y
          ningun grupo puede asumir que la ubicacion se mantuvo durante ese
          tiempo no observado.
-       - *¿El carro se fue a otro lado?* -- la duracion PROPIA del tramo
-         (`t_fin - t_ini` de ese tramo solo). Si es `< max_gap_s` es RUIDO
-         (se tolera: no corta nada); si es `>= max_gap_s` es un desplazamiento
-         real, y corta la fusion de cualquier OTRA ubicacion que estuviera
-         esperando (la propia ubicacion del tramo sigue abierta y acumulando).
+       - *¿El carro se fue a otro lado?* -- un tramo de OTRA ubicacion se
+         absorbe (no corta nada) si su duracion PROPIA es `< max_gap_s` (una
+         interrupcion corta, sea ruido de deteccion o una parada real breve)
+         **o** si esa ubicacion esta a menos de `noise_radius_m` de la
+         ubicacion del grupo (ronda de arreglo 5 de la tarea 6 -- la
+         distancia se mide entre las COORDENADAS de las dos ubicaciones via
+         `Layout.xy`, `_distancia_ubicaciones`, no entre los puntos crudos).
+         Si NINGUNA de las dos se cumple (lejos Y dura mas que el umbral), es
+         un desplazamiento real, y corta la fusion de cualquier OTRA
+         ubicacion que estuviera esperando (la propia ubicacion del tramo
+         sigue abierta y acumulando).
     4. Se emite una parada por cada grupo fusionado cuya duracion llega a
        `min_dwell_s`, con el `t_s` del primer punto del grupo.
 
@@ -381,17 +451,44 @@ def dwell_events(
       separado -> DOS paradas (si cada lado alcanza `min_dwell_s` por si
       solo). Un marcador que no se vio no es un marcador que se quedo quieto
       -- es justamente lo que la cobertura existe para declarar.
+    - Estanteria densa (`bay_pitch` chico, p.ej. 0.4 m): un operario parado
+      cerca del borde entre dos ubicaciones vecinas, inclinandose y
+      enderezandose para alcanzar un nivel de arriba, alterna entre las dos
+      asignaciones sin moverse. Cada tramo dura menos que `max_gap_s`, es
+      ruido temporal -- pero antes de la ronda 5, ninguna de las dos
+      ubicaciones llegaba sola a `min_dwell_s`, y la parada desaparecia
+      entera sin dejar rastro. Con `noise_radius_m` (ronda 5), las dos
+      ubicaciones vecinas estan a menos de `noise_radius_m` de distancia, asi
+      que se absorben una a la otra sin importar cuanto dure cada tramo ->
+      UNA parada.
 
-    `max_gap_s=2.0` por default es el umbral que separa ruido de parada real,
-    y cumple dos roles con el mismo numero: dentro de un tramo, mas largo que
-    el ruido de deteccion tipico entre cuadros consecutivos y mas corto que un
-    desplazamiento real a otra ubicacion; entre tramos de la misma ubicacion,
-    mas largo que un hueco de deteccion normal (el marcador se pierde un
-    instante) y mas corto que un hueco que amerita desconfiar de la
-    permanencia. Subirlo mucho fusiona paradas vecinas en una sola, o inventa
-    permanencia sobre huecos de deteccion largos; bajarlo a cero corta
-    cualquier interrupcion (incluido el ruido normal), y se vuelve al bug
-    original del algoritmo de ancla.
+    `max_gap_s=2.0` por default es el umbral TEMPORAL que separa una
+    interrupcion corta de un desplazamiento real: dentro de un tramo, mas
+    largo que el ruido de deteccion tipico entre cuadros consecutivos y mas
+    corto que un desplazamiento real a otra ubicacion; entre tramos de la
+    misma ubicacion, mas largo que un hueco de deteccion normal (el marcador
+    se pierde un instante) y mas corto que un hueco que amerita desconfiar de
+    la permanencia. Subirlo mucho fusiona paradas vecinas en una sola, o
+    inventa permanencia sobre huecos de deteccion largos; bajarlo a cero
+    corta cualquier interrupcion (incluido el ruido normal), y se vuelve al
+    bug original del algoritmo de ancla.
+
+    `noise_radius_m=0.75` por default es el umbral ESPACIAL, el eje que
+    faltaba desde la ronda 2 (ronda de arreglo 5): mas grande que el jitter
+    de deteccion de un marcador ArUco (centimetros) y que el paso de una
+    estanteria densa (`bay_pitch` chico, p.ej. 0.4 m en e-commerce o farma),
+    y mas chico que la distancia entre bahias de un CD de pitch normal
+    (metros). Con estanteria densa, el criterio TEMPORAL solo no alcanza: el
+    periodo critico (el tiempo entre dos "vueltas" de una postura repetitiva,
+    como inclinarse para alcanzar un nivel de arriba) se cruza en segundos,
+    no en minutos, y ninguna de las dos ubicaciones vecinas llega a
+    `min_dwell_s` por si sola -- la parada real desaparece entera. El eje
+    espacial resuelve eso sin tocar el temporal: una ubicacion vecina cerca
+    se absorbe SIEMPRE, sin importar cuanto dure el tramo; una ubicacion
+    lejos solo se absorbe si dura menos que `max_gap_s`, como antes. Subirlo
+    mucho fusiona dos paradas vecinas legitimas (dos bahias distintas que el
+    operario realmente visito una despues de la otra); bajarlo a cero vuelve
+    al bug de arriba (la parada de estanteria densa desaparece otra vez).
 
     El algoritmo anterior (ancla que reinicia al alejarse de un radio) fallaba
     en las dos direcciones: una permanencia real cortada por ruido
@@ -409,16 +506,26 @@ def dwell_events(
     carro se fue a otro lado?" quedaban medidas con el mismo numero (el hueco
     entre puntos del grupo), y una ubicacion visitada cada `> max_gap_s`
     segundos con OTRA deteccion real en el medio se leia como ausencia del
-    marcador, exactamente el bug original con otra puerta. Este algoritmo
-    (ronda 4) separa las dos preguntas: `hueco_antes` mide ausencia sobre el
-    TRACK completo, la duracion propia del tramo mide desplazamiento real.
+    marcador, exactamente el bug original con otra puerta. El de la ronda 4
+    separa las dos preguntas: `hueco_antes` mide ausencia sobre el TRACK
+    completo, la duracion propia del tramo mide desplazamiento real -- pero
+    solo con el eje TEMPORAL, y el revisor de la ronda 5 encontro el caso
+    realista que ese eje solo no cubre: con estanteria densa, dos ubicaciones
+    vecinas separadas por centimetros pueden tardar mas que `max_gap_s` en
+    alternar (una postura repetitiva, no ruido de camara), y sin un criterio
+    de distancia, cada una se lee como una interrupcion sustancial de la
+    otra -- ninguna llega a `min_dwell_s`, y la parada real desaparece
+    entera. `noise_radius_m` (ronda 5) agrega el eje ESPACIAL que faltaba
+    desde la ronda 2.
 
-    `radius_m` ya no existe (se fue en la ronda 1): era una tolerancia
-    espacial continua, la distancia del punto al ultimo visto. La tolerancia
-    actual es de otro tipo, y no la reemplaza: en el espacio, la asigna la
-    grilla fija de `nearest_location`; en el tiempo, la controla `max_gap_s`.
-    Son dos ejes distintos (espacio vs. tiempo), asi que ese grado de libertad
-    espacial no se recupera con este cambio.
+    `radius_m` (el de antes de la ronda 1) no es lo mismo que
+    `noise_radius_m`, aunque los dos sean distancias: `radius_m` era una
+    tolerancia CONTINUA sobre la distancia de un punto al ultimo punto
+    visto (por eso desaparecio cuando el algoritmo dejo de rastrear un
+    "ultimo punto"). `noise_radius_m` es una distancia FIJA entre las
+    COORDENADAS DE DOS UBICACIONES del layout (`Layout.xy`), no entre
+    puntos crudos del track -- un eje distinto, reintroducido para una
+    pregunta distinta.
 
     El caso de "una sola interrupcion corta dentro de una permanencia larga"
     (un test de la ronda 1, borrado en la ronda 2) no tiene test propio en
@@ -457,7 +564,7 @@ def dwell_events(
 
     for loc, t_ini, t_fin, hueco_antes in tramos:
         duracion_tramo = t_fin - t_ini
-        es_ruido = duracion_tramo < max_gap_s
+        es_ruido_temporal = duracion_tramo < max_gap_s
 
         if hueco_antes:
             # Pregunta 1: ¿el marcador dejo de verse? Medida sobre el TRACK
@@ -467,20 +574,47 @@ def dwell_events(
             for l in list(abiertos):
                 _cerrar(l)
 
+        loc_efectiva = loc
         if loc is not None:
             grupo = abiertos.get(loc)
-            if grupo is None:
-                abiertos[loc] = {"t_primero": t_ini, "t_ultimo": t_fin}
-            else:
+            if grupo is not None:
                 grupo["t_ultimo"] = t_fin
+            else:
+                # No hay grupo propio abierto todavia. Si hay un grupo
+                # abierto de OTRA ubicacion a menos de `noise_radius_m`
+                # (ronda 5), este tramo se fusiona ADENTRO de ese grupo en
+                # vez de abrir uno competidor -- si no, dos ubicaciones
+                # vecinas (p.ej. estanteria densa) terminan cada una con su
+                # propio span y su propia parada, en vez de una sola.
+                vecino = next(
+                    (
+                        l
+                        for l in abiertos
+                        if _distancia_ubicaciones(layout, loc, l) < noise_radius_m
+                    ),
+                    None,
+                )
+                if vecino is not None:
+                    abiertos[vecino]["t_ultimo"] = t_fin
+                    loc_efectiva = vecino
+                else:
+                    abiertos[loc] = {"t_primero": t_ini, "t_ultimo": t_fin}
 
-        if not es_ruido:
-            # Pregunta 2: ¿el carro se fue a otro lado? La duracion PROPIA de
-            # este tramo (no un hueco entre puntos) decide si es un
-            # desplazamiento real. Si lo es, corta la fusion de cualquier
-            # OTRA ubicacion que estuviera esperando (la propia, si la hay,
-            # sigue abierta y acumulando en la rama de arriba).
-            for otra_loc in [l for l in abiertos if l != loc]:
+        # Pregunta 2: ¿el carro se fue a otro lado? Un tramo de OTRA ubicacion
+        # se absorbe (no la corta) si es corto (`es_ruido_temporal`) O si esa
+        # otra ubicacion esta a menos de `noise_radius_m` DE LA UBICACION DEL
+        # TRAMO (ronda 5) -- estanteria densa hace que dos ubicaciones vecinas
+        # alternen mas lento que `max_gap_s` sin que el carro se haya movido
+        # de verdad. Solo si NINGUNA de las dos se cumple es un desplazamiento
+        # real que corta la fusion. Se compara contra `loc_efectiva`, no
+        # `loc`: si este tramo ya se fusiono en un grupo vecino, ese grupo no
+        # se corta a si mismo.
+        for otra_loc in [l for l in abiertos if l != loc_efectiva]:
+            cerca_espacialmente = (
+                loc is not None
+                and _distancia_ubicaciones(layout, loc, otra_loc) < noise_radius_m
+            )
+            if not es_ruido_temporal and not cerca_espacialmente:
                 _cerrar(otra_loc)
 
     for loc in list(abiertos):
@@ -497,6 +631,7 @@ def tracks_to_eventlog(
     min_dwell_s: float = 4.0,
     max_gap_s: float = 2.0,
     max_distance_m: float | None = None,
+    noise_radius_m: float = 0.75,
 ) -> tuple[EventLog, MeasurementCoverage]:
     """Pistas medidas -> el contrato de datos que el kit entero ya sabe leer.
 
@@ -535,6 +670,7 @@ def tracks_to_eventlog(
             min_dwell_s=min_dwell_s,
             max_gap_s=max_gap_s,
             max_distance_m=max_distance_m,
+            noise_radius_m=noise_radius_m,
         )
         total_descartados += resultado.discarded_out_of_bounds
         for t_s, loc in resultado.stops:
