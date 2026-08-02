@@ -147,6 +147,51 @@ def _attr(has_control_group: bool) -> Range:
     return Range(0.65, 0.85, 0.95) if has_control_group else Range(0.20, 0.40, 0.65)
 
 
+# Claves que el kit emitia ya anualizadas, con un 250 hardcodeado, mientras esta
+# funcion volvia a escalar por los dias de operacion del arquetipo.
+_LEGACY_KEYS = {
+    ("travel", "walking_hours_annual"): "walking_hours_in_window",
+    ("standard_work_gap", "recoverable_hours_annual"): "recoverable_hours_in_window",
+}
+
+
+def _reject_preannualized(findings: dict) -> None:
+    """Rechaza un `hallazgos.json` anterior al cambio de unidad.
+
+    Regla 3 del repo: no mentir en silencio. Un archivo viejo ya no trae las
+    claves `*_in_window` que se leen ahora, y `.get(clave, 0.0)` haria
+    desaparecer L1 y L2 del caso economico sin una sola linea de aviso. Un caso
+    economico al que se le cayo una palanca entera sigue imprimiendo un VAN
+    perfectamente creible, y ese es el modo de falla mas caro de este repo.
+    """
+    stale = [
+        f"{block}.{old} (ahora {new})"
+        for (block, old), new in _LEGACY_KEYS.items()
+        if old in findings.get(block, {}) and new not in findings.get(block, {})
+    ]
+    if any("annual_hours_lost" in r and "hours_lost_in_window" not in r for r in findings.get("rework", [])):
+        stale.append("rework[].annual_hours_lost (ahora hours_lost_in_window)")
+
+    if stale:
+        raise ValueError(
+            "hallazgos.json en formato viejo (pre-anualizacion unica): "
+            + "; ".join(stale)
+            + ". Hay que regenerar el archivo con `fdekit demo --out out`."
+        )
+
+
+def _annualize(hours_in_window: float, observed_units: float, annual_orders: float) -> float:
+    """Ventana observada -> ano, con el denominador propio del bloque.
+
+    Sin denominador no hay tasa, y una tasa inventada por division por cero es
+    peor que una palanca ausente: la palanca ausente se nota en la tabla.
+    """
+    observed = float(observed_units or 0)
+    if observed <= 0:
+        return 0.0
+    return float(hours_in_window) / observed * float(annual_orders)
+
+
 def levers_from_findings(
     findings: dict,
     arch,
@@ -169,16 +214,32 @@ def levers_from_findings(
     lo, mode, hi = arch.cash_labor_bounds()
     labor_cash = Range(lo, mode, hi)
 
-    # Factor de escala: el kit midio N pedidos, el cliente procesa otros tantos.
-    observed_orders = float(findings.get("cycle_times", {}).get("n_cases", 1)) or 1.0
-    scale = arch.annual_orders / (observed_orders * arch.operating_days)
+    _reject_preannualized(findings)
+
+    # El kit midio N pedidos en una ventana; el cliente procesa `annual_orders`
+    # al ano. La conversion es una sola division y una sola multiplicacion:
+    # tasa por pedido observado -> volumen anual del arquetipo. Los dias de
+    # operacion entran una vez, dentro de `annual_orders`, y nunca dos.
+    cases_observed = float(findings.get("cycle_times", {}).get("n_cases", 0) or 0)
 
     levers: list[Lever] = []
 
     # --- L1: caminata excedente + brecha de trabajo estandar
-    walk_h = float(findings.get("travel", {}).get("walking_hours_annual", 0.0)) * scale
+    travel = findings.get("travel", {})
+    sw = findings.get("standard_work_gap", {})
+    # Cada bloque anualiza con SU propio denominador: `travel` cuenta los pedidos
+    # con lineas de picking, que pueden ser menos que los casos del log.
+    walk_h = _annualize(
+        travel.get("walking_hours_in_window", 0.0),
+        travel.get("orders", cases_observed),
+        arch.annual_orders,
+    )
     slot_cut = float(findings.get("slotting", {}).get("reduction_pct", 0.0)) / 100
-    sw_h = float(findings.get("standard_work_gap", {}).get("recoverable_hours_annual", 0.0)) * scale
+    sw_h = _annualize(
+        sw.get("recoverable_hours_in_window", 0.0),
+        sw.get("cases_in_window", cases_observed),
+        arch.annual_orders,
+    )
     l1_units = walk_h * slot_cut + sw_h
     if l1_units > 0:
         levers.append(
@@ -196,7 +257,14 @@ def levers_from_findings(
         )
 
     # --- L2: reproceso, acotado por la fraccion atribuible a datos maestros
-    rework_h = sum(float(r.get("annual_hours_lost", 0)) for r in findings.get("rework", [])) * scale
+    rework_h = sum(
+        _annualize(
+            r.get("hours_lost_in_window", 0.0),
+            r.get("cases_in_window", cases_observed),
+            arch.annual_orders,
+        )
+        for r in findings.get("rework", [])
+    )
     paf = float(findings.get("defects_to_rework", {}).get("population_attributable_fraction_pct", 0)) / 100
     if rework_h > 0:
         # El PAF es el techo de lo que se elimina arreglando el maestro. Usarlo

@@ -44,19 +44,39 @@ def takt_analysis(log: EventLog, demand_units: int | None = None, available_hour
     span_h = (cases["end"].max() - cases["start"].min()).total_seconds() / 3600
     available_hours = available_hours or span_h
     demand_units = demand_units or log.n_cases
+    median_cycle_s = float(cases["cycle_time_s"].median())
+
+    out = {
+        "window_hours": round(span_h, 2),
+        "demand_units": int(demand_units),
+        "median_cycle_s": round(median_cycle_s, 1),
+    }
+
+    # Una ventana de duracion cero es un log mal exportado —tipicamente el
+    # timestamp truncado al dia— y no un CD infinitamente rapido. Devolver el
+    # hueco marcado es la regla 1: lo que no se puede cuantificar se declara,
+    # no se rellena. Reventar aca deja al FDE sin herramienta en la sala.
+    if available_hours <= 0:
+        return {
+            **out,
+            "takt_s": None,
+            "throughput_per_hour": None,
+            "cycle_over_takt": None,
+            "warning": (
+                "ventana de duracion cero: el log no tiene rango temporal utilizable. "
+                "Revisar la precision del timestamp exportado por el WMS."
+            ),
+        }
 
     takt_s = available_hours * 3600 / demand_units
-    throughput_per_h = demand_units / available_hours
 
     return {
-        "window_hours": round(span_h, 2),
-        "demand_units": demand_units,
+        **out,
         "takt_s": round(takt_s, 1),
-        "throughput_per_hour": round(throughput_per_h, 1),
-        "median_cycle_s": round(float(cases["cycle_time_s"].median()), 1),
+        "throughput_per_hour": round(demand_units / available_hours, 1),
         # Es normal que ciclo >> takt cuando hay paralelismo. Lo relevante es la
         # comparacion contra la capacidad instalada, no contra 1 operador.
-        "cycle_over_takt": round(float(cases["cycle_time_s"].median()) / takt_s, 2),
+        "cycle_over_takt": round(median_cycle_s / takt_s, 2),
     }
 
 
@@ -117,7 +137,13 @@ def standard_work_gap(log: EventLog, activity: str, role_prefix: str | None = No
         "operators": int(len(ov)),
         "target_median_s": round(target, 1),
         "worst_median_s": round(float(ov["median_s"].max()), 1),
-        "spread_pct": round((ov["median_s"].max() / ov["median_s"].min() - 1) * 100, 1),
-        "recoverable_hours_in_window": round(hours, 2),
-        "recoverable_hours_annual": round(hours * 250, 0),
+        "spread_pct": round(float(ov["median_s"].max() / ov["median_s"].min() - 1) * 100, 1),
+        # Unidad de salida: la ventana observada, con su denominador al lado.
+        # Anualizar aca obligaria a hardcodear los dias de operacion, que son un
+        # dato del arquetipo del cliente y no del log. La conversion a base anual
+        # vive en `value/levers.py`, que es donde esta `operating_days`. Cuando
+        # estaba en los dos lados quedaba un residuo silencioso de 250/dias.
+        # 4 decimales: es el insumo de la anualizacion, no un campo de tabla.
+        "recoverable_hours_in_window": round(hours, 4),
+        "cases_in_window": int(log.n_cases),
     }

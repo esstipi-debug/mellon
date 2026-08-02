@@ -92,9 +92,14 @@ def rework_summary(log: EventLog, rework_activities: list[str] | None = None) ->
     med = dur.groupby("activity")["dur_s"].median()
 
     out["direct_cost_s"] = out["activity"].map(med).round(1)
-    out["hours_lost_in_window"] = (out["occurrences"] * out["direct_cost_s"] / 3600).round(2)
-    out["annual_hours_lost"] = (out["hours_lost_in_window"] * 250).round(0)
-    return out.sort_values("annual_hours_lost", ascending=False).reset_index(drop=True)
+    out["hours_lost_in_window"] = (out["occurrences"] * out["direct_cost_s"] / 3600).round(4)
+    # Unidad de salida: la ventana observada. `annual_hours_lost` vivia aca con
+    # un 250 hardcodeado y `value/levers.py` volvia a escalar por
+    # `annual_orders / (pedidos_observados * operating_days)`: los dos factores
+    # se cancelaban salvo por un residuo de 250/operating_days que nadie veia.
+    # La anualizacion es una sola, y va donde estan los dias del arquetipo.
+    out["cases_in_window"] = log.n_cases
+    return out.sort_values("hours_lost_in_window", ascending=False).reset_index(drop=True)
 
 
 def conformance(log: EventLog, declared: list[str], collapse_repeats: bool = True) -> dict:

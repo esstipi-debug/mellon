@@ -403,11 +403,12 @@ poka-yoke, TWI Job Instruction, Toyota Kata, SPC, MSA, DMAIC.
 pytest -q
 ```
 
-388 tests. No verifican que el código corra: verifican las propiedades que hacen
+422 tests. No verifican que el código corra: verifican las propiedades que hacen
 que los números sean defendibles frente a un cliente — que el DFG no una casos
 distintos, que DiD recupere el efecto cuando la estacionalidad esconde el signo,
 que la tasa de falsa alarma del gráfico de control esté bajo 2%, que la auditoría
-detecte los defectos inyectados con más de 97% de acuerdo.
+detecte los defectos inyectados con más de 97% de acuerdo, y que la cifra anual
+del caso económico no dependa de cuántos días de log mandó el área de TI.
 
 ## Licencia
 

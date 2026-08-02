@@ -48,10 +48,19 @@ def travel_stats(log: EventLog, layout: Layout | None = None, walk_speed: float 
         "median_m_per_order": round(float(t["distance_m"].median()), 1),
         "p90_m_per_order": round(float(t["distance_m"].quantile(0.9)), 1),
         "median_m_per_stop": round(float(t["m_per_stop"].median()), 1),
-        "walking_hours_in_window": round(hours, 2),
         # En un CD tipico el 50-60% del tiempo de picking es caminata. Si el
         # numero da menos de 35%, sospechar del log antes que del CD.
-        "walking_hours_annual": round(hours * 250, 0),
+        #
+        # Unidad de salida: la ventana observada, con `orders` como denominador.
+        # Ojo que `orders` cuenta los pedidos CON lineas de picking, que no son
+        # todos los casos del log — repartir estas horas entre los casos totales
+        # subestima la caminata por pedido. La anualizacion vive en
+        # `value/levers.py`, junto a los dias de operacion del arquetipo.
+        #
+        # 4 decimales, no 2: este campo dejo de ser decorativo y paso a ser el
+        # insumo de la anualizacion. En una ventana corta 0.0081 h redondeado a
+        # 0.01 h es un +24% que despues se multiplica por los pedidos del ano.
+        "walking_hours_in_window": round(hours, 4),
     }
 
 
