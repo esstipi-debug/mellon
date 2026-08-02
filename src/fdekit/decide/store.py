@@ -168,13 +168,45 @@ class DecideStore:
     def _dir(self, prefix: str) -> Path:
         return self.root / _KINDS[prefix][0]
 
+    def _read_one(self, cls, path: Path):
+        """Lee un archivo diciendo CUAL fallo si falla.
+
+        `_from_fm` levanta por campo desconocido —a proposito: un .md escrito
+        por una version mas nueva no se puede leer a medias— pero el mensaje no
+        nombraba el archivo, y como no hay try por archivo, uno solo tumba
+        `decisions()` entero y con el `agenda()`, `tick()`, `volume_gate()` y
+        `rebuild_index()`. Con trescientos archivos en el registro, "campos
+        desconocidos: ['clase']" no alcanza para encontrar cual.
+
+        Sigue fallando: un registro que se lee a medias es peor que uno que no
+        se lee, porque el que se lee a medias imprime un numero.
+        """
+        data, _ = loads(path.read_text(encoding="utf-8"))
+        try:
+            return _from_fm(cls, data)
+        except ValidationError as exc:
+            raise ValidationError(
+                cls.__name__,
+                [f"{path.name}: " + i for i in exc.issues]
+                + [
+                    "si el archivo lo escribio una version mas nueva del kit, actualizar; "
+                    "el registro no se lee a medias a proposito"
+                ],
+            ) from exc
+        except TypeError as exc:
+            # `cls(**kwargs)` con un campo obligatorio ausente. Llega como
+            # TypeError, que `cli._guarded` no atrapa: el usuario veria un
+            # traceback de Python en vez de una linea que dice que hacer.
+            raise ValidationError(
+                cls.__name__, [f"{path.name}: falta un campo obligatorio ({exc})"]
+            ) from exc
+
     def _load_kind(self, prefix: str) -> list:
         cls = _KINDS[prefix][1]
-        out = []
-        for p in sorted(self._dir(prefix).glob(f"{prefix}-*.md")):
-            data, _ = loads(p.read_text(encoding="utf-8"))
-            out.append(_from_fm(cls, data))
-        return out
+        return [
+            self._read_one(cls, p)
+            for p in sorted(self._dir(prefix).glob(f"{prefix}-*.md"))
+        ]
 
     def decisions(self) -> list[Decision]:
         return self._load_kind("D")
@@ -189,11 +221,10 @@ class DecideStore:
         return self._load_kind("Q")
 
     def meetings(self) -> list[Meeting]:
-        out = []
-        for p in sorted((self.root / "meetings").glob("*.md")):
-            data, _ = loads(p.read_text(encoding="utf-8"))
-            out.append(_from_fm(Meeting, data))
-        return out
+        return [
+            self._read_one(Meeting, p)
+            for p in sorted((self.root / "meetings").glob("*.md"))
+        ]
 
     def get(self, entity_id: str):
         prefix = entity_id.split("-")[0]
@@ -202,15 +233,13 @@ class DecideStore:
         path = self._dir(prefix) / f"{entity_id}.md"
         if not path.exists():
             raise KeyError(f"no existe: {entity_id}")
-        data, _ = loads(path.read_text(encoding="utf-8"))
-        return _from_fm(_KINDS[prefix][1], data)
+        return self._read_one(_KINDS[prefix][1], path)
 
     def get_meeting(self, meeting_id: str) -> Meeting:
         path = self.root / "meetings" / f"{meeting_id}.md"
         if not path.exists():
             raise KeyError(f"no existe la reunion: {meeting_id}")
-        data, _ = loads(path.read_text(encoding="utf-8"))
-        return _from_fm(Meeting, data)
+        return self._read_one(Meeting, path)
 
     def roster_of(self, meeting_id: str) -> tuple[str, ...] | None:
         """Roster de la reunion, o `None` si la entidad no declara ninguna.

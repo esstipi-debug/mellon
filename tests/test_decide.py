@@ -586,3 +586,35 @@ def test_sin_meeting_id_la_decision_de_pasillo_sigue_entrando(store):
     decision de pasillo y no valida roster porque no hay ninguno declarado."""
     d = store.add_decision(mk_decision(meeting_id="", owner="Alguien de afuera"))
     assert d.id == "D-001"
+
+
+def test_un_archivo_ilegible_dice_cual_es(tmp_path):
+    """`_from_fm` levanta por campo desconocido a proposito —un .md escrito por
+    una version mas nueva no se puede leer a medias— pero el mensaje no nombraba
+    el archivo. Y como no hay try por archivo, uno solo tumba `decisions()`
+    entero y con el `agenda()`, `tick()`, `volume_gate()` y `rebuild_index()`.
+    Con trescientos archivos, "campos desconocidos: ['clase']" no alcanza.
+
+    Sigue fallando: un registro que se lee a medias es peor que uno que no se
+    lee, porque el que se lee a medias imprime un numero.
+    """
+    st = DecideStore(tmp_path / "decide")
+    st.add_meeting(Meeting(
+        id="m1", date=HOY, roster=ROSTER, facilitator=ROSTER[0],
+        consent=Consent(granted=True, granted_by=ROSTER[0], basis="interes_legitimo"),
+    ))
+    d = st.add_decision(Decision(
+        id="", statement="Consolidar el picking de Pudahuel en una sola ola",
+        owner=ROSTER[0], date_decided=HOY, criteria="100% de los SKU clase A antes del 30-09",
+        rationale="cambio el mix de pedidos", meeting_id="m1",
+    ))
+    sano = (st.root / "decisions" / f"{d.id}.md").read_text(encoding="utf-8")
+    (st.root / "decisions" / "D-099.md").write_text(
+        sano.replace(f'id: "{d.id}"', 'id: "D-099"\nclase: "INCIDENTE"'), encoding="utf-8"
+    )
+
+    with pytest.raises(ValidationError) as exc:
+        st.decisions()
+    assert "D-099.md" in str(exc.value)          # cual archivo
+    assert "clase" in str(exc.value)             # que campo
+    assert "version mas nueva" in str(exc.value)  # que hacer
