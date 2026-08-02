@@ -8,16 +8,20 @@ productividad; aca la medicion viene con olvido disenado.
 Limite conocido: con dos operadores por zona el umbral k no impide deducir
 quien es quien. Lo mitiga, no lo elimina. Ver seccion 6 del spec.
 
-Postura de `assert_no_identity` (ronda de arreglo 3): tres rondas de review
-encontraron, cada una, un vecino sin cubrir de la anterior (DataFrame, luego
-indice de Series, luego MultiIndex e indice de DataFrame). El problema no era
-un tipo puntual: era que la funcion recorria una lista negra de tipos
-conocidos y, ante cualquier tipo que no reconociera, no hacia nada y volvia
-limpio. Una lista negra sobre un universo abierto de tipos siempre deja un
-vecino afuera. Por eso la funcion ahora falla cerrado: todo valor cae en
-exactamente una de tres categorias (contenedor entendido que se recorre,
-escalar entendido que se valida, o "no lo entiendo" que levanta
-`AnonymityError`). Lo no reconocido se rechaza a proposito, no por descuido.
+Postura de `assert_no_identity` (ronda de arreglo 4): las tres rondas
+anteriores agrandaron la funcion —DataFrame, Series, dataclass, namedtuple,
+objetos con `__dict__`— y cada review encontro un vecino nuevo sin cubrir
+(indice de Series, MultiIndex, indice de DataFrame, `property`, `__getattr__`,
+`pd.Categorical`, callables). El diagnostico de esta ronda es que el problema
+no era la lista de tipos sino la ambicion: estabamos construyendo un escaner
+de proposito general para cualquier objeto Python, y nadie lo necesita. Los
+dos unicos consumidores del toolkit le pasan estructuras JSON-simples.
+
+Por eso esta ronda BORRA codigo en vez de agregarlo. `assert_no_identity`
+entiende contenedores simples y escalares simples, y rechaza todo lo demas
+pidiendo `canonicalize()`. La superficie chica es lo que hace la garantia
+demostrable en vez de aspiracional: se puede enumerar en una lista corta todo
+lo que la funcion sabe leer, y todo lo que no esta en esa lista no pasa.
 """
 
 from __future__ import annotations
@@ -33,10 +37,6 @@ SALT_BYTES = 16
 _PSEUDONYM_HEX = 12
 _PSEUDONYM_RE = re.compile(r"^sub-[0-9a-f]{12}\Z")
 
-# Profundidad maxima "declarada": no se aplica activamente (no hay contador),
-# es solo la documentacion de que el limite real es el de recursion de Python
-# y que se traduce a AnonymityError en vez de propagarse crudo. Ver
-# `assert_no_identity`.
 _RECURSION_ERROR_MSG = (
     "la estructura es demasiado profunda para certificarla (se alcanzo el "
     "limite de recursion de Python). Achatar la estructura o convertir con "
@@ -46,8 +46,26 @@ _RECURSION_ERROR_MSG = (
 # Nombres de campo que, si aparecen en una salida, significan que algo se
 # escapo. La lista es deliberadamente amplia: un falso positivo cuesta un
 # renombre, un falso negativo cuesta el despliegue.
+#
+# Ronda 4: se saco "name" y se reemplazo por variantes especificas. "name" es
+# demasiado generico — el nombre de una zona, de un archivo o de una ubicacion
+# no es identidad personal, y tenerlo en la lista hacia fallar cualquier dict
+# con una clave "name" inocua. Un falso positivo que dispara siempre entrena a
+# la gente a desactivar la verificacion, que es peor que no tenerla.
 IDENTITY_FIELDS = frozenset(
-    {"marker_id", "sensor_id", "resource_raw", "operator", "operator_id", "name", "rut"}
+    {
+        "marker_id",
+        "sensor_id",
+        "resource_raw",
+        "operator",
+        "operator_id",
+        "operator_name",
+        "worker_name",
+        "employee_name",
+        "full_name",
+        "nombre",
+        "rut",
+    }
 )
 
 # Campos que SI pueden aparecer, pero cuyo valor tiene que tener forma de
@@ -117,73 +135,102 @@ def _try_import_numpy():
         return None
 
 
+def _is_field_name(label: object) -> bool:
+    """Una etiqueta sirve como nombre de campo si es str, o tupla de str.
+
+    La tupla es el caso de un MultiIndex: `("meta", "marker_id")` sigue siendo
+    un nombre de campo, solo que compuesto. Un entero no: es una posicion.
+    """
+    if isinstance(label, str):
+        return True
+    return isinstance(label, tuple) and bool(label) and all(isinstance(x, str) for x in label)
+
+
 def canonicalize(obj: object) -> object:
-    """Convierte un objeto arbitrario a estructura JSON-simple (dict/lista/escalar).
+    """Convierte pandas a estructura JSON-simple (dict/lista/escalar).
 
-    Para quien tiene un tipo que `assert_no_identity` no reconoce y por eso
-    rechaza: convertir con esta funcion antes de emitir, para que la
-    verificacion opere sobre dicts, listas y escalares que si entiende.
+    Es la contraparte de que `assert_no_identity` haya dejado de entender
+    pandas: quien tiene un `DataFrame` o una `Series` lo pasa por aca primero,
+    y la verificacion opera despues sobre dicts y listas. La conversion es
+    idempotente sobre estructuras que ya son simples, asi que se puede llamar
+    sin saber que tipo llega.
 
-    El DataFrame se resetea el indice ANTES de convertir a records. Eso no es
+    El `DataFrame` resetea el indice ANTES de convertir a records. Eso no es
     cosmetico: `reset_index()` convierte las etiquetas del indice en columnas
     comunes, asi que `df.set_index("marker_id")` —que de otra forma queda
-    escondido en el indice— termina siendo una columna "marker_id" que
+    escondido en el indice— termina siendo una clave "marker_id" que
     `assert_no_identity` si sabe leer, sin codigo especial.
+
+    Una `Series` posicional (indice de enteros, sin nombres de campo) se
+    RECHAZA en vez de convertirse. Convertirla producia un dict
+    `{0: "MARKER-07", 1: "MARKER-08"}`, sin la asociacion campo -> valor de la
+    que depende toda la deteccion, y `assert_no_identity` despues certificaba
+    limpio un diccionario con dos identificadores crudos adentro. El flujo que
+    producia ese falso negativo era exactamente el que recomienda el mensaje de
+    error de `assert_no_identity`, asi que la unica salida segura es no
+    convertirla.
     """
     pd = _try_import_pandas()
-    return _canonicalize_impl(obj, pd)
+    np = _try_import_numpy()
+    return _canonicalize_impl(obj, pd, np)
 
 
-def _canonicalize_impl(obj: object, pd) -> object:
+def _canonicalize_impl(obj: object, pd, np) -> object:
     if pd is not None and isinstance(obj, pd.DataFrame):
         registros = obj.reset_index().to_dict("records")
-        return [_canonicalize_impl(reg, pd) for reg in registros]
+        return [_canonicalize_impl(reg, pd, np) for reg in registros]
 
     if pd is not None and isinstance(obj, pd.Series):
-        valores = {}
-        for etiqueta, valor in obj.items():
-            clave = etiqueta if not isinstance(etiqueta, tuple) else "/".join(str(x) for x in etiqueta)
-            valores[clave] = _canonicalize_impl(valor, pd)
-        if obj.name is not None:
-            return {"name": obj.name, "values": valores}
-        return valores
-
-    if _is_namedtuple(obj):
-        return {campo: _canonicalize_impl(getattr(obj, campo), pd) for campo in obj._fields}
-
-    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
-        return {
-            campo.name: _canonicalize_impl(getattr(obj, campo.name), pd)
-            for campo in dataclasses.fields(obj)
-        }
+        return _canonicalize_series(obj, pd, np)
 
     if isinstance(obj, dict):
-        return {clave: _canonicalize_impl(valor, pd) for clave, valor in obj.items()}
+        return {clave: _canonicalize_impl(valor, pd, np) for clave, valor in obj.items()}
 
     if isinstance(obj, (list, tuple, set, frozenset)):
-        return [_canonicalize_impl(item, pd) for item in obj]
+        return [_canonicalize_impl(item, pd, np) for item in obj]
 
-    # Escalar (o algo que ni canonicalize reconoce): se deja tal cual. Si
-    # despues assert_no_identity tampoco lo reconoce, va a levantar y ese es
-    # el punto: nadie certifica lo que no entiende.
-    return obj
+    if _is_understood_scalar(obj, pd, np):
+        return obj
 
-
-def _is_namedtuple(obj: object) -> bool:
-    return (
-        isinstance(obj, tuple)
-        and hasattr(obj, "_fields")
-        and isinstance(getattr(obj, "_fields", None), tuple)
+    raise AnonymityError(
+        f"canonicalize no sabe convertir un {type(obj).__name__}. Solo convierte "
+        "pandas.DataFrame y pandas.Series con etiquetas, y deja pasar dicts, "
+        "listas, tuplas, conjuntos y escalares simples. Armar un dict con "
+        "nombres de campo explicitos antes de emitir."
     )
+
+
+def _canonicalize_series(serie, pd, np) -> dict:
+    """Convierte una `Series` con etiquetas a un dict plano etiqueta -> valor.
+
+    Plano a proposito: envolver en `{"name": ..., "values": ...}` metia una
+    clave "name" inventada por la conversion, que despues chocaba con la
+    verificacion de campos y hacia fallar toda Series con nombre. El nombre de
+    la Series se verifica aca —si identifica, se levanta— y no se propaga al
+    resultado.
+    """
+    _check_key_for_identity(serie.name)
+
+    etiquetas = list(serie.index)
+    if not all(_is_field_name(etiqueta) for etiqueta in etiquetas):
+        raise AnonymityError(
+            "una pandas.Series posicional (indice sin nombres de campo) no se "
+            "puede certificar: sin el nombre del campo no hay forma de saber si "
+            "un valor es un identificador. Pasar un DataFrame, o un dict con "
+            "nombres de campo explicitos."
+        )
+
+    return {etiqueta: _canonicalize_impl(valor, pd, np) for etiqueta, valor in serie.items()}
 
 
 def _check_key_for_identity(key: object) -> None:
     """Revisa un nombre de campo (o una tupla de MultiIndex) contra IDENTITY_FIELDS.
 
-    Si `key` es una tupla —el caso de una etiqueta de columna MultiIndex tipo
-    ("meta", "marker_id")— se verifica CADA ELEMENTO por separado. Comparar la
-    tupla entera contra IDENTITY_FIELDS nunca matchea, porque el conjunto
-    contiene strings sueltos: ese fue el agujero de la ronda 2.
+    Si `key` es una tupla —el caso de una clave que quedo compuesta al aplanar
+    un MultiIndex via `canonicalize`, tipo ("meta", "marker_id")— se verifica
+    CADA ELEMENTO por separado. Comparar la tupla entera contra IDENTITY_FIELDS
+    nunca matchea, porque el conjunto contiene strings sueltos: ese fue el
+    agujero de la ronda 2.
     """
     if key is None:
         return
@@ -257,7 +304,7 @@ def _is_understood_scalar(val: object, pd, np) -> bool:
 
 
 def _check_mapping_items(items, visited_ids: set, keep_alive: list, pd, np) -> None:
-    """Logica compartida por dict, namedtuple, dataclass y objetos con __dict__.
+    """Cada clave se revisa; el valor se valida o se recorre.
 
     `items` es un iterable de pares (clave, valor). Cada clave se revisa
     contra IDENTITY_FIELDS; si cae en PSEUDONYM_FIELDS se valida su forma en
@@ -276,102 +323,42 @@ def _check_mapping_items(items, visited_ids: set, keep_alive: list, pd, np) -> N
             _assert_no_identity_impl(valor, visited_ids, keep_alive, pd, np)
 
 
-def _check_axis_names(index, pd) -> None:
-    """Revisa el/los nombre(s) de un Index/MultiIndex de pandas.
-
-    Para un MultiIndex, cada nombre de nivel se revisa por separado (son las
-    etiquetas de fila/columna, no valores de datos). Para un Index simple,
-    `.name` es el unico nombre relevante — es lo que expone
-    `df.set_index("marker_id")` o `Series(...).rename_axis("marker_id")`,
-    donde el valor de cada fila es un dato (p.ej. "MARKER-07") pero el NOMBRE
-    del eje es el campo prohibido.
-    """
-    if pd is not None and isinstance(index, pd.MultiIndex):
-        for nombre_nivel in index.names:
-            _check_key_for_identity(nombre_nivel)
-    else:
-        _check_key_for_identity(index.name)
-
-
-def _check_dataframe(df, visited_ids: set, keep_alive: list, pd, np) -> None:
-    """Revisa columnas (incluido MultiIndex), sus valores, y el indice de fila."""
-    _check_axis_names(df.columns, pd)
-
-    for col in df.columns:
-        _check_key_for_identity(col)
-        if _key_matches_pseudonym(col):
-            for val in df[col]:
-                if not _is_valid_pseudonym_value(val, pd):
-                    raise AnonymityError(
-                        f"la columna '{col}' contiene un valor que no es "
-                        f"seudonimo valido (valor: {val!r}). Pseudonimizar con "
-                        "privacy.pseudonymize antes de emitir."
-                    )
-        else:
-            for val in df[col]:
-                _assert_no_identity_impl(val, visited_ids, keep_alive, pd, np)
-
-    # El indice de fila: solo el/los nombre(s) importan (ver _check_axis_names).
-    # Cubre tanto `df.set_index("marker_id")` como `df.index.name = "marker_id"`.
-    _check_axis_names(df.index, pd)
-
-
-def _check_series(s, visited_ids: set, keep_alive: list, pd, np) -> None:
-    """Revisa el indice (nombres y etiquetas), el .name, y los valores."""
-    _check_axis_names(s.index, pd)
-
-    for etiqueta in s.index:
-        _check_key_for_identity(etiqueta)
-
-    if s.name is not None:
-        _check_key_for_identity(s.name)
-
-    pseudonym_por_name = s.name is not None and _key_matches_pseudonym(s.name)
-
-    for etiqueta, valor in s.items():
-        if pseudonym_por_name or _key_matches_pseudonym(etiqueta):
-            if not _is_valid_pseudonym_value(valor, pd):
-                raise AnonymityError(
-                    f"la serie contiene un valor que no es seudonimo valido en "
-                    f"'{etiqueta}' (valor: {valor!r}). Pseudonimizar con "
-                    "privacy.pseudonymize antes de emitir."
-                )
-        else:
-            _assert_no_identity_impl(valor, visited_ids, keep_alive, pd, np)
-
-
 def assert_no_identity(payload: object) -> None:
     """Recorre la salida completa y falla si sobrevivio un identificador.
 
-    Cada valor cae en exactamente una de tres categorias:
+    Entiende una lista corta y cerrada de formas, y rechaza todo lo demas:
 
-    1. Contenedor entendido -> se recorre: dict, list, tuple, set, frozenset,
-       namedtuple, dataclass, objetos con __dict__, pandas.DataFrame,
-       pandas.Series.
-    2. Escalar entendido -> se valida y se termina: str (incluido
-       numpy.str_), int, float, bool, complex, bytes, None, NaN/pd.NA/NaT,
-       escalares de numpy, datetime/date/pd.Timestamp, Decimal.
-    3. Cualquier otra cosa -> AnonymityError. Un objeto con __slots__ y sin
-       __dict__, o cualquier tipo que esta funcion no sepa leer, NO pasa en
-       silencio: se rechaza, y el mensaje dice que convertirlo con
-       `canonicalize()` antes de emitir.
+    1. Contenedores -> se recorren: `dict` y sus subclases (`defaultdict`,
+       `OrderedDict`, `Counter`), `list`, `tuple`, `set`, `frozenset`.
+    2. Escalares -> se validan y se termina: `str` (incluido `numpy.str_`),
+       `int`, `float`, `bool`, `complex`, `bytes`, `None`, NaN/`pd.NA`/`NaT`,
+       escalares de numpy, `datetime`/`date`/`pd.Timestamp`, `Decimal`.
+    3. Cualquier otra cosa -> `AnonymityError`, nombrando el tipo concreto y
+       pidiendo convertirlo con `canonicalize()` antes de emitir. Eso incluye
+       `DataFrame`, `Series`, dataclasses, objetos comunes y callables.
 
-    Esa tercera categoria es la que cambio en esta ronda. Antes, un tipo no
-    reconocido caia al fondo de la funcion sin matchear ningun `isinstance` y
-    volvia sin error — "no encontre nada malo" en vez de "revise todo lo que
-    salio". Tres rondas de review mostraron que esa forma de garantia
-    siempre deja un vecino sin cubrir. Fallar cerrado es el cambio de fondo.
+    Por que se achico (ronda 4): las rondas 1 a 3 fueron agrandando la funcion
+    para entender pandas, dataclasses, namedtuples y objetos con `__dict__`, y
+    cada review encontro un vecino nuevo sin cubrir — `property`,
+    `__getattr__`, `pd.Categorical`, callables. La rama de `__dict__` en
+    particular quedo como cajon de sastre que certificaba limpio cualquier
+    objeto cuyos datos no vivieran literalmente en `vars()`. El problema de
+    fondo era la ambicion: un escaner de proposito general para cualquier
+    objeto Python no se puede terminar, porque el universo de tipos es abierto.
+    Los dos unicos consumidores del toolkit pasan estructuras JSON-simples
+    (`log.df.to_dict("records")` y un dict de resultados), asi que la funcion
+    entiende exactamente eso. Con la superficie chica, la garantia se vuelve
+    demostrable: se puede enumerar todo lo que la funcion sabe leer, y todo lo
+    que queda afuera se rechaza a proposito, no por descuido.
 
     Campos en PSEUDONYM_FIELDS: si el valor es string, debe coincidir con la
     forma de seudonimo (sub-<12 hex>). Se permiten explicitamente None y pd.NA
     porque EventLog rellena columnas opcionales ausentes con pd.NA, y prohibir
     el nulo rompe logs perfectamente validos. Todo lo demas levanta.
 
-    Los indices de pandas.Series se revisan etiqueta por etiqueta (son los
-    nombres de campo cuando la Series viene de un dict o de una fila de
-    DataFrame). Los indices de pandas.DataFrame se revisan solo por su(s)
-    nombre(s) de eje, MultiIndex incluido, con cada elemento de las tuplas de
-    columna MultiIndex verificado por separado.
+    Las claves compuestas (tuplas, lo que produce `canonicalize` a partir de
+    columnas MultiIndex) se verifican elemento por elemento: `("meta",
+    "marker_id")` identifica igual que `"marker_id"`.
 
     Una estructura demasiado profunda hace que Python levante RecursionError;
     esta funcion lo traduce a AnonymityError en vez de dejarlo propagarse
@@ -389,52 +376,22 @@ def assert_no_identity(payload: object) -> None:
 def _assert_no_identity_impl(payload: object, visited_ids: set, keep_alive: list, pd, np) -> None:
     """Implementacion interna: clasifica, recorre o rechaza.
 
-    `visited_ids` guarda id(objeto) para no entrar en bucle con estructuras
-    ciclicas. `keep_alive` guarda una referencia fuerte a cada objeto
-    visitado mientras dura la llamada: sin eso, un objeto efimero podria
-    liberarse durante la recursion y otro objeto reusar su id(), saltandose
-    la revision. Es un riesgo teorico, pero el arreglo es de una linea y el
-    costo es cero.
+    `visited_ids` guarda id(objeto) de los contenedores ya visitados para no
+    entrar en bucle con estructuras ciclicas. `keep_alive` guarda una
+    referencia fuerte a cada uno mientras dura la llamada: sin eso, un
+    contenedor efimero podria liberarse durante la recursion y otro objeto
+    reusar su id(), saltandose la revision. Es un riesgo teorico, pero el
+    arreglo es de una linea y el costo es cero.
     """
-    obj_id = id(payload)
-    if obj_id in visited_ids:
-        return
-    visited_ids.add(obj_id)
-    keep_alive.append(payload)
-
     if isinstance(payload, dict):
+        if _ya_visitado(payload, visited_ids, keep_alive):
+            return
         _check_mapping_items(payload.items(), visited_ids, keep_alive, pd, np)
         return
 
-    if pd is not None and isinstance(payload, pd.DataFrame):
-        _check_dataframe(payload, visited_ids, keep_alive, pd, np)
-        return
-
-    if pd is not None and isinstance(payload, pd.Series):
-        _check_series(payload, visited_ids, keep_alive, pd, np)
-        return
-
-    if _is_namedtuple(payload):
-        _check_mapping_items(
-            ((campo, getattr(payload, campo)) for campo in payload._fields),
-            visited_ids,
-            keep_alive,
-            pd,
-            np,
-        )
-        return
-
-    if dataclasses.is_dataclass(payload) and not isinstance(payload, type):
-        _check_mapping_items(
-            ((campo.name, getattr(payload, campo.name)) for campo in dataclasses.fields(payload)),
-            visited_ids,
-            keep_alive,
-            pd,
-            np,
-        )
-        return
-
     if isinstance(payload, (list, tuple, set, frozenset)):
+        if _ya_visitado(payload, visited_ids, keep_alive):
+            return
         for item in payload:
             _assert_no_identity_impl(item, visited_ids, keep_alive, pd, np)
         return
@@ -442,13 +399,19 @@ def _assert_no_identity_impl(payload: object, visited_ids: set, keep_alive: list
     if _is_understood_scalar(payload, pd, np):
         return
 
-    if hasattr(payload, "__dict__"):
-        _check_mapping_items(vars(payload).items(), visited_ids, keep_alive, pd, np)
-        return
-
     raise AnonymityError(
-        f"tipo no reconocido ({type(payload).__name__}): assert_no_identity no "
-        "sabe leer este tipo, y por eso no puede certificar que no hay "
-        "identidad escondida adentro. Convertir con privacy.canonicalize() a "
-        "una estructura simple (dict/lista/escalar) antes de emitir."
+        f"tipo no reconocido ({type(payload).__name__}): assert_no_identity solo "
+        "certifica dicts, listas, tuplas, conjuntos y escalares simples, y no "
+        "puede garantizar que no hay identidad escondida en este tipo. "
+        "Convertir con privacy.canonicalize() a una estructura simple antes de "
+        "emitir."
     )
+
+
+def _ya_visitado(payload: object, visited_ids: set, keep_alive: list) -> bool:
+    obj_id = id(payload)
+    if obj_id in visited_ids:
+        return True
+    visited_ids.add(obj_id)
+    keep_alive.append(payload)
+    return False
