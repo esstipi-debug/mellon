@@ -286,13 +286,63 @@ def index_quality(store: DecideStore) -> dict:
 # -------------------------------------------------------------- XmR
 
 
+BASELINE_FILE = "xmr_baseline.json"
+
+
+def freeze_baseline(store: DecideStore, today: date, baseline: int = XMR_BASELINE) -> dict:
+    """Congela la linea base del XmR **en disco**. Se corre una sola vez.
+
+    Sin esto, "congelado" era una palabra del docstring y no un hecho:
+    `touches_xmr` recalculaba `serie[:baseline]` desde el store en cada llamada,
+    ordenando por fecha de decision. Una sola decision registrada hoy pero
+    **fechada antes** de la ventana entra a la linea base y corre los limites.
+    Medido: center 2,83 -> 2,58 y sigma 1,69 -> 1,85 con un solo registro.
+
+    Eso es exactamente el modo de falla que la regla 6 existe para impedir. Un
+    CD que se degrada de a poco ensancha sus propios limites y no alarma nunca:
+    la degradacion se vuelve la nueva normalidad, y el grafico sigue diciendo
+    "en control" mientras el proceso empeora.
+
+    Se guardan los **valores** de los puntos, no los limites derivados, para que
+    `compute_limits` los reproduzca identicos; y los `case_id`, que es lo que
+    permite despues detectar que los datos se movieron debajo.
+    """
+    t = touches_to_decide(store)
+    if len(t) < baseline:
+        raise ValueError(
+            f"{len(t)} decisiones cerradas: hacen falta {baseline} para congelar una "
+            "linea base. Congelarla antes fija ruido con apariencia de control."
+        )
+    orden = t.sort_values("decidida")
+    puntos = orden.head(baseline)
+    datos = {
+        "congelada_el": today.isoformat(),
+        "n_baseline": baseline,
+        "case_ids": list(puntos["case_id"]),
+        "toques": [float(x) for x in puntos["toques"]],
+        "hasta": str(puntos["decidida"].max()),
+        "nota": (
+            "NO editar a mano ni regenerar para 'actualizar' los limites. Si el "
+            "proceso mejoro de verdad, se documenta el cambio y se congela una "
+            "linea base NUEVA, con fecha, conservando esta al lado."
+        ),
+    }
+    (store.root / BASELINE_FILE).write_text(
+        json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    return datos
+
+
 def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE) -> dict:
     """Grafico de control de toques-para-decidir, con limites CONGELADOS.
 
-    Solo desde la reunion ~15: antes es ruido. Y los limites se calculan sobre
-    la linea base y no se recalculan nunca — recalcularlos cada semana hace que
-    la degradacion se vuelva la nueva normalidad, que es el error mas comun al
-    implementar SPC por primera vez.
+    Solo desde la reunion ~15: antes es ruido. Los limites salen de la linea
+    base persistida por `freeze_baseline` y no se recalculan nunca.
+
+    Si no hay linea base congelada, los limites se calculan igual pero salen
+    marcados `congelada=False` y con el veredicto diciendolo: un grafico de
+    control cuyos limites se mueven solos no es un grafico de control, y
+    presentarlo como tal es peor que no tenerlo.
     """
     gate = volume_gate(store)
     t = touches_to_decide(store)
@@ -301,6 +351,7 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE) -> dict:
             "puntos": len(t),
             "necesarios": baseline + 4,
             "ok": False,
+            "congelada": False,
             "veredicto": (
                 f"{len(t)} decisiones cerradas: hacen falta al menos {baseline + 4} para "
                 "una linea base creible. Antes de eso el grafico dibuja ruido con "
@@ -309,19 +360,67 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE) -> dict:
             "volumen": gate,
         }
 
-    from ..spc import compute_limits, degradation_alarm
+    from ..spc import degradation_alarm
 
-    serie = t.sort_values("decidida")["toques"].astype(float).tolist()
-    base, mon = serie[:baseline], serie[baseline:]
+    orden = t.sort_values("decidida")
+    path = store.root / BASELINE_FILE
+    avisos: list[str] = []
+
+    if path.exists():
+        fija = json.loads(path.read_text(encoding="utf-8"))
+        congelados = list(fija["case_ids"])
+        base = [float(x) for x in fija["toques"]]
+        # Todo lo que NO es de la linea base es monitoreo — incluida una decision
+        # fechada hacia atras. Que entre al monitoreo y no a la base es el punto:
+        # la base es un periodo declarado, no los primeros N por fecha.
+        en_base = set(congelados)
+        mon = [float(x) for x in orden[~orden["case_id"].isin(en_base)]["toques"]]
+
+        actuales = set(orden["case_id"])
+        faltan = [c for c in congelados if c not in actuales]
+        if faltan:
+            avisos.append(
+                f"{len(faltan)} caso(s) de la linea base ya no estan en el registro "
+                f"({', '.join(faltan[:5])}): los limites siguen siendo los congelados, "
+                "pero la base ya no es reproducible desde los datos de hoy."
+            )
+        nuevos_viejos = [
+            c for c in orden.head(baseline)["case_id"] if c not in en_base
+        ]
+        if nuevos_viejos:
+            avisos.append(
+                f"{len(nuevos_viejos)} decision(es) fechada(s) dentro de la ventana de "
+                f"la linea base se registraron despues de congelarla "
+                f"({', '.join(nuevos_viejos[:5])}). NO entraron a los limites —"
+                " entraron al monitoreo, que es lo correcto— pero conviene saber que "
+                "el pasado del registro cambio."
+            )
+        congelada, cuando = True, fija["congelada_el"]
+    else:
+        serie = [float(x) for x in orden["toques"]]
+        base, mon = serie[:baseline], serie[baseline:]
+        congelada, cuando = False, None
+        avisos.append(
+            "linea base NO congelada: estos limites se recalculan en cada corrida y se "
+            "mueven solos cuando entra una decision fechada hacia atras. Correr "
+            "`freeze_baseline(store, today)` antes de presentarlos como control."
+        )
+
     alarm = degradation_alarm(base, mon, direction="lower_is_better", lcl_floor=1.0)
+    veredicto = alarm["verdict"]
+    if not congelada:
+        veredicto = f"{veredicto} (limites PROVISORIOS: linea base sin congelar)"
     return {
-        "puntos": len(serie),
+        "puntos": len(orden),
         "baseline": baseline,
         "ok": True,
+        "congelada": congelada,
+        "congelada_el": cuando,
         "limites": alarm["limits"],
-        "veredicto": alarm["verdict"],
+        "veredicto": veredicto,
         "violaciones_criticas": alarm["critical_violations"],
         "corrimiento_sigmas": alarm["shift_sigmas"],
+        "avisos": avisos,
         "volumen": gate,
     }
 

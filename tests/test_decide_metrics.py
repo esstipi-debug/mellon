@@ -28,6 +28,7 @@ from fdekit.decide.eventlog import (
 )
 from fdekit.decide.export import to_graphify, to_mermaid, write_graphify
 from fdekit.decide.metrics import (
+    freeze_baseline,
     MIN_DECISIONS,
     QueryLog,
     circular_minutes,
@@ -426,3 +427,103 @@ def test_el_mermaid_se_corta_y_lo_dice(store):
     m = to_mermaid(store, max_nodes=2)
     assert m.startswith("flowchart TD")
     assert "cortado: 3 nodos mas" in m
+
+
+# ------------------------------- la regla 6: los limites TIENEN que congelarse
+#
+# "Congelado" era una palabra del docstring y no un hecho: `touches_xmr`
+# recalculaba `serie[:baseline]` desde el store en cada llamada, ordenando por
+# fecha de decision. Una sola decision registrada hoy pero fechada antes de la
+# ventana entraba a la linea base y corria los limites — medido, center 2,83 ->
+# 2,58 y sigma 1,69 -> 1,85. Es exactamente el modo de falla que la regla 6
+# existe para impedir: un CD que se degrada de a poco ensancha sus propios
+# limites, y el grafico dice "en control" mientras el proceso empeora.
+
+# Doce de linea base mas seis de monitoreo. El margen sobre el minimo
+# (`baseline + 4`) es deliberado: sin el, borrar un caso tira la serie por la
+# rama de "volumen insuficiente" y el test mediria otra cosa.
+_TOQUES_BASE = [3, 2, 4, 1, 3, 2, 5, 2, 3, 1, 4, 4, 3, 2, 4, 3, 2, 4]
+_R = ("Marcela", "Fabian", "Rodrigo")
+
+
+def _consent():
+    return Consent(granted=True, granted_by="Marcela", basis="interes_legitimo")
+
+
+def _serie(st, filas):
+    """Fabrica decisiones con N toques: N-1 preguntas previas que la bloquean."""
+    for i, (f, n) in enumerate(filas):
+        mid = f"m{i:02d}"
+        st.add_meeting(Meeting(id=mid, date=f, roster=_R, facilitator="Marcela",
+                               consent=_consent()))
+        d = st.add_decision(Decision(
+            id="", statement=f"Consolidar la ola {i} del picking de Pudahuel",
+            owner="Marcela", date_decided=f, criteria="100% de los SKU clase A antes del 30-09",
+            rationale="cambio el mix de pedidos", meeting_id=mid))
+        for j in range(n - 1):
+            pm = f"p{i:02d}x{j}"
+            st.add_meeting(Meeting(id=pm, date=f - timedelta(days=7 * (j + 1)), roster=_R,
+                                   facilitator="Marcela", consent=_consent()))
+            st.add_question(OpenQuestion(
+                id="", question=f"consolidamos la ola {i}?", resolver="Marcela",
+                resolve_by=f, blocks=[d.id], meeting_id=pm))
+    return st
+
+
+@pytest.fixture
+def serie_xmr(tmp_path):
+    st = DecideStore(tmp_path / "decide")
+    return _serie(st, [(date(2026, 3, 1) + timedelta(days=7 * i), n)
+                       for i, n in enumerate(_TOQUES_BASE)])
+
+
+def test_sin_congelar_los_limites_se_declaran_provisorios(serie_xmr):
+    """Regla 3. Un grafico de control cuyos limites se mueven solos no es un
+    grafico de control, y presentarlo como tal es peor que no tenerlo."""
+    r = touches_xmr(serie_xmr)
+    assert r["congelada"] is False
+    assert "PROVISORIOS" in r["veredicto"]
+    assert any("NO congelada" in a for a in r["avisos"])
+
+
+def test_los_limites_no_se_mueven_con_una_decision_fechada_hacia_atras(serie_xmr):
+    """El bug, en su forma exacta: una decision registrada hoy y fechada seis
+    meses antes entraba a la linea base porque la base eran 'los primeros 12 por
+    fecha'. La base es un PERIODO DECLARADO, no un ranking que se reordena."""
+    freeze_baseline(serie_xmr, date(2026, 8, 2))
+    antes = touches_xmr(serie_xmr)["limites"]
+
+    f = date(2026, 1, 5)  # anterior a toda la ventana de linea base
+    serie_xmr.add_meeting(Meeting(id="tarde", date=f, roster=_R, facilitator="Marcela",
+                                  consent=_consent()))
+    serie_xmr.add_decision(Decision(
+        id="", statement="Consolidar una ola vieja del picking", owner="Marcela",
+        date_decided=f, criteria="100% de los SKU clase A antes del 30-09",
+        rationale="cambio el mix de pedidos", meeting_id="tarde"))
+
+    despues = touches_xmr(serie_xmr)
+    assert despues["limites"] == antes
+    assert despues["congelada"] is True
+    # ...y no se calla que el pasado del registro cambio.
+    assert any("fechada(s) dentro de la ventana" in a for a in despues["avisos"])
+
+
+def test_avisa_si_un_caso_de_la_linea_base_ya_no_esta(serie_xmr, tmp_path):
+    """Los limites siguen siendo los congelados —esa es la regla— pero la base
+    deja de ser reproducible desde los datos de hoy, y eso se dice."""
+    freeze_baseline(serie_xmr, date(2026, 8, 2))
+    congelados = touches_xmr(serie_xmr)["limites"]
+    (serie_xmr.root / "decisions" / "D-001.md").unlink()
+
+    r = touches_xmr(serie_xmr)
+    assert r["limites"] == congelados
+    assert any("ya no estan en el registro" in a for a in r["avisos"])
+
+
+def test_no_se_puede_congelar_ruido(tmp_path):
+    """Congelar con pocos puntos fija ruido con apariencia de control."""
+    st = _serie(DecideStore(tmp_path / "decide"),
+                [(date(2026, 3, 1) + timedelta(days=7 * i), n)
+                 for i, n in enumerate([3, 2, 4])])
+    with pytest.raises(ValueError, match="linea base"):
+        freeze_baseline(st, date(2026, 8, 2))
