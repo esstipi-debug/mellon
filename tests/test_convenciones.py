@@ -20,11 +20,42 @@ from pathlib import Path
 
 # Archivos que contienen acentos a proposito, con motivo documentado.
 ARCHIVOS_CON_ACENTOS_A_PROPOSITO = {
+    "tests/test_convenciones.py": (
+        "Este guardia detecta caracteres acentuados, asi que necesita contenerlos "
+        "en su regex. La regex misma es la unica forma de especificar qué "
+        "caracteres buscar."
+    ),
     "src/fdekit/gemba/transcribe.py": (
         "Este modulo normaliza acentos en transcripciones. Necesita ejemplos "
         "acentuados (dia, quizas, etc.) para probar que los quita correctamente."
     ),
 }
+
+
+def _get_py_files_to_check() -> list[Path]:
+    """Obtiene todos los archivos .py versionados bajo src/fdekit/ y tests/."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "*.py"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        # Filtrar por prefijo en Python para evitar problemas de glob.
+        py_files = [
+            Path(line.strip())
+            for line in result.stdout.splitlines()
+            if line.strip() and (line.startswith("src/fdekit/") or line.startswith("tests/"))
+        ]
+        return py_files
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Fallback: glob recursivo desde raiz, luego filtrar por prefijo.
+        py_files = list(Path(".").glob("src/fdekit/**/*.py"))
+        py_files += list(Path(".").glob("tests/**/*.py"))
+        # Tambien agregar archivos directos (que glob no cubre).
+        py_files += [p for p in Path("src/fdekit").glob("*.py") if p.is_file()]
+        py_files += [p for p in Path("tests").glob("*.py") if p.is_file()]
+        return sorted(set(py_files))
 
 
 def test_no_tildes_ni_enes_en_codigo_python():
@@ -34,22 +65,12 @@ def test_no_tildes_ni_enes_en_codigo_python():
     Si encuentra una tilde o ene, el mensaje de falla dice archivo, linea,
     y el texto ofensor, para que sea trivial arreglarlo.
     """
-    # Obtener la lista de archivos .py versionados en git.
-    try:
-        result = subprocess.run(
-            ["git", "ls-files", "src/fdekit/**/*.py", "tests/**/*.py"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        py_files = [Path(line.strip()) for line in result.stdout.splitlines() if line.strip()]
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        # Si git no funciona, hacer un fallback a glob.
-        py_files = list(Path("src/fdekit").rglob("*.py")) + list(Path("tests").rglob("*.py"))
+    py_files = _get_py_files_to_check()
 
     # Patron: solo tildes en vocales castellanas y ene, minuscula y mayuscula.
-    # Excluye puntuacion espanola legitima (¿, ¡) y caracteres de otros idiomas.
-    patron_acentos = re.compile(r"[áéíóúñÁÉÍÓÚÑ]")
+    # Excluye puntuacion espanola legitima y caracteres de otros idiomas.
+    # Usar escape Unicode para no violar la propia regla del guardia.
+    patron_acentos = re.compile("[áéíóúñÁÉÍÓÚÑ]")
 
     violaciones = []
     for py_file in py_files:
@@ -80,4 +101,42 @@ def test_no_tildes_ni_enes_en_codigo_python():
         msg += "\n\nMotivos de excepcion documentados:\n"
         for archivo, motivo in ARCHIVOS_CON_ACENTOS_A_PROPOSITO.items():
             msg += f"  - {archivo}: {motivo}\n"
+        raise AssertionError(msg)
+
+
+def test_guardia_cubre_todos_los_archivos():
+    """Verifica que el guardia efectivamente revisa todos los .py versionados.
+
+    Esta es la metaprueba: si el guardia cubre menos archivos de los que
+    deberia, esta prueba falla. Impide cambios silenciosos en el patrón de
+    busqueda que dejen archivos sin vigilar.
+    """
+    # Contar los .py versionados bajo src/fdekit/ y tests/.
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "*.py"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        todos = [
+            line.strip()
+            for line in result.stdout.splitlines()
+            if line.strip() and (line.startswith("src/fdekit/") or line.startswith("tests/"))
+        ]
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        todos = []
+
+    # Contar los que el guardia revisa.
+    py_files = _get_py_files_to_check()
+    revisados = [str(p) for p in py_files]
+
+    # Comparar.
+    if len(revisados) != len(todos):
+        faltantes = set(todos) - set(revisados)
+        msg = (
+            f"El guardia revisa {len(revisados)} archivos pero hay {len(todos)} "
+            f".py versionados bajo src/fdekit/ y tests/. "
+            f"Faltantes: {sorted(faltantes)}"
+        )
         raise AssertionError(msg)
