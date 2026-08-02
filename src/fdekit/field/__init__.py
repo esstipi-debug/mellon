@@ -6,6 +6,7 @@ por eso se testea sin camara.
 """
 
 from .coverage import MeasurementCoverage
+from .homography import FloorHomography
 from .privacy import (
     AnonymityError,
     AnonymityGate,
@@ -16,6 +17,7 @@ from .privacy import (
 )
 
 __all__ = [
+    "FloorHomography",
     "MeasurementCoverage",
     "AnonymityError",
     "AnonymityGate",
