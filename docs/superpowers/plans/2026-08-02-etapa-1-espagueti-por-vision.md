@@ -958,16 +958,25 @@ el carro hace un viaje. Queda documentado en el docstring, no escondido.
 
 - [ ] **Step 1: Escribir el test que falla**
 
+**Los imports van al tope del archivo, no acá.** Agregar `import pandas as pd`,
+`from fdekit.layout import Layout`, `from fdekit.timestudy import travel_report`
+y `dwell_events, nearest_location, tracks_to_eventlog` al bloque de imports
+existente de `tests/test_field_tracks.py` (tarea 5); las constantes `LAY` y `T0`
+van junto a `H`. Sólo las funciones de test se agregan al final. Un import a
+mitad de archivo es un defecto de rúbrica y no hay razón para incurrirlo.
+
 ```python
-# agregar al final de tests/test_field_tracks.py
+# al tope de tests/test_field_tracks.py, junto a los imports de la tarea 5
 import pandas as pd
 
+from fdekit.field.tracks import TrackPoint, dwell_events, nearest_location, tracks_to_eventlog
 from fdekit.layout import Layout
 from fdekit.timestudy import travel_report
-from fdekit.field.tracks import TrackPoint, dwell_events, nearest_location, tracks_to_eventlog
 
 LAY = Layout(aisles=4, bays=10, levels=2, aisle_pitch=3.0, bay_pitch=1.0)
 T0 = pd.Timestamp("2026-09-14 10:00:00")
+
+# --- y de aca para abajo, al FINAL del archivo, solo las funciones de test:
 
 
 def test_nearest_location_cae_en_la_ubicacion_del_layout():
@@ -1549,7 +1558,12 @@ git commit -m "feat: groundtruth — el residual entre el espagueti calculado y 
 
 **Interfaces:**
 - Consumes: todo lo anterior.
-- Produces: subcomando `fdekit field --detections <csv> --refs <csv> --out <dir>`; función `run_field(detections, refs, out, fps, t0, today) -> dict`.
+- Produces: subcomando `fdekit field --detections <csv> --refs <csv> --out <dir>`; función `run_field(detections, refs, out, fps, t0, today, layout: Layout | None = None) -> dict`.
+
+**La geometría entra por argumento.** Un escritorio de 1 m no es un CD de 12
+pasillos: si `run_field` fijara `Layout()`, la taza caería en "pasillo 2 módulo
+2" y el número perdería significado físico. `layout=None` usa el CD por defecto;
+la maqueta pasa el suyo.
 
 **Criterio de éxito de la etapa 1:** este comando produce el espagueti en
 pantalla en menos de dos minutos, sobre un escritorio, sin red.
@@ -1571,8 +1585,11 @@ import pandas as pd
 import pytest
 
 from fdekit.cli import run_field
+from fdekit.layout import Layout
 
 REFS = "x_px,y_px,x_m,y_m\n0,0,0,0\n100,0,10,0\n100,100,10,10\n0,100,0,10\n"
+# La geometria de la maqueta, no la del CD: 10x10 m de escritorio.
+MESA = Layout(aisles=4, bays=10, levels=2, aisle_pitch=3.0, bay_pitch=1.0)
 
 
 def _detecciones() -> str:
@@ -1594,6 +1611,7 @@ def test_la_demo_de_mesa_produce_espagueti_y_residual(tmp_path):
         fps=10.0,
         t0=pd.Timestamp("2026-09-14 10:00:00"),
         today=date(2026, 9, 14),
+        layout=MESA,
     )
 
     assert (tmp_path / "out" / "espagueti_medido.png").exists()
@@ -1615,8 +1633,35 @@ def test_la_salida_no_lleva_identidad(tmp_path):
         fps=10.0,
         t0=pd.Timestamp("2026-09-14 10:00:00"),
         today=date(2026, 9, 14),
+        layout=MESA,
     )
     assert_no_identity(r)
+
+
+def test_la_geometria_se_respeta_y_no_se_fuerza_la_del_cd(tmp_path):
+    """La maqueta no es un CD de doce pasillos.
+
+    Con dos geometrias distintas el mismo recorrido cae en ubicaciones
+    distintas. Si `run_field` fijara `Layout()`, este test no notaria la
+    diferencia — y la taza sobre el escritorio quedaria reportada en el pasillo
+    2 modulo 2, que es un numero sin significado fisico.
+    """
+    (tmp_path / "refs.csv").write_text(REFS, encoding="utf-8")
+    (tmp_path / "det.csv").write_text(_detecciones(), encoding="utf-8")
+
+    comun = dict(
+        detections=tmp_path / "det.csv",
+        refs=tmp_path / "refs.csv",
+        fps=10.0,
+        t0=pd.Timestamp("2026-09-14 10:00:00"),
+        today=date(2026, 9, 14),
+    )
+    a = run_field(out=tmp_path / "a", layout=MESA, **comun)
+    b = run_field(out=tmp_path / "b", layout=Layout(), **comun)
+
+    # Las paradas son las mismas dos; lo que cambia es a que ubicacion caen.
+    assert a["stops"] == b["stops"] == 2
+    assert a["locations"] != b["locations"]
 
 
 def test_avisa_si_el_csv_de_referencias_no_tiene_cuatro_filas(tmp_path):
@@ -1631,6 +1676,7 @@ def test_avisa_si_el_csv_de_referencias_no_tiene_cuatro_filas(tmp_path):
             fps=10.0,
             t0=pd.Timestamp("2026-09-14 10:00:00"),
             today=date(2026, 9, 14),
+            layout=MESA,
         )
 ```
 
@@ -1644,10 +1690,14 @@ Expected: FAIL con `ImportError: cannot import name 'run_field'`
 ```python
 # agregar a src/fdekit/cli.py
 
-def run_field(detections, refs, out, fps, t0, today, k: int = 3) -> dict:
+def run_field(detections, refs, out, fps, t0, today, layout=None) -> dict:
     """Demo de mesa: CSV de detecciones -> espagueti medido + residual.
 
     `t0` y `today` son argumentos (regla 4). `out` se crea si no existe.
+
+    `layout` tambien es argumento: un escritorio de un metro no es un CD de doce
+    pasillos, y fijar el layout por defecto haria que la taza cayera en "pasillo
+    2 modulo 2". El numero seguiria saliendo, y no querria decir nada.
     """
     import csv as _csv
     from pathlib import Path
@@ -1674,7 +1724,7 @@ def run_field(detections, refs, out, fps, t0, today, k: int = 3) -> dict:
         [(float(f["x_m"]), float(f["y_m"])) for f in filas],
     )
 
-    lay = Layout()
+    lay = layout or Layout()
     tracks, cobertura = build_tracks(
         load_detections(detections), homografia, fps=fps, salt=new_session_salt()
     )
@@ -1687,6 +1737,9 @@ def run_field(detections, refs, out, fps, t0, today, k: int = 3) -> dict:
             sum(track_distance_m(p) for p in tracks.values()), 1
         ),
         "stops": int(len(log)),
+        # Las ubicaciones dependen de la geometria que se paso, y por eso van en
+        # la salida: son lo que deja ver si el layout declarado es el correcto.
+        "locations": sorted(log.df["location"].dropna().unique().tolist()),
         "coverage_note": cobertura.note(),
         "today": today.isoformat(),
     }
@@ -1706,6 +1759,8 @@ def cmd_field(a):
     """
     import datetime as _dt
 
+    from .layout import Layout
+
     out = run_field(
         detections=a.detections,
         refs=a.refs,
@@ -1713,6 +1768,9 @@ def cmd_field(a):
         fps=a.fps,
         t0=pd.Timestamp.now(),
         today=_dt.date.today(),
+        layout=Layout(
+            aisles=a.aisles, bays=a.bays, aisle_pitch=a.aisle_pitch, bay_pitch=a.bay_pitch
+        ),
     )
     print(json.dumps(out, indent=2, ensure_ascii=False))
     return 0
@@ -1725,6 +1783,12 @@ def cmd_field(a):
     f.add_argument("--refs", required=True, help="CSV con 4 esquinas: x_px,y_px,x_m,y_m")
     f.add_argument("--out", default="out")
     f.add_argument("--fps", type=float, default=30.0)
+    # Geometria: los defaults son los del CD. La maqueta de escritorio pasa la
+    # suya (p.ej. --aisles 4 --bays 10 --aisle-pitch 3 --bay-pitch 1).
+    f.add_argument("--aisles", type=int, default=12)
+    f.add_argument("--bays", type=int, default=50)
+    f.add_argument("--aisle-pitch", type=float, default=3.0)
+    f.add_argument("--bay-pitch", type=float, default=1.2)
     f.set_defaults(func=cmd_field)
 ```
 
@@ -1777,8 +1841,14 @@ Procedimiento completo, sobre un escritorio, en menos de dos minutos:
 5. Y el análisis, que **no** necesita OpenCV:
 
    ```bash
-   fdekit field --detections det.csv --refs refs.csv --out out --fps 30
+   fdekit field --detections det.csv --refs refs.csv --out out --fps 30 \
+                --aisles 4 --bays 10 --aisle-pitch 3 --bay-pitch 1
    ```
+
+   Los cuatro flags de geometría describen la maqueta. Sin ellos se usa la del
+   CD (12 pasillos × 50 módulos), y la taza sobre el escritorio quedaría
+   reportada en el pasillo 2 módulo 2 — un número que sale, y que no quiere
+   decir nada.
 
 En `out/espagueti_medido.png` queda el recorrido real. La salida en consola trae
 los metros medidos y la nota de cobertura — qué fracción de los cuadros vio
@@ -1804,7 +1874,9 @@ git commit -m "feat: fdekit field — la demo de mesa completa, de CSV a espague
 
 Al terminar la tarea 9:
 
-- [ ] `python -m pytest -q` verde. Esperado: ~423 + ~45 nuevos.
+- [ ] `python -m pytest -q` verde. Base al arrancar la etapa: **493** (correr
+      `python -m pytest -q` antes de la tarea 2 y anotar el número real; la base
+      se movió durante la escritura del plan). Esperado al cerrar: base + ~48.
 - [ ] `python -m pytest -m vision -q` corre (con OpenCV instalado) o se salta limpio.
 - [ ] Actualizar `HANDOFF.md`: nueva sección del toolkit de terreno, reglas 9 y 10
       en la lista de decisiones de diseño, y el conteo de tests.
