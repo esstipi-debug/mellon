@@ -9,3 +9,4 @@ venv/
 out/
 *.parquet
 .DS_Store
+.coverage
