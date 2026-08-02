@@ -254,6 +254,8 @@ cambió, o caducó.
 fdekit decide resolve "lo del slotting" --meeting m1      # L0 -> L1 -> L2
 fdekit decide confirm "lo del slotting" --symbol D-001 --meeting m1 --by "Marcela Perez"
 fdekit decide unalias "lo del slotting" --reason "..."     # revierte y reprocesa
+fdekit decide supersede D-001 --by D-002 --reason "..."     # lista lo que hay que retriar
+fdekit decide head D-001                                   # cual rige hoy
 ```
 
 Tres capas con cortocircuito: **L0** ID literal o herencia del punto de agenda

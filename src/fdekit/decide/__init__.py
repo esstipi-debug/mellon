@@ -72,9 +72,11 @@ from .query import (
     Agenda,
     Coverage,
     agenda,
+    head_of,
     implementations,
     referencing,
     safe_close,
+    supersede,
     tick,
     why,
 )
@@ -116,6 +118,8 @@ __all__ = [
     "why",
     "referencing",
     "implementations",
+    "head_of",
+    "supersede",
     "safe_close",
     "tick",
 ]
