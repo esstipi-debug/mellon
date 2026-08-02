@@ -229,34 +229,42 @@ class DwellEvents(NamedTuple):
 
 def _tramos_consecutivos(
     points: list[TrackPoint], asignaciones: list[str | None], max_gap_s: float
-) -> list[tuple[str | None, float, float]]:
+) -> list[tuple[str | None, float, float, bool]]:
     """Agrupa puntos consecutivos con la misma ubicacion asignada.
 
-    Cada tramo es (ubicacion, t_inicio, t_fin) -- una corrida maximal de
-    puntos seguidos con la misma asignacion, incluida la asignacion `None`
-    (puntos que `nearest_location` no pudo ubicar). Es el insumo crudo de
-    `dwell_events`: todavia no distingue ruido de parada real, solo junta lo
-    que ya vino junto en el tiempo.
+    Cada tramo es (ubicacion, t_inicio, t_fin, hueco_antes) -- una corrida
+    maximal de puntos seguidos con la misma asignacion, incluida la
+    asignacion `None` (puntos que `nearest_location` no pudo ubicar). Es el
+    insumo crudo de `dwell_events`: todavia no distingue ruido de parada
+    real, solo junta lo que ya vino junto en el tiempo.
 
     Corta el tramo aunque la ubicacion sea la misma si el hueco entre dos
-    puntos consecutivos supera `max_gap_s` (ronda de arreglo 3 de la tarea 6).
+    puntos CONSECUTIVOS DEL TRACK supera `max_gap_s` -- sin importar a que
+    ubicacion cayo cada uno. `hueco_antes` marca si el tramo empieza justo
+    despues de uno de esos huecos (a diferencia de un simple cambio de
+    ubicacion con el marcador visto todo el tiempo). Es la pregunta "¿el
+    marcador dejo de verse?", medida sobre el TRACK completo -- ver el
+    docstring de `dwell_events` para la distincion con "¿el carro se fue a
+    otro lado?", que se mide distinto (ronda de arreglo 4 de la tarea 6).
+
     Sin este corte, dos puntos de la MISMA ubicacion separados por un hueco de
     deteccion de cien segundos formarian un solo tramo de cien segundos de
     "duracion": un marcador que desaparecio cien segundos y reaparecio no es
-    un marcador que estuvo quieto cien segundos, es data que no se vio. Cortar
-    aca evita que ese hueco quede escondido dentro de un tramo, antes incluso
-    de llegar a la fusion.
+    un marcador que estuvo quieto cien segundos, es data que no se vio.
     """
-    tramos: list[tuple[str | None, float, float]] = []
+    tramos: list[tuple[str | None, float, float, bool]] = []
     loc_actual = asignaciones[0]
     t_ini = t_fin = points[0].t_s
+    hueco_antes = False  # el primer tramo no tiene "antes"
     for p, loc in zip(points[1:], asignaciones[1:]):
-        if loc == loc_actual and (p.t_s - t_fin) <= max_gap_s:
+        gap = p.t_s - t_fin
+        if loc == loc_actual and gap <= max_gap_s:
             t_fin = p.t_s
             continue
-        tramos.append((loc_actual, t_ini, t_fin))
+        tramos.append((loc_actual, t_ini, t_fin, hueco_antes))
+        hueco_antes = gap > max_gap_s
         loc_actual, t_ini, t_fin = loc, p.t_s, p.t_s
-    tramos.append((loc_actual, t_ini, t_fin))
+    tramos.append((loc_actual, t_ini, t_fin, hueco_antes))
     return tramos
 
 
@@ -274,22 +282,30 @@ def dwell_events(
     economico. El umbral de permanencia (`min_dwell_s`) es lo que separa
     "estuvo ahi" de "paso por ahi".
 
-    Algoritmo, en cuatro pasos (ronda de arreglo 3 de la tarea 6; la fusion
-    por tramos es la de la ronda 2, pero como se mide la duracion de un grupo
-    fusionado cambio -- ver mas abajo):
+    Algoritmo, en cuatro pasos (ronda de arreglo 4 de la tarea 6; la fusion
+    por tramos y la duracion por span son las de la ronda 2 y 3, pero el
+    corte por hueco de deteccion se separo en DOS preguntas distintas -- ver
+    mas abajo):
 
     1. Cada punto se asigna a su ubicacion mas cercana (o `None` si cae fuera
        de `max_distance_m`).
     2. Se arman TRAMOS: corridas consecutivas maximales de puntos con la
-       misma ubicacion asignada, cortando ademas si el hueco entre dos puntos
-       consecutivos supera `max_gap_s` aunque la ubicacion no haya cambiado
-       (`_tramos_consecutivos`).
-    3. Un tramo es RUIDO si su duracion PROPIA (`t_fin - t_ini` de ese tramo
-       solo) es menor que `max_gap_s`. Los tramos de una misma ubicacion
-       separados unicamente por tramos de ruido (de cualquier otra ubicacion,
-       o sin ubicacion) se fusionan; un tramo sustancial (no-ruido) de OTRA
-       ubicacion corta la fusion. Un hueco de deteccion mayor que `max_gap_s`
-       entre dos tramos de la MISMA ubicacion tambien corta -- ver el punto 2.
+       misma ubicacion asignada (`_tramos_consecutivos`). Ademas, cada tramo
+       queda marcado con `hueco_antes`: si el hueco entre este tramo y el
+       anterior, medido sobre el TRACK completo (dos muestras consecutivas,
+       sin importar la ubicacion de cada una), supera `max_gap_s`.
+    3. Dos preguntas distintas deciden si la fusion se corta, y NO son la
+       misma comprobacion:
+       - *¿El marcador dejo de verse?* -- `hueco_antes`, del punto 2. Si es
+         cierto, TODOS los grupos abiertos se cierran (sin importar su
+         ubicacion): el track se quedo sin muestras por mas de `max_gap_s`, y
+         ningun grupo puede asumir que la ubicacion se mantuvo durante ese
+         tiempo no observado.
+       - *¿El carro se fue a otro lado?* -- la duracion PROPIA del tramo
+         (`t_fin - t_ini` de ese tramo solo). Si es `< max_gap_s` es RUIDO
+         (se tolera: no corta nada); si es `>= max_gap_s` es un desplazamiento
+         real, y corta la fusion de cualquier OTRA ubicacion que estuviera
+         esperando (la propia ubicacion del tramo sigue abierta y acumulando).
     4. Se emite una parada por cada grupo fusionado cuya duracion llega a
        `min_dwell_s`, con el `t_s` del primer punto del grupo.
 
@@ -306,14 +322,19 @@ def dwell_events(
     carro estuvo dieciocho segundos en una zona, aunque el marcador saltara a
     otra ubicacion por instantes, estuvo dieciocho segundos ahi.
 
-    Por que el criterio es el mismo en los cuatro casos que importan (todos
-    con tramos de una sola muestra, el caso realista de una camara muestreando
-    a una frecuencia parecida a la de la alternancia):
+    Por que el criterio es el mismo en los cuatro casos que importan:
 
-    - 20 s en una ubicacion con excursiones de 1 s: los tramos de excursion
-      miden ~0 s (una sola muestra) < `max_gap_s` (2.0) y son ruido -> se
-      toleran, y el span de la ubicacion principal (de la primera a la ultima
-      muestra propia) llega a ~18-20 s -> UNA parada.
+    - Una ubicacion visitada repetidamente con una excursion de una sola
+      muestra en el medio, cada 3 s (p.ej. A en t=0,3,6 con B en t=2,5): el
+      track nunca pierde al marcador (2 s maximo entre muestras, nunca supera
+      `max_gap_s`), asi que `hueco_antes` nunca corta nada; y los tramos de B
+      duran 0 s cada uno, ruido para A -> A se fusiona en una sola parada. El
+      span PROPIO de B (de su primera a su ultima muestra) tambien crece con
+      cada repeticion, igual que el de A: en una pista larga, si B se repite
+      lo suficiente, su propio span termina cruzando `min_dwell_s` tambien, y
+      deja de distinguirse de una segunda ubicacion real (el caso de abajo).
+      Este algoritmo no resuelve esa ambiguedad de fondo con datos puramente
+      temporales -- ver la nota de longitud en el test que cubre este caso.
     - Dos ubicaciones reales alternando cada 1 s durante 20 s: el tramo de
       CADA visita mide ~0 s, asi que cada uno es ruido PARA LA OTRA ubicacion
       -- pero eso no le impide fusionarse con sus propios tramos anteriores.
@@ -327,13 +348,14 @@ def dwell_events(
       paradas en la ubicacion original mas una en la lejana.
     - La misma ubicacion antes y despues de un hueco de deteccion largo (el
       marcador desaparece y reaparece en el mismo lugar, sin ningun tramo de
-      otra ubicacion en el medio): sin el corte del punto 2, el span abarcaria
-      todo el hueco no observado y contaria como una sola parada larga que
-      nadie vio. Con el corte, son dos tramos separados de la misma ubicacion,
-      y el span de cada uno se mide por separado -> DOS paradas (si cada lado
-      alcanza `min_dwell_s` por si solo), no una que se inventa el tiempo de
-      en medio. Un marcador que no se vio no es un marcador que se quedo
-      quieto -- es justamente lo que la cobertura existe para declarar.
+      otra ubicacion en el medio): `hueco_antes` es cierto para el tramo que
+      sigue al hueco, y cierra TODOS los grupos abiertos en ese instante --
+      sin el corte, el span abarcaria todo el hueco no observado y contaria
+      como una sola parada larga que nadie vio. Con el corte, son dos tramos
+      separados de la misma ubicacion, y el span de cada uno se mide por
+      separado -> DOS paradas (si cada lado alcanza `min_dwell_s` por si
+      solo). Un marcador que no se vio no es un marcador que se quedo quieto
+      -- es justamente lo que la cobertura existe para declarar.
 
     `max_gap_s=2.0` por default es el umbral que separa ruido de parada real,
     y cumple dos roles con el mismo numero: dentro de un tramo, mas largo que
@@ -354,9 +376,17 @@ def dwell_events(
     ubicacion real alternada sin dejar rastro. El de la ronda 2 (fusion por
     tramos con duracion sumada) arreglaba esa perdida, pero solo en el caso de
     tramos de varios puntos: con tramos de una sola muestra, la suma daba cero
-    y el problema volvia disfrazado. Este algoritmo (fusion por tramos con
-    duracion de span, mas el corte por hueco de deteccion) es el que no pierde
-    ninguno de los cuatro casos.
+    y el problema volvia disfrazado. El de la ronda 3 (fusion con duracion de
+    span, mas un corte por hueco medido ENTRE LOS PUNTOS DEL GRUPO -- es decir,
+    entre dos muestras consecutivas de la MISMA ubicacion, ignorando lo que
+    hubiera pasado en el medio) arreglaba el span pero colapsaba dos preguntas
+    distintas en una sola comprobacion: "¿el marcador dejo de verse?" y "¿el
+    carro se fue a otro lado?" quedaban medidas con el mismo numero (el hueco
+    entre puntos del grupo), y una ubicacion visitada cada `> max_gap_s`
+    segundos con OTRA deteccion real en el medio se leia como ausencia del
+    marcador, exactamente el bug original con otra puerta. Este algoritmo
+    (ronda 4) separa las dos preguntas: `hueco_antes` mide ausencia sobre el
+    TRACK completo, la duracion propia del tramo mide desplazamiento real.
 
     `radius_m` ya no existe (se fue en la ronda 1): era una tolerancia
     espacial continua, la distancia del punto al ultimo visto. La tolerancia
@@ -400,39 +430,33 @@ def dwell_events(
         if grupo is not None and (grupo["t_ultimo"] - grupo["t_primero"]) >= min_dwell_s:
             paradas.append((grupo["t_primero"], loc))
 
-    # Ubicacion del tramo procesado justo antes del actual. Un sentinel que no
-    # es un str valido ni None, para que el primer tramo nunca "coincida".
-    loc_anterior: object = object()
-
-    for loc, t_ini, t_fin in tramos:
+    for loc, t_ini, t_fin, hueco_antes in tramos:
         duracion_tramo = t_fin - t_ini
         es_ruido = duracion_tramo < max_gap_s
 
+        if hueco_antes:
+            # Pregunta 1: ¿el marcador dejo de verse? Medida sobre el TRACK
+            # completo en `_tramos_consecutivos`, no sobre este grupo. Si es
+            # cierto, ningun grupo abierto -- de ninguna ubicacion -- puede
+            # asumir que se mantuvo durante el tiempo no observado.
+            for l in list(abiertos):
+                _cerrar(l)
+
         if loc is not None:
             grupo = abiertos.get(loc)
-            if grupo is not None and loc == loc_anterior:
-                # Dos tramos de la MISMA ubicacion, uno justo despues del
-                # otro, sin ningun tramo de otra ubicacion en el medio. Por
-                # construccion de `_tramos_consecutivos`, eso solo puede pasar
-                # si el hueco entre ellos ya supero `max_gap_s` (si fuera
-                # chico, habrian quedado fusionados en un solo tramo). El
-                # span no puede inventarse ese tiempo no observado: se cierra
-                # el grupo viejo y se abre uno nuevo.
-                _cerrar(loc)
-                grupo = None
             if grupo is None:
                 abiertos[loc] = {"t_primero": t_ini, "t_ultimo": t_fin}
             else:
                 grupo["t_ultimo"] = t_fin
 
         if not es_ruido:
-            # Interrupcion sustancial: corta la fusion de cualquier OTRA
-            # ubicacion que estuviera esperando (la propia, si la hay, sigue
-            # abierta y acumulando en la rama de arriba).
+            # Pregunta 2: ¿el carro se fue a otro lado? La duracion PROPIA de
+            # este tramo (no un hueco entre puntos) decide si es un
+            # desplazamiento real. Si lo es, corta la fusion de cualquier
+            # OTRA ubicacion que estuviera esperando (la propia, si la hay,
+            # sigue abierta y acumulando en la rama de arriba).
             for otra_loc in [l for l in abiertos if l != loc]:
                 _cerrar(otra_loc)
-
-        loc_anterior = loc
 
     for loc in list(abiertos):
         _cerrar(loc)

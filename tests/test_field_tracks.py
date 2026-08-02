@@ -425,6 +425,56 @@ def test_dwell_events_corta_el_grupo_por_hueco_de_deteccion_en_la_misma_ubicacio
     assert resultado.stops[1][0] == 105.0
 
 
+# --- Ronda de arreglo 4: la ronda 3 media "¿el marcador dejo de verse?" y
+# "¿el carro se fue a otro lado?" con la MISMA comprobacion (el hueco entre
+# dos puntos del propio grupo). Eso vaciaba la tolerancia al ruido que la
+# ronda 2 vino a construir: una ubicacion visitada cada > max_gap_s segundos,
+# con OTRA deteccion real en el medio (el marcador nunca dejo de verse), se
+# leia como si el marcador hubiera desaparecido. dwell_events ahora separa las
+# dos preguntas: el hueco se mide sobre el TRACK completo (_tramos_consecutivos),
+# y la duracion propia del tramo decide si es un desplazamiento real.
+
+
+def test_dwell_events_no_confunde_ruido_interleaveado_con_ausencia_del_marcador():
+    # Caso 1 (ronda 4), el que la ronda 3 rompia: A visitada cada 3 s (mas que
+    # max_gap_s=2.0 entre visitas propias), con una deteccion de B en el medio
+    # cada vez, a 2 s y a 1 s de cada A. El TRACK nunca pierde al marcador (el
+    # hueco maximo entre dos puntos cualquiera es 2 s, nunca supera
+    # max_gap_s), asi que A se fusiona en una sola parada -- no la ronda 3,
+    # que cortaba el grupo de A por el hueco de 3 s entre sus propios puntos,
+    # ignorando que B llenaba el medio.
+    #
+    # Nota de longitud: esta es la instancia MINIMA (3 visitas a A, 2 a B) en
+    # la que A cruza min_dwell_s=4.0 (span 6 s) y B se queda corto (span 3 s).
+    # El span de B tambien crece con cada repeticion adicional del mismo
+    # patron, igual que el de A: en una pista mucho mas larga, B terminaria
+    # cruzando min_dwell_s tambien, y a partir de ahi ya no se distingue de
+    # una segunda ubicacion real (test de arriba). Este algoritmo no resuelve
+    # esa ambiguedad con datos puramente temporales; ver el docstring de
+    # dwell_events.
+    puntos = [
+        TrackPoint(0.0, *M_XY),
+        TrackPoint(2.0, *E_XY),
+        TrackPoint(3.0, *M_XY),
+        TrackPoint(5.0, *E_XY),
+        TrackPoint(6.0, *M_XY),
+    ]
+
+    resultado = dwell_events(puntos, LAY)
+    assert [loc for _, loc in resultado.stops] == ["01-002-1"]
+
+
+def test_dwell_events_no_corta_cuando_el_hueco_es_exactamente_max_gap_s():
+    # Borde: el hueco es IGUAL a max_gap_s, ni mas ni menos. La comparacion en
+    # _tramos_consecutivos es estricta (> corta, <= tolera), asi que este caso
+    # NO corta el grupo. Fijado con un test para que nadie lo cambie sin
+    # darse cuenta.
+    puntos = [TrackPoint(float(t), *M_XY) for t in (0.0, 2.0, 4.0, 6.0)]  # pasos de 2 s = max_gap_s
+
+    resultado = dwell_events(puntos, LAY)
+    assert [loc for _, loc in resultado.stops] == ["01-002-1"]
+
+
 def test_dwell_events_marca_el_timestamp_de_entrada_no_el_de_salida():
     # El timestamp de la parada tiene que ser el del primer punto del grupo
     # (la entrada), no el del ultimo punto que ya se habia ido (la salida) --
