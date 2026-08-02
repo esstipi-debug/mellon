@@ -26,6 +26,49 @@ class MeasurementCoverage:
     tracks_expected: int | None = None
     discarded_low_confidence: int = 0
 
+    def __post_init__(self) -> None:
+        """Valida coherencia de los contadores.
+
+        Levanta ValueError si hay incoherencias que indican error en quien
+        construye el objeto, es mas barato detectarlo en construccion que
+        verlo aguas abajo.
+        """
+        # Validar no-negatividad
+        if self.frames_total < 0:
+            raise ValueError(
+                f"frames_total no puede ser negativo: {self.frames_total}"
+            )
+        if self.frames_with_marker < 0:
+            raise ValueError(
+                f"frames_with_marker no puede ser negativo: {self.frames_with_marker}"
+            )
+        if self.tracks_seen < 0:
+            raise ValueError(
+                f"tracks_seen no puede ser negativo: {self.tracks_seen}"
+            )
+        if self.discarded_low_confidence < 0:
+            raise ValueError(
+                f"discarded_low_confidence no puede ser negativo: {self.discarded_low_confidence}"
+            )
+        if self.tracks_expected is not None and self.tracks_expected < 0:
+            raise ValueError(
+                f"tracks_expected no puede ser negativo: {self.tracks_expected}"
+            )
+
+        # Validar coherencia: frames_with_marker <= frames_total
+        if self.frames_with_marker > self.frames_total:
+            raise ValueError(
+                f"frames_with_marker ({self.frames_with_marker}) no puede ser mayor que "
+                f"frames_total ({self.frames_total}): revisar el calculo de marcador"
+            )
+
+        # Validar coherencia: si tracks_expected == 0, entonces tracks_seen debe ser 0
+        if self.tracks_expected == 0 and self.tracks_seen > 0:
+            raise ValueError(
+                f"tracks_expected es 0 pero se reconstruyeron {self.tracks_seen} viajes: "
+                "incoherencia, revisar WMS y reconstruccion"
+            )
+
     @property
     def frame_pct(self) -> float:
         if self.frames_total <= 0:
@@ -34,7 +77,13 @@ class MeasurementCoverage:
 
     @property
     def track_pct(self) -> float | None:
-        if not self.tracks_expected:
+        # Distinguir: None significa "no se sabe", 0/0 tambien da None pero es
+        # un caso coherente donde ambos son cero.
+        if self.tracks_expected is None:
+            return None
+        if self.tracks_expected == 0:
+            # Si esperamos 0 y vimos 0, es coherente pero indefinido (0/0).
+            # Devolver None pero la nota lo menciona explicitamente.
             return None
         return round(self.tracks_seen / self.tracks_expected * 100, 1)
 
@@ -48,8 +97,16 @@ class MeasurementCoverage:
             f"({self.frame_pct}%)",
             f"{self.tracks_seen} viajes reconstruidos",
         ]
-        if self.track_pct is not None:
-            partes.append(f"{self.track_pct}% de los viajes esperados")
+        # Si tracks_expected esta definido (incluso si es 0), mencionar el porcentaje.
+        # El caso tracks_expected == 0 es especial: se declararon 0 viajes esperados,
+        # y si se reconstruyeron 0 es coherente (0/0 indefinido, pero lo mencionamos).
+        if self.tracks_expected is not None:
+            if self.tracks_expected == 0:
+                # Caso especial 0/0: indefinido pero lo mencionamos como 0.0%
+                partes.append("0.0% de los viajes esperados")
+            else:
+                if self.track_pct is not None:
+                    partes.append(f"{self.track_pct}% de los viajes esperados")
         if self.discarded_low_confidence:
             partes.append(f"{self.discarded_low_confidence} tramos descartados por baja confianza")
         return (
