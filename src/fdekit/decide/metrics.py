@@ -310,7 +310,7 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE) -> dict:
             "volumen": gate,
         }
 
-    from ..spc.xmr import compute_limits, degradation_alarm
+    from ..spc import compute_limits, degradation_alarm
 
     serie = t.sort_values("decidida")["toques"].astype(float).tolist()
     base, mon = serie[:baseline], serie[baseline:]

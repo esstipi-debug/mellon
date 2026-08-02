@@ -5,8 +5,8 @@ El VSM que dibujaste en el gemba es el flujo *declarado*. Esto es el flujo
 """
 
 from .log import EventLog
-from .dfg import directly_follows, bottlenecks
-from .variants import variants, rework_summary, conformance
+from .dfg import activity_durations, bottlenecks, directly_follows, to_mermaid
+from .variants import conformance, pareto_coverage, rework_summary, variants
 
 __all__ = [
     "EventLog",
@@ -15,4 +15,7 @@ __all__ = [
     "variants",
     "rework_summary",
     "conformance",
+    "activity_durations",
+    "pareto_coverage",
+    "to_mermaid",
 ]

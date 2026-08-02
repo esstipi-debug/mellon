@@ -85,7 +85,7 @@ def _has_number(text: str) -> bool:
 # La normalizacion es una sola en todo el kit. Definirla aca otra vez —sin
 # quitar acentos— hacia que `HEDGES` y `VERIFIABLE_PREDICATES`, que estan
 # escritos sin tildes, fallaran contra el espanol real.
-from ..gemba.transcribe import normalize as _norm
+from ..gemba import normalize as _norm
 
 
 # ------------------------------------------------------------------ soporte

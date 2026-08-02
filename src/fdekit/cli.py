@@ -61,9 +61,14 @@ def cmd_synth(a):
 
 
 def cmd_mine(a):
-    from .processmining import bottlenecks, conformance, rework_summary, variants
-    from .processmining.dfg import to_mermaid
-    from .processmining.variants import pareto_coverage
+    from .processmining import (
+        bottlenecks,
+        conformance,
+        pareto_coverage,
+        rework_summary,
+        to_mermaid,
+        variants,
+    )
 
     log = _load_log(a.log)
     print(f"\n== {len(log):,} eventos / {log.n_cases:,} casos / {len(log.activities)} actividades ==\n")
@@ -133,7 +138,7 @@ def cmd_sim(a):
 
 
 def cmd_spc(a):
-    from .spc.xmr import compute_limits, degradation_alarm, plot_xmr
+    from .spc import compute_limits, degradation_alarm, plot_xmr
 
     values = pd.read_csv(a.values).iloc[:, 0].astype(float).tolist()
     base, mon = values[: a.baseline], values[a.baseline :]
@@ -167,9 +172,9 @@ def cmd_value(a):
         cost_to_serve,
         gainshare_terms,
         levers_from_findings,
+        model_ladder,
         price_band,
     )
-    from .value.pricing import model_ladder
 
     findings = json.loads(Path(a.findings).read_text(encoding="utf-8"))
     keys = [a.archetype] if a.archetype != "todos" else sorted(ARCHETYPES)
@@ -181,7 +186,7 @@ def cmd_value(a):
         )
 
     if a.regimes:
-        from .value.labor_regimes import REGIMES, STAFFING_MODELS, regime_table
+        from .value import REGIMES, STAFFING_MODELS, regime_table
 
         _print(pd.DataFrame(regime_table()))
         print("\nModelos de dotacion (JUICIO, no medicion):")

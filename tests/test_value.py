@@ -373,3 +373,57 @@ def test_cada_arquetipo_produce_un_perfil_de_palancas_distinto(findings):
         r = case(findings, k, control=True).simulate(2000)
         top[k] = r.per_lever.iloc[0]["key"]
     assert top["3PL"] != top["MAYORISTA"]
+
+
+# --------------------------------------------------- gemba dentro de L1
+
+
+def test_gemba_aporta_a_l1_solo_lo_que_el_log_no_ve(findings):
+    """El Pareto de gemba no llegaba a ninguna palanca: `levers_from_findings`
+    nunca leia `findings["gemba"]` y el string "gemba.pareto" vivia solo en el
+    campo `source` del catalogo. Ahora entra, y entra acotado: sumar el Pareto
+    completo duplicaria L1 y L2 porque casi todo lo observado ya esta en el log
+    bajo otro nombre."""
+    arch = build_archetype("RETAIL_OMNI", "grande")
+    base = levers_from_findings(findings, arch, has_control_group=True)
+    l1_base = next(l for l in base if l.key == "L1_productividad").annual_units.mode
+
+    # Se duplican las horas de gemba fuera del log: L1 tiene que moverse.
+    f = json.loads(json.dumps(findings))
+    f["gemba"]["value_input"]["hours_per_shift"] *= 2
+    doble = levers_from_findings(f, arch, has_control_group=True)
+    l1_doble = next(l for l in doble if l.key == "L1_productividad").annual_units.mode
+    assert l1_doble > l1_base
+
+    # El delta es exactamente las horas extra anualizadas por turnos, no por
+    # pedidos: la ventana de gemba es un turno y los dias entran una sola vez.
+    extra = findings["gemba"]["value_input"]["hours_per_shift"] * arch.annual_shifts
+    assert l1_doble - l1_base == pytest.approx(extra, rel=1e-9)
+
+
+def test_el_pareto_completo_de_gemba_no_entra_a_l1(findings):
+    """La observacion mas grande del Pareto de la demo es la espera de olas, que
+    `bottlenecks` ya cuantifica. Si entrara a L1, la palanca se duplicaria y el
+    numero resultante seguiria pareciendo razonable — que es la unica forma en
+    que un error de este tamano llega a una reunion."""
+    total = sum(r["hours_per_shift"] for r in findings["gemba"]["pareto"])
+    aporta = findings["gemba"]["value_input"]["hours_per_shift"]
+    assert 0 < aporta < total
+
+
+def test_hallazgos_con_gemba_viejo_se_rechaza(findings):
+    """Un `hallazgos.json` anterior al cambio trae `pareto[].hours_per_year` con
+    el 250 fijo y no trae `value_input`. Un `.get(..., {})` haria desaparecer el
+    aporte de gemba sin una linea de aviso, que es el modo de falla mas caro del
+    repo."""
+    viejo = json.loads(json.dumps(findings))
+    viejo["gemba"].pop("value_input")
+    with pytest.raises(ValueError, match="value_input"):
+        levers_from_findings(viejo, build_archetype("RETAIL_OMNI", "grande"))
+
+
+def test_los_turnos_por_dia_reusan_los_dias_de_operacion():
+    """La anualizacion de gemba no puede traer su propio calendario: los dias de
+    operacion entran una sola vez, en el arquetipo."""
+    arch = build_archetype("RETAIL_OMNI", "grande")
+    assert arch.annual_shifts == arch.shifts_per_day * arch.operating_days

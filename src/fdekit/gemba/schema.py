@@ -56,6 +56,23 @@ class Observation:
     duration_s: float | None = None
     frequency_per_shift: float | None = None
     operators_affected: int = 1
+    # ¿Este desperdicio ya deja rastro en el log del WMS?
+    #
+    # Es el campo que permite que gemba entre al caso economico sin contar dos
+    # veces. Casi todo lo que se observa en un pasillo YA esta en el log bajo
+    # otro nombre: "buscar un SKU que no esta" es PICK_EXCEPTION_LOCATION,
+    # "rehacer el carton" es CARTON_REWORK, "esperar pedidos liberados" es la
+    # espera de la transicion ORDER_RELEASED -> PICK. Sumar esas horas a las que
+    # ya aporta `timestudy` duplicaria la palanca L1 entera.
+    #
+    # Lo que gemba ve y el log no puede ver es el trabajo sin transaccion:
+    # buscar el carro, esperar al supervisor, la planilla paralela, el traslado
+    # que nadie escanea. Eso es lo unico que suma.
+    #
+    # `None` significa "no se declaro", no "no esta": va a la cola de revision.
+    # Un default de True o False decidiria en silencio si la observacion vale
+    # plata, que es exactamente lo que la regla 1 del repo prohibe.
+    in_event_log: bool | None = None
     shift: str = ""
     observer: str = ""
     timestamp: str = field(default_factory=lambda: datetime.now().astimezone().isoformat())
@@ -77,12 +94,27 @@ class Observation:
         return self.duration_s * self.frequency_per_shift * self.operators_affected / 3600
 
     @property
-    def impact_h_per_year(self) -> float:
-        return self.impact_h_per_shift * 250
+    def quantified(self) -> bool:
+        return self.duration_s is not None and self.frequency_per_shift is not None
+
+    @property
+    def counts_for_value(self) -> bool:
+        """Si esta observacion puede entrar al caso economico.
+
+        Exige las dos condiciones: cuantificada, y declarada como fuera del log.
+        Ver `in_event_log`.
+        """
+        return self.quantified and self.in_event_log is False
 
     def to_dict(self) -> dict:
         d = asdict(self)
-        d["impact_h_per_shift"] = round(self.impact_h_per_shift, 3)
-        d["impact_h_per_year"] = round(self.impact_h_per_year, 1)
-        d["quantified"] = self.duration_s is not None and self.frequency_per_shift is not None
+        # Unidad de salida: el turno observado. El `* 250` que vivia aca era el
+        # ultimo resto de la anualizacion doble que el repo ya elimino de
+        # `travel_stats` y `standard_work_gap`, y sobrevivio solo porque nadie
+        # aguas abajo lo leia. Ahora que gemba alimenta L1, el 250 seria un
+        # residuo de 250/operating_days (-17% con los 300 dias del arquetipo).
+        # La anualizacion es una sola y vive en `value/levers.py`.
+        d["impact_h_per_shift"] = round(self.impact_h_per_shift, 4)
+        d["quantified"] = self.quantified
+        d["counts_for_value"] = self.counts_for_value
         return d

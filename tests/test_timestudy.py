@@ -273,10 +273,29 @@ def test_el_espagueti_no_revienta_sin_rutas_que_dibujar():
     assert plot_spaghetti(vacio, LAY) is not None
 
 
-def test_location_frequency_solo_cuenta_picks():
+def test_location_frequency_solo_cuenta_actividades_de_picking():
     f = location_frequency(_travel_log()).set_index("location")
     assert set(f.index) == {"01-002-1", "01-004-1", "02-003-1"}
     assert DOCK not in f.index
+
+
+def test_location_frequency_cuenta_las_visitas_con_maestro_vencido():
+    """Filtrar solo `PICK` dejaba fuera las excepciones y los quiebres, que son
+    exactamente las ubicaciones que mas se recorren y las unicas que el
+    reslotting tiene que ver. El mapa de calor mostraba el CD que el WMS cree,
+    no el que el picker camina, y el sesgo apuntaba contra el hallazgo."""
+    log = make_log(
+        [
+            ("A", "RELEASE", 0, None, None),
+            ("A", "PICK", 60, "PICK-1", "01-002-1"),
+            ("A", "PICK_EXCEPTION_LOCATION", 90, "PICK-1", "01-004-1"),
+            ("A", "SHORT_PICK", 120, "PICK-1", "02-003-1"),
+            ("A", "SHIP", 200, None, DOCK),
+        ]
+    )
+    f = location_frequency(log).set_index("location")["visits"]
+    assert set(f.index) == {"01-002-1", "01-004-1", "02-003-1"}
+    assert int(f.sum()) == 3
 
 
 def test_slotting_opportunity_premia_mover_la_clase_a_a_la_zona_dorada():

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from fdekit.baseline import diff_in_diff, pre_post
+from fdekit.baseline import diff_in_diff, parallel_trends_check, pre_post
 from fdekit.baseline.design import BaselineSpec, mde, required_days
 from fdekit.dataquality import (
     audit_master,
@@ -57,6 +57,105 @@ def test_resumen_trae_intervalo_de_confianza(dc):
     r = res["rates"]["any_defect"]
     assert r["ci_low_pct"] <= r["rate_pct"] <= r["ci_high_pct"]
     assert res["projected_defective_skus"]["low"] <= res["projected_defective_skus"]["high"]
+
+
+def test_sin_ponderar_la_tasa_se_declara_como_de_muestra(dc):
+    """`stratified_sample` sobre-representa la clase A 3:1 a proposito. Agregar
+    con `k/n` crudo sobre esa muestra NO da la tasa poblacional. Mientras no se
+    pasen las clases de la poblacion, el resultado tiene que decir que es la
+    tasa de la muestra en vez de dejar que se lea como poblacional."""
+    s = stratified_sample(dc.master, 300, seed=5)
+    audit = audit_master(s, dc.truth[dc.truth["sku_id"].isin(s["sku_id"])])
+
+    sin = audit_summary(audit, population=len(dc.master))
+    assert "SIN PONDERAR" in sin["weighting"]
+    assert sin["population_coverage_pct"] is None
+
+
+def _audit_sintetica(por_clase_muestra: dict, tasas: dict) -> pd.DataFrame:
+    """Auditoria armada a mano: `n` SKU por clase con la tasa de defecto exacta."""
+    filas = []
+    for cls, n in por_clase_muestra.items():
+        malos = round(n * tasas[cls])
+        for i in range(n):
+            filas.append({"abc_class": cls, "dim_out_of_tol": i < malos})
+    df = pd.DataFrame(filas)
+    df["weight_out_of_tol"] = False
+    df["location_mismatch"] = False
+    df["any_defect"] = df["dim_out_of_tol"]
+    df["cube_err_pct"] = 0.0
+    return df
+
+
+def test_la_post_estratificacion_pondera_por_la_poblacion_no_por_la_muestra():
+    """El caso de manual, con numeros a mano para que la aritmetica quede fija.
+
+    Muestra: 50 A / 30 B / 20 C con tasas 50% / 20% / 10%.
+    Crudo:      (25 + 6 + 2) / 100                      = 33,0%
+    Ponderado:  0,1*50% + 0,3*20% + 0,6*10%             = 17,0%
+
+    Los 16 puntos de diferencia son enteros artefacto del diseno de muestreo.
+    Reportar el 33% como 'tasa de defecto del catalogo' es un error de una linea
+    que produce un numero perfectamente creible.
+    """
+    audit = _audit_sintetica({"A": 50, "B": 30, "C": 20}, {"A": 0.5, "B": 0.2, "C": 0.1})
+    poblacion = {"A": 100, "B": 300, "C": 600}
+
+    crudo = audit_summary(audit, population=1000)
+    pond = audit_summary(audit, population=1000, population_by_class=poblacion)
+
+    assert crudo["rates"]["dim_out_of_tol"]["rate_pct"] == pytest.approx(33.0, abs=0.05)
+    assert pond["rates"]["dim_out_of_tol"]["rate_pct"] == pytest.approx(17.0, abs=0.05)
+    # La tasa de la muestra se conserva al lado, para poder ver el sesgo.
+    assert pond["rates"]["dim_out_of_tol"]["sample_rate_pct"] == pytest.approx(33.0, abs=0.05)
+    assert "post-estratificado" in pond["weighting"]
+
+
+def test_la_post_estratificacion_baja_el_sesgo_contra_la_clave_de_respuestas(dc):
+    """La propiedad real del estimador es ser insesgado EN EXPECTATIVA, no caer
+    mas cerca en cada muestra: en una muestra suelta el crudo puede ganar por
+    azar. Por eso el test promedia varias muestras y mira el sesgo, que es lo
+    que efectivamente se corrigio."""
+    por_clase = dc.master["abc_class"].value_counts().to_dict()
+    verdad = float(dc.defects["dim_error"].mean()) * 100
+
+    crudos, ponderados = [], []
+    for seed in range(40):
+        s = stratified_sample(dc.master, 400, seed=seed)
+        audit = audit_master(s, dc.truth[dc.truth["sku_id"].isin(s["sku_id"])])
+        crudos.append(audit_summary(audit, population=len(dc.master))["rates"]["dim_out_of_tol"]["rate_pct"])
+        ponderados.append(
+            audit_summary(audit, population=len(dc.master), population_by_class=por_clase)[
+                "rates"
+            ]["dim_out_of_tol"]["rate_pct"]
+        )
+
+    sesgo_crudo = abs(float(np.mean(crudos)) - verdad)
+    sesgo_pond = abs(float(np.mean(ponderados)) - verdad)
+    assert sesgo_pond < sesgo_crudo
+
+
+def test_el_censo_colapsa_el_intervalo(dc):
+    """Auditar el catalogo entero no tiene error de muestreo. Que el intervalo
+    desaparezca en vez de solo achicarse es la propiedad que hace el caso
+    economico de automatizar la medicion dimensional."""
+    audit = audit_master(dc.master, dc.truth)
+    por_clase = dc.master["abc_class"].value_counts().to_dict()
+    r = audit_summary(audit, population=len(dc.master), population_by_class=por_clase)
+
+    d = r["rates"]["dim_out_of_tol"]
+    assert d["ci_low_pct"] == d["rate_pct"] == d["ci_high_pct"]
+
+
+def test_una_clase_sin_auditar_se_reporta_como_cobertura_parcial(dc):
+    """Renormalizar el peso sobre lo cubierto sin decirlo convertiria un hueco
+    en un promedio."""
+    audit = audit_master(dc.master, dc.truth)
+    por_clase = dc.master["abc_class"].value_counts().to_dict()
+    r = audit_summary(
+        audit[audit["abc_class"] != "C"], population=len(dc.master), population_by_class=por_clase
+    )
+    assert 0 < r["population_coverage_pct"] < 100
 
 
 def test_vinculo_defecto_reproceso_es_significativo(dc):
@@ -167,3 +266,75 @@ def test_did_con_dispersion_si_es_contrastable():
     assert did["testable"] is True
     assert did["warning_varianza"] == ""
     assert did["significant"] is True
+
+
+# ------------------------------------------------- tendencias paralelas
+
+
+def _panel_tendencias(n_days: int, drift: float, noise: float, seed: int = 0) -> pd.DataFrame:
+    """Panel pre con `n_days` dias por grupo. `drift` es la divergencia diaria
+    real del grupo tratado; `noise` el ruido entre dias."""
+    rng = np.random.default_rng(seed)
+    filas = []
+    for g in ("control", "treat"):
+        for d in range(n_days):
+            base = 50 + (drift * d if g == "treat" else 0.0)
+            filas += [
+                {
+                    "grupo": g,
+                    "dia": pd.Timestamp("2026-03-02") + pd.Timedelta(days=d),
+                    "ciclo": base + rng.normal(0, noise),
+                }
+                for _ in range(40)
+            ]
+    return pd.DataFrame(filas)
+
+
+CORTE = pd.Timestamp("2026-06-01")
+
+
+def test_tendencias_paralelas_agrega_por_periodo_y_no_por_fila():
+    """La version que nunca se corria ajustaba la recta sobre las filas crudas y
+    contaba filas para decidir si tenia puntos: con un panel de pedidos veia
+    2.100 'puntos' donde habia 3 dias. Tendencias paralelas es una propiedad de
+    la media del grupo en el tiempo, no de cada pedido."""
+    r = parallel_trends_check(_panel_tendencias(4, 0.0, 1.0), "ciclo", "grupo", "dia", CORTE)
+    assert r["n_periods_pre"] == {"control": 4, "treat": 4}
+
+
+def test_el_ruido_de_tres_dias_no_se_reporta_como_divergencia():
+    """Un veredicto categorico desde tres dias de un proceso cuya mediana diaria
+    se mueve 30% rechaza ruido como si fuera senal, y descarta el unico
+    estimador que se puede defender. Con pocos dias el resultado honesto es 'no
+    encontre, y tampoco podria haber encontrado'."""
+    r = parallel_trends_check(_panel_tendencias(3, 0.0, 8.0), "ciclo", "grupo", "dia", CORTE)
+    assert r["parallel_trends_ok"] is True
+    assert r["conclusive"] is False
+    assert "NO quedo verificado" in r["reason"]
+
+
+def test_una_divergencia_real_y_grande_se_detecta_igual_con_pocos_dias():
+    r = parallel_trends_check(_panel_tendencias(3, 5.0, 1.0), "ciclo", "grupo", "dia", CORTE)
+    assert r["parallel_trends_ok"] is False
+    assert "divergian" in r["reason"]
+
+
+def test_con_ventana_larga_y_sin_divergencia_el_chequeo_es_concluyente():
+    r = parallel_trends_check(_panel_tendencias(14, 0.0, 3.0), "ciclo", "grupo", "dia", CORTE)
+    assert r["parallel_trends_ok"] is True
+    assert r["conclusive"] is True
+    assert r["reason"] == ""
+
+
+def test_con_ventana_larga_se_detecta_una_divergencia_sutil():
+    r = parallel_trends_check(_panel_tendencias(14, 1.5, 3.0), "ciclo", "grupo", "dia", CORTE)
+    assert r["parallel_trends_ok"] is False
+    assert r["conclusive"] is True
+
+
+def test_sin_periodos_suficientes_no_se_afirma_nada():
+    """`None` en `parallel_trends_ok` es 'sin verificar', que no es lo mismo que
+    verificado. Devolver True aca seria firmar el supuesto sin mirarlo."""
+    r = parallel_trends_check(_panel_tendencias(2, 0.0, 1.0), "ciclo", "grupo", "dia", CORTE)
+    assert r["parallel_trends_ok"] is None
+    assert r["conclusive"] is False

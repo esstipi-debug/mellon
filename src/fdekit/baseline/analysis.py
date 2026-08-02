@@ -135,29 +135,140 @@ def diff_in_diff(df: pd.DataFrame, value: str, group: str, period: str) -> dict:
     }
 
 
-def parallel_trends_check(df: pd.DataFrame, value: str, group: str, time: str, cutoff) -> dict:
+def _slope_with_se(x: np.ndarray, y: np.ndarray) -> tuple[float, float]:
+    """Pendiente de una regresion simple y su error estandar."""
+    n = len(x)
+    slope, intercept = np.polyfit(x, y, 1)
+    sxx = float(((x - x.mean()) ** 2).sum())
+    if n <= 2 or sxx <= 0:
+        return float(slope), float("inf")
+    resid = y - (slope * x + intercept)
+    s2 = float((resid**2).sum()) / (n - 2)
+    return float(slope), float(np.sqrt(s2 / sxx))
+
+
+def parallel_trends_check(
+    df: pd.DataFrame,
+    value: str,
+    group: str,
+    time: str,
+    cutoff,
+    alpha: float = 0.05,
+    materiality: float = 0.02,
+    min_periods: int = 3,
+) -> dict:
     """Chequeo de tendencias paralelas en el periodo pre.
 
     Si los dos grupos ya venian divergiendo antes del cambio, DiD no es valido y
     hay que decirlo antes de que lo diga el analista del cliente.
+
+    DOS CORRECCIONES SOBRE LA VERSION QUE NUNCA SE CORRIA:
+
+    1. **Se agrega a nivel de periodo antes de ajustar.** La version anterior
+       ajustaba la recta sobre las filas crudas y contaba filas para decidir si
+       tenia puntos suficientes: con un panel de pedidos veia 2.100 "puntos"
+       donde habia 3 dias. Tendencias paralelas es una propiedad de la media del
+       grupo a lo largo del tiempo, no de cada pedido.
+
+    2. **La divergencia se contrasta contra su error estandar.** Sin eso, la
+       funcion emitia un veredicto categorico desde tres dias de un proceso cuya
+       mediana diaria se mueve 30%, y el ruido salia como "DiD sesgado" — un
+       falso positivo que descarta el unico estimador que se puede defender.
+
+    Por eso el resultado tiene DOS banderas y no una:
+
+        parallel_trends_ok   no se detecto divergencia material y significativa
+        conclusive           el diseno tenia con que detectarla
+
+    `ok=True` con `conclusive=False` significa "no encontre divergencia y
+    tampoco podria haberla encontrado". Es ausencia de evidencia, no evidencia
+    de ausencia, y colapsar las dos cosas en un solo booleano es exactamente
+    como se firma un DiD que el analista del cliente despues rompe.
     """
-    pre = df[df[time] < cutoff]
-    slopes = {}
+    d = df.copy()
+    d[time] = pd.to_datetime(d[time])
+    pre = d[d[time] < pd.Timestamp(cutoff)]
+    scale = abs(pre[value].astype(float).mean()) if len(pre) else 0.0
+    scale = scale or 1.0
+
+    slopes: dict[str, float] = {}
+    ses: dict[str, float] = {}
+    periods: dict[str, int] = {}
+    dfs: dict[str, int] = {}
     for g in ("control", "treat"):
         sub = pre[pre[group] == g]
-        x = pd.to_numeric(pd.to_datetime(sub[time])).to_numpy(dtype=float) / 8.64e13
-        y = sub[value].astype(float).to_numpy()
-        if len(x) < 3:
-            return {"valid": False, "reason": "muy pocos puntos en el periodo pre"}
-        slopes[g] = float(np.polyfit(x, y, 1)[0])
+        # Una fila por periodo: la media del grupo en ese dia.
+        daily = sub.groupby(time)[value].mean().sort_index()
+        periods[g] = int(len(daily))
+        if len(daily) < min_periods:
+            return {
+                "slope_treat_per_day": None,
+                "slope_control_per_day": None,
+                "divergence_per_day": None,
+                "se_divergence_per_day": None,
+                "n_periods_pre": periods,
+                "parallel_trends_ok": None,
+                "conclusive": False,
+                "reason": (
+                    f"solo {len(daily)} periodo(s) pre en el grupo '{g}': hacen falta "
+                    f"al menos {min_periods} para estimar una tendencia. El supuesto "
+                    "queda SIN VERIFICAR, que no es lo mismo que verificado."
+                ),
+            }
+        x = pd.to_numeric(daily.index).to_numpy(dtype=float) / 8.64e13
+        slopes[g], ses[g] = _slope_with_se(x, daily.to_numpy(dtype=float))
+        dfs[g] = len(daily) - 2
 
     diff = slopes["treat"] - slopes["control"]
-    scale = abs(pre[value].astype(float).mean()) or 1.0
-    ok = abs(diff) / scale < 0.02
+    se = float(np.sqrt(ses["control"] ** 2 + ses["treat"] ** 2))
+
+    # Critico t, no normal. Con tres dias por grupo la pendiente tiene UN grado
+    # de libertad, y un z=1,96 sobre una varianza estimada con 1 g.l. rechaza
+    # ruido como si fuera senal: es la misma clase de error que `diff_in_diff`
+    # ya corrigio cuando devolvia p=0 con varianza cero. Grados de libertad de
+    # la diferencia por Welch-Satterthwaite, que es lo correcto cuando los dos
+    # grupos tienen ventanas pre distintas.
+    num = (ses["control"] ** 2 + ses["treat"] ** 2) ** 2
+    den = sum(ses[g] ** 4 / dfs[g] for g in ("control", "treat") if dfs[g] > 0)
+    dof = num / den if den > 0 and np.isfinite(num) else 0.0
+    crit = float(stats.t.ppf(1 - alpha / 2, dof)) if dof > 0 else float("inf")
+    z = crit
+
+    significant = bool(np.isfinite(se) and se > 0 and np.isfinite(crit) and abs(diff) > crit * se)
+    material = bool(abs(diff) / scale >= materiality)
+    ok = not (significant and material)
+
+    # Divergencia mas chica que este diseno podria haber detectado, en % de la
+    # metrica por dia. Es el MDE del chequeo, con la misma logica que
+    # `design.required_days`: si supera el umbral de materialidad, el chequeo no
+    # tenia con que fallar y su "ok" no significa nada.
+    detectable = z * se / scale if np.isfinite(se) else float("inf")
+    conclusive = bool(detectable <= materiality)
+
+    if significant and material:
+        reason = "los grupos ya divergian antes del cambio: DiD sesgado"
+    elif not conclusive:
+        reason = (
+            f"sin divergencia detectada, pero el diseno solo podia detectar una de "
+            f"{detectable:.1%} por dia contra un umbral de {materiality:.1%}: el "
+            f"supuesto NO quedo verificado. Alargar la ventana pre "
+            f"(hoy {periods['treat']} y {periods['control']} periodos) antes de "
+            "presentar el DiD como limpio."
+        )
+    else:
+        reason = ""
+
     return {
         "slope_treat_per_day": round(slopes["treat"], 4),
         "slope_control_per_day": round(slopes["control"], 4),
         "divergence_per_day": round(diff, 4),
+        "se_divergence_per_day": round(se, 4) if np.isfinite(se) else None,
+        "dof": round(dof, 2),
+        "detectable_divergence_pct_per_day": (
+            round(detectable * 100, 2) if np.isfinite(detectable) else None
+        ),
+        "n_periods_pre": periods,
         "parallel_trends_ok": bool(ok),
-        "reason": "" if ok else "los grupos ya divergian antes del cambio: DiD sesgado",
+        "conclusive": conclusive,
+        "reason": reason,
     }

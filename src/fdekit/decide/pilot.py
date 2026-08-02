@@ -36,8 +36,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ..baseline import BaselineSpec, diff_in_diff
-from ..baseline.design import mde, sd_from_log
+from ..baseline import BaselineSpec, diff_in_diff, mde, sd_from_log
 
 # Los cinco campos que el facilitador dice en voz alta y alguien anota.
 CAMPOS = ("que", "dueno", "fecha", "porque", "supuesto")

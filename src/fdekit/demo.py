@@ -14,18 +14,25 @@ import numpy as np
 import pandas as pd
 
 from .a3 import build_a3_from_findings
-from .baseline import BaselineSpec, diff_in_diff, pre_post
-from .baseline.design import required_days, sd_from_log
+from .baseline import BaselineSpec, diff_in_diff, parallel_trends_check, pre_post
+from .baseline import required_days, sd_from_log
 from .dataquality import audit_master, audit_summary, link_defects_to_rework, sampling_plan, stratified_sample
 from .gemba import GembaSession, Observation
 from .layout import Layout
-from .probe.contracts import ContractCheck, check_payload, retry_idempotency_check, timezone_audit
+from .probe import ContractCheck, check_payload, retry_idempotency_check, timezone_audit
 from .probe.edi import smoke_report
-from .processmining import EventLog, bottlenecks, conformance, rework_summary, variants
-from .processmining.dfg import activity_durations, to_mermaid
-from .processmining.variants import pareto_coverage
+from .processmining import (
+    EventLog,
+    activity_durations,
+    bottlenecks,
+    conformance,
+    pareto_coverage,
+    rework_summary,
+    to_mermaid,
+    variants,
+)
 from .sim import calibrate_from_log, sizing_sweep
-from .spc.xmr import degradation_alarm, plot_xmr, compute_limits
+from .spc import compute_limits, degradation_alarm, plot_xmr
 from .standardwork import JobBreakdown, runbook_template
 from .synth import DCConfig, generate_dc
 from .timestudy.cycles import cycle_time_stats, operator_variation, standard_work_gap, takt_analysis
@@ -112,6 +119,8 @@ def _gemba_demo(out: Path) -> dict:
             description="El WMS manda a una ubicacion vacia; el picker recorre el pasillo buscando.",
             duration_s=75,
             frequency_per_shift=38,
+            # Ya esta en el log como PICK_EXCEPTION_LOCATION: no suma a L1.
+            in_event_log=True,
             shift="manana",
             operator_quote="Cuando no esta, me acuerdo donde suele estar. El sistema no.",
             five_whys=[
@@ -133,6 +142,8 @@ def _gemba_demo(out: Path) -> dict:
             description="El carton sugerido no cierra; se rehace con carton mayor.",
             duration_s=190,
             frequency_per_shift=26,
+            # Ya esta en el log como CARTON_REWORK: no suma a L1.
+            in_event_log=True,
             shift="manana",
             operator_quote="El sistema siempre me manda la caja chica para estos.",
             root_cause="Dimensiones del maestro no corresponden al producto fisico",
@@ -147,9 +158,35 @@ def _gemba_demo(out: Path) -> dict:
             description="La ola de las 10:00 libera 400 pedidos con 9 pickers en piso.",
             duration_s=430,
             frequency_per_shift=180,
+            # Ya esta en el log: es la espera de la transicion dominante
+            # ORDER_RELEASED -> PICK, que `bottlenecks` cuantifica aparte. Es la
+            # observacion mas grande del Pareto y la que mas dano haria sumada
+            # dos veces.
+            in_event_log=True,
             shift="manana",
             root_cause="Politica de liberacion por lote grande, no nivelada contra capacidad",
             countermeasure_idea="Nivelar liberacion (heijunka) contra dotacion real del turno",
+        )
+    )
+    s.add(
+        Observation(
+            area="Picking — inicio de ola",
+            activity="Buscar carro de picking disponible",
+            waste_type="MOVIMIENTO",
+            description=(
+                "Al liberarse la ola el picker recorre packing y recepcion buscando "
+                "un carro libre; los carros no tienen posicion asignada."
+            ),
+            duration_s=150,
+            frequency_per_shift=22,
+            # NO deja rastro en el WMS: no hay transaccion que emitir por buscar
+            # un carro. Es el unico tipo de hallazgo que gemba aporta a L1, y la
+            # razon por la que la herramienta 1 existe teniendo el log.
+            in_event_log=False,
+            shift="manana",
+            operator_quote="El carro lo encuentro, pero primero doy la vuelta entera.",
+            root_cause="Los carros no tienen ubicacion de retorno definida",
+            countermeasure_idea="Zona de carros marcada en piso + retorno al final de cada ola",
         )
     )
     s.add(
@@ -158,6 +195,7 @@ def _gemba_demo(out: Path) -> dict:
             activity="Doble digitacion de guia",
             waste_type="SOBREPROCESO",
             description="Se digita en el WMS y despues en una planilla de control paralela.",
+            in_event_log=False,
             shift="tarde",
         )
     )
@@ -166,6 +204,10 @@ def _gemba_demo(out: Path) -> dict:
         "observations": len(s),
         "pareto": s.pareto().to_dict("records"),
         "unquantified": s.unquantified().to_dict("records"),
+        # Lo que efectivamente entra a L1: solo lo cuantificado Y declarado
+        # fuera del log. El resto del Pareto se discute con el supervisor pero
+        # no se cobra, porque ya lo cuenta `timestudy`.
+        "value_input": s.value_input(),
     }
 
 
@@ -222,7 +264,14 @@ def run_full_diagnosis(outdir: str | Path = "out", seed: int = 7, quiet: bool = 
     sample = stratified_sample(dc.master, plan["sample_size"], seed=seed)
     measured = dc.truth[dc.truth["sku_id"].isin(sample["sku_id"])]  # la medicion fisica en terreno
     audit = audit_master(sample, measured)
-    dq = audit_summary(audit, population=len(dc.master))
+    # La poblacion por clase deshace la sobre-representacion deliberada de la
+    # clase A que hace `stratified_sample`. Sin esto la tasa reportada es la de
+    # la muestra sesgada y no la del catalogo.
+    dq = audit_summary(
+        audit,
+        population=len(dc.master),
+        population_by_class=dc.master["abc_class"].value_counts().to_dict(),
+    )
     link = link_defects_to_rework(audit, dc.events, dc.order_lines)
     results["sampling_plan"] = plan
     results["data_quality"] = dq
@@ -260,9 +309,10 @@ def run_full_diagnosis(outdir: str | Path = "out", seed: int = 7, quiet: bool = 
         sd=sd, effect=0.15 * float(cyc.median()), units_per_day=dc.config.n_orders, icc=0.02
     )
 
-    panel, did, naive = _baseline_experiment(seed)
+    panel, did, naive, trends = _baseline_experiment(seed)
     panel.to_csv(out / "panel_experimento.csv", index=False)
     results["pre_post_naive"] = naive
+    results["parallel_trends"] = trends
     results["diff_in_diff"] = did
 
     # ------------------------------------------------- 7. sonda integracion
@@ -354,6 +404,13 @@ def _baseline_experiment(seed: int) -> tuple[pd.DataFrame, dict, dict]:
     NORMAL, PEAK = 700, 805  # el periodo post trae 15% mas volumen: el peak pega a los dos grupos
     REPS = 3  # dias por celda
 
+    # Fechas reales por dia de medicion. Sin una columna de tiempo el panel no
+    # se puede someter a `parallel_trends_check`, y sin ese chequeo el DiD se
+    # reporta como valido sin haber verificado el unico supuesto que lo sostiene.
+    PRE_START = pd.Timestamp("2026-03-02")
+    POST_START = pd.Timestamp("2026-03-16")
+    CUTOFF = pd.Timestamp("2026-03-09")
+
     # Con una sola corrida por celda el estimador queda dominado por el ruido
     # entre turnos — la mediana del tiempo de ciclo varia 30% de un dia a otro
     # en un sistema cerca de saturacion. Por eso se promedian varios dias por
@@ -370,7 +427,8 @@ def _baseline_experiment(seed: int) -> tuple[pd.DataFrame, dict, dict]:
     frames = []
     s = seed
     for (grp, per), kw in cells.items():
-        for _ in range(REPS):
+        base = PRE_START if per == "pre" else POST_START
+        for rep in range(REPS):
             s += 1
             c = EventLog(generate_dc(DCConfig(seed=s, layout=lay, **kw)).events).case_durations()
             frames.append(
@@ -381,6 +439,7 @@ def _baseline_experiment(seed: int) -> tuple[pd.DataFrame, dict, dict]:
                         "group": grp,
                         "period": per,
                         "day_seed": s,
+                        "day": base + pd.Timedelta(days=rep),
                     }
                 )
             )
@@ -391,7 +450,11 @@ def _baseline_experiment(seed: int) -> tuple[pd.DataFrame, dict, dict]:
         panel.loc[(panel["group"] == "treat") & (panel["period"] == "post"), "cycle_min"],
     )
     did = diff_in_diff(panel, "cycle_min", "group", "period")
-    return panel, did, naive
+    # El chequeo va ANTES de que nadie mire el estimador. Si los grupos ya
+    # divergian en el periodo pre, el DiD esta sesgado y hay que decirlo antes
+    # de que lo diga el analista del cliente.
+    trends = parallel_trends_check(panel, "cycle_min", "group", "day", CUTOFF)
+    return panel, did, naive, trends
 
 
 def _job_breakdown() -> JobBreakdown:

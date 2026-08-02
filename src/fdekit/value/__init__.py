@@ -19,10 +19,11 @@ Y detecta el humo: `ValueCase.warnings()` marca los supuestos que hacen que un
 caso se caiga en la primera revision seria.
 """
 
+from .labor_regimes import REGIMES, STAFFING_MODELS, regime_table
 from .archetypes import ARCHETYPES, SCALES, Archetype, build_archetype
 from .levers import LEVER_CATALOG, Lever, Range, levers_from_findings
 from .model import ValueCase, ValueResult
-from .pricing import PRICING_MODELS, cost_to_serve, gainshare_terms, price_band
+from .pricing import PRICING_MODELS, cost_to_serve, gainshare_terms, model_ladder, price_band
 
 __all__ = [
     "ARCHETYPES",
@@ -39,4 +40,8 @@ __all__ = [
     "cost_to_serve",
     "gainshare_terms",
     "price_band",
+    "REGIMES",
+    "STAFFING_MODELS",
+    "model_ladder",
+    "regime_table",
 ]
