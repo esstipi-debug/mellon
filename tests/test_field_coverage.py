@@ -114,7 +114,7 @@ def test_error_con_tracks_seen_negativo():
 
 
 def test_error_con_frames_with_marker_mayor_que_frames_total():
-    # No se pueden tener más frames marcados que frames totales.
+    # No se pueden tener mas frames marcados que frames totales.
     import pytest
     with pytest.raises(ValueError, match="mayor que"):
         MeasurementCoverage(

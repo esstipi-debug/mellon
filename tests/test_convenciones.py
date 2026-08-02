@@ -18,12 +18,32 @@ import subprocess
 from pathlib import Path
 
 
-# Archivos que contienen acentos a proposito, con motivo documentado.
+# CRITERIO DE EXCEPCION: Se exceptua un archivo cuando el acento es DATO BAJO
+# PRUEBA o materia del modulo, NUNCA cuando es prosa descuidada. Los acentos en
+# datos de prueba son obligatorios cuando lo que se prueba es justamente el
+# manejo de acentos. Un acento descuidado en un comentario de un archivo
+# exceptuado no se detecta — ese es el precio de la simplicidad.
+
 ARCHIVOS_CON_ACENTOS_A_PROPOSITO = {
     "tests/test_convenciones.py": (
         "Este guardia detecta caracteres acentuados, asi que necesita contenerlos "
         "en su regex. La regex misma es la unica forma de especificar qué "
         "caracteres buscar."
+    ),
+    "tests/test_transcribe.py": (
+        "Prueba strip_accents() con entrada acentuada: 'día andén reposición'. "
+        "El acento es la entrada de la funcion bajo prueba; sin acentos el test "
+        "no prueba nada."
+    ),
+    "tests/test_decide.py": (
+        "Verifica que el lexico acepte 'quizás' y 'a más tardar'. Es el test "
+        "del bug de normalizacion: 'quizas' se rechazaba y 'quizás' pasaba. "
+        "Los acentos en datos de prueba son la materia del test."
+    ),
+    "tests/test_decide_parse.py": (
+        "Test del agujero H14: resolve_owner('dueño Fabián', ROSTER). El nombre "
+        "acentuado es parte del caso que revela el bug. Sin acentos, el test "
+        "no atraparia el problema."
     ),
     "src/fdekit/gemba/transcribe.py": (
         "Este modulo normaliza acentos en transcripciones. Necesita ejemplos "
