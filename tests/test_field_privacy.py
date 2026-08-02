@@ -162,3 +162,79 @@ def test_no_cuelga_en_estructura_ciclica():
     d = {"key": "value"}
     d["self"] = d  # Crear ciclo
     assert_no_identity(d) is None  # Debe terminar sin error
+
+
+def test_rechaza_series_desde_dict_con_clave_prohibida():
+    # Una Series construida desde dict con clave prohibida debe fallar.
+    # La clave se convierte en indice.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    s = pd.Series({"marker_id": "MARKER-07"})
+    with pytest.raises(AnonymityError, match="marker_id"):
+        assert_no_identity(s)
+
+
+def test_rechaza_series_desde_dict_en_lista():
+    # Una Series dentro de una lista debe atraparse igual.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    s = pd.Series({"operator_id": "OP-001"})
+    with pytest.raises(AnonymityError, match="operator_id"):
+        assert_no_identity([s])
+
+
+def test_rechaza_series_con_indice_pseudonym_field_crudo():
+    # Una Series cuyo indice tiene una etiqueta en PSEUDONYM_FIELDS pero valor crudo.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    s = pd.Series({"resource": "MARKER-07", "distance": 41.2})
+    with pytest.raises(AnonymityError, match="resource"):
+        assert_no_identity(s)
+
+
+def test_rechaza_resource_con_entero():
+    # Un campo 'resource' con un entero (no string, no None, no NA) debe fallar.
+    d = {"resource": 42, "distance_m": 41.2}
+    with pytest.raises(AnonymityError, match="resource"):
+        assert_no_identity(d)
+
+
+def test_rechaza_resource_con_objeto_arbitrario():
+    # Un campo 'resource' con un objeto arbitrario debe fallar.
+    class Marker:
+        pass
+
+    d = {"resource": Marker(), "distance_m": 41.2}
+    with pytest.raises(AnonymityError, match="resource"):
+        assert_no_identity(d)
+
+
+def test_rechaza_seudonimo_con_newline():
+    # Un seudonimo con salto de linea final no debe pasar (regresion \Z).
+    d = {"resource": "sub-a1b2c3d4e5f6\n", "distance_m": 41.2}
+    with pytest.raises(AnonymityError, match="resource"):
+        assert_no_identity(d)
+
+
+def test_acepta_resource_none():
+    # resource=None debe ser permitido (case legitimate en EventLog).
+    d = {"resource": None, "distance_m": 41.2}
+    assert_no_identity(d) is None
+
+
+def test_acepta_resource_pd_na():
+    # resource=pd.NA debe ser permitido (case legitimo en EventLog).
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    d = {"resource": pd.NA, "distance_m": 41.2}
+    assert_no_identity(d) is None
+
+
+def test_acepta_resource_seudonimo_valido():
+    # resource con un seudonimo bien formado debe pasar.
+    d = {"resource": "sub-a1b2c3d4e5f6", "distance_m": 41.2}
+    assert_no_identity(d) is None

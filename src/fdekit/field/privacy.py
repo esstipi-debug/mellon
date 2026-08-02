@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 SALT_BYTES = 16
 _PSEUDONYM_HEX = 12
-_PSEUDONYM_RE = re.compile(r"^sub-[0-9a-f]{12}$")
+_PSEUDONYM_RE = re.compile(r"^sub-[0-9a-f]{12}\Z")
 
 # Nombres de campo que, si aparecen en una salida, significan que algo se
 # escapo. La lista es deliberadamente amplia: un falso positivo cuesta un
@@ -84,8 +84,39 @@ def assert_no_identity(payload: object) -> None:
     pandas.Series, dataclass, namedtuple, objeto con __dict__.
 
     Tipos NO recorridos: str, int, float, bool, None, y otros tipos primitivos.
+
+    Campos en PSEUDONYM_FIELDS: si el valor es string, debe coincidir con la
+    forma de seudonimo (sub-<12 hex>). Se permiten explicitamente None y pd.NA
+    porque EventLog rellena columnas opcionales ausentes con pd.NA, y prohibir
+    el nulo rompe logs perfectamente validos. Todo lo demas levanta.
+
+    Los indices de pandas.Series se revisan como si fueran nombres de campo,
+    porque df.iloc[0] y df.iterrows() devuelven filas como Series cuyo indice
+    son los nombres de columna.
     """
     _assert_no_identity_impl(payload, set())
+
+
+def _is_valid_pseudonym_value(val: object) -> bool:
+    """Valida que un valor sea valido en un campo PSEUDONYM_FIELDS.
+
+    None y pd.NA son permitidos (son legitimos en EventLog). Un string debe
+    coincidir con la forma de seudonimo. Todo lo demas es sospechoso.
+    """
+    try:
+        import pandas as pd
+        if pd.isna(val):
+            return True
+    except ImportError:
+        pass
+
+    if val is None:
+        return True
+
+    if isinstance(val, str):
+        return _PSEUDONYM_RE.match(val) is not None
+
+    return False
 
 
 def _assert_no_identity_impl(payload: object, visited: set) -> None:
@@ -114,15 +145,16 @@ def _assert_no_identity_impl(payload: object, visited: set) -> None:
                 # Revisar valores de columnas en PSEUDONYM_FIELDS
                 if col in PSEUDONYM_FIELDS:
                     for val in payload[col]:
-                        if isinstance(val, str) and not _PSEUDONYM_RE.match(val):
+                        if not _is_valid_pseudonym_value(val):
                             raise AnonymityError(
-                                f"la columna '{col}' contiene valores que no son seudonimos "
-                                f"(valor: '{val}'). Pseudonimizar con privacy.pseudonymize "
+                                f"la columna '{col}' contiene un valor que no es seudonimo "
+                                f"valido (valor: {val!r}). Pseudonimizar con privacy.pseudonymize "
                                 "antes de emitir."
                             )
             return
         # Revisar pandas.Series
         if isinstance(payload, pd.Series):
+            # Revisar el nombre de la serie
             if payload.name and payload.name in IDENTITY_FIELDS:
                 raise AnonymityError(
                     f"la serie con nombre '{payload.name}' identifica y no puede cruzar el borde "
@@ -131,13 +163,30 @@ def _assert_no_identity_impl(payload: object, visited: set) -> None:
             # Revisar valores si el nombre esta en PSEUDONYM_FIELDS
             if payload.name and payload.name in PSEUDONYM_FIELDS:
                 for val in payload:
-                    if isinstance(val, str) and not _PSEUDONYM_RE.match(val):
+                    if not _is_valid_pseudonym_value(val):
                         raise AnonymityError(
-                            f"la serie '{payload.name}' contiene valores que no son seudonimos "
-                            f"(valor: '{val}'). Pseudonimizar con privacy.pseudonymize antes de emitir."
+                            f"la serie '{payload.name}' contiene un valor que no es seudonimo "
+                            f"valido (valor: {val!r}). Pseudonimizar con privacy.pseudonymize "
+                            "antes de emitir."
                         )
-            else:
-                # Recorrer elementos de la serie
+            # Revisar las etiquetas del indice contra IDENTITY_FIELDS y PSEUDONYM_FIELDS
+            for idx_label in payload.index:
+                if idx_label in IDENTITY_FIELDS:
+                    raise AnonymityError(
+                        f"el indice de la serie contiene '{idx_label}' que identifica y "
+                        "no puede cruzar el borde (regla 9). Pseudonimizar antes de emitir."
+                    )
+                # Si la etiqueta del indice esta en PSEUDONYM_FIELDS, revisar el valor
+                if idx_label in PSEUDONYM_FIELDS:
+                    val = payload[idx_label]
+                    if not _is_valid_pseudonym_value(val):
+                        raise AnonymityError(
+                            f"el indice '{idx_label}' contiene un valor que no es seudonimo "
+                            f"valido (valor: {val!r}). Pseudonimizar con privacy.pseudonymize "
+                            "antes de emitir."
+                        )
+            # Recorrer elementos de la serie
+            if not (payload.name and payload.name in PSEUDONYM_FIELDS):
                 for item in payload:
                     _assert_no_identity_impl(item, visited)
             return
@@ -154,10 +203,10 @@ def _assert_no_identity_impl(payload: object, visited: set) -> None:
                 )
             field_val = getattr(payload, field_name)
             if field_name in PSEUDONYM_FIELDS:
-                if isinstance(field_val, str) and not _PSEUDONYM_RE.match(field_val):
+                if not _is_valid_pseudonym_value(field_val):
                     raise AnonymityError(
                         f"el campo '{field_name}' contiene un valor que no es seudonimo "
-                        f"(valor: '{field_val}'). Pseudonimizar con privacy.pseudonymize "
+                        f"valido (valor: {field_val!r}). Pseudonimizar con privacy.pseudonymize "
                         "antes de emitir."
                     )
             else:
@@ -174,10 +223,10 @@ def _assert_no_identity_impl(payload: object, visited: set) -> None:
                     "(regla 9). Pseudonimizar con privacy.pseudonymize antes de emitir."
                 )
             if clave in PSEUDONYM_FIELDS:
-                if isinstance(valor, str) and not _PSEUDONYM_RE.match(valor):
+                if not _is_valid_pseudonym_value(valor):
                     raise AnonymityError(
                         f"el campo '{clave}' contiene un valor que no es seudonimo "
-                        f"(valor: '{valor}'). Pseudonimizar con privacy.pseudonymize "
+                        f"valido (valor: {valor!r}). Pseudonimizar con privacy.pseudonymize "
                         "antes de emitir."
                     )
             else:
@@ -193,10 +242,10 @@ def _assert_no_identity_impl(payload: object, visited: set) -> None:
                     "(regla 9). Pseudonimizar con privacy.pseudonymize antes de emitir."
                 )
             if clave in PSEUDONYM_FIELDS:
-                if isinstance(valor, str) and not _PSEUDONYM_RE.match(valor):
+                if not _is_valid_pseudonym_value(valor):
                     raise AnonymityError(
                         f"el campo '{clave}' contiene un valor que no es seudonimo "
-                        f"(valor: '{valor}'). Pseudonimizar con privacy.pseudonymize "
+                        f"valido (valor: {valor!r}). Pseudonimizar con privacy.pseudonymize "
                         "antes de emitir."
                     )
             else:
