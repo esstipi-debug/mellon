@@ -1874,9 +1874,8 @@ git commit -m "feat: fdekit field — la demo de mesa completa, de CSV a espague
 
 Al terminar la tarea 9:
 
-- [ ] `python -m pytest -q` verde. Base al arrancar la etapa: **493** (correr
-      `python -m pytest -q` antes de la tarea 2 y anotar el número real; la base
-      se movió durante la escritura del plan). Esperado al cerrar: base + ~48.
+- [ ] `python -m pytest -q` verde. Base medida al arrancar la etapa, en
+      `aa4bb10`: **540 passed**. Esperado al cerrar: ~588.
 - [ ] `python -m pytest -m vision -q` corre (con OpenCV instalado) o se salta limpio.
 - [ ] Actualizar `HANDOFF.md`: nueva sección del toolkit de terreno, reglas 9 y 10
       en la lista de decisiones de diseño, y el conteo de tests.
