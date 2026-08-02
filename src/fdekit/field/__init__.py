@@ -6,5 +6,13 @@ por eso se testea sin camara.
 """
 
 from .coverage import MeasurementCoverage
+from .privacy import AnonymityError, AnonymityGate, assert_no_identity, new_session_salt, pseudonymize
 
-__all__ = ["MeasurementCoverage"]
+__all__ = [
+    "MeasurementCoverage",
+    "AnonymityError",
+    "AnonymityGate",
+    "assert_no_identity",
+    "new_session_salt",
+    "pseudonymize",
+]
