@@ -293,13 +293,69 @@ class DecideStore:
                 obj.id = self._next_id(prefix)
         raise RuntimeError(f"no se pudo asignar un id libre para {prefix}")
 
-    def save(self, obj) -> None:
-        """Sobreescribe una entidad existente. No asigna IDs."""
+    def _path_of(self, obj) -> Path:
         if isinstance(obj, Meeting):
-            path = self.root / "meetings" / f"{obj.id}.md"
-        else:
-            path = self._dir(obj.id.split("-")[0]) / f"{obj.id}.md"
+            return self.root / "meetings" / f"{obj.id}.md"
+        return self._dir(obj.id.split("-")[0]) / f"{obj.id}.md"
+
+    def _issues(self, obj) -> list[str]:
+        """Los issues de una entidad. Despacho por TIPO, no por string.
+
+        Reemplaza a `_check_roster`, que decidia con
+        `obj.validate(roster) if kind != "Assumption" else obj.validate()`: un
+        typo en ese string mandaba un roster a `Assumption.validate()` y salia
+        un TypeError en vez de una validacion.
+
+        Si el roster no se puede leer —la reunion no existe, o su .md lo
+        escribio una version mas nueva— eso es un ISSUE, no una excepcion.
+        Propagarla mataba `tick()` entero: un solo archivo de reunion ilegible
+        y no se puede vencer ni un compromiso.
+        """
+        if isinstance(obj, (Assumption, Meeting)):
+            return list(obj.validate())
+        try:
+            roster = self.roster_of(obj.meeting_id)
+        except (KeyError, ValidationError) as exc:
+            return list(obj.validate(None)) + [
+                f"no se pudo leer el roster de '{obj.meeting_id}': "
+                f"{exc.__class__.__name__}. El dueno quedo sin validar contra nadie."
+            ]
+        return list(obj.validate(roster))
+
+    def save(self, obj, force: bool = False) -> list[str]:
+        """Sobreescribe una entidad existente. No asigna IDs. **Valida.**
+
+        Era un `write_text` desnudo, y es lo que usan `supersede`, `safe_close`
+        y `tick`: toda regla escrita en un `validate()` era codigo muerto en los
+        caminos que mas la necesitan.
+
+        Valida contra el DISCO, no contra el vacio. La regla es **una escritura
+        no puede empeorar el registro**: se comparan los issues del objeto que
+        entra contra los que el archivo ya tenia, y solo se rechaza la
+        diferencia. Los heredados se toleran y se DEVUELVEN para que el llamador
+        los muestre.
+
+        Sin esa semantica, escribir sobre una entidad ya invalida seria
+        imposible — y las entidades invalidas son justamente sobre las que hay
+        que poder anotar que algo fallo. Validar contra el vacio convierte cada
+        arreglo en un bloqueo.
+        """
+        path = self._path_of(obj)
+        nuevos = self._issues(obj)
+        if nuevos and not force:
+            heredados: set[str] = set()
+            if path.exists():
+                try:
+                    heredados = set(self._issues(self._read_one(type(obj), path)))
+                except (ValidationError, TypeError, ValueError):
+                    # Ilegible: no hay contra que comparar. Todo issue cuenta
+                    # como nuevo, que es el lado seguro.
+                    heredados = set()
+            peores = [i for i in nuevos if i not in heredados]
+            if peores:
+                raise ValidationError(type(obj).__name__, peores)
         path.write_text(dumps(_to_fm(obj), _body(obj)), encoding="utf-8")
+        return nuevos
 
     def add_meeting(self, meeting: Meeting, force: bool = False, overwrite: bool = False) -> Meeting:
         """Registra una reunion. Se niega a pisar una existente.
@@ -334,10 +390,15 @@ class DecideStore:
         return meeting
 
     def _check_roster(self, obj, meeting_id: str, force: bool, kind: str):
-        # `roster_of` levanta si el meeting_id no existe. No se atrapa: un
-        # `--meeting` mal tipeado tiene que fallar, no desactivar la validacion.
-        roster = self.roster_of(meeting_id)
-        issues = obj.validate(roster) if kind != "Assumption" else obj.validate()
+        """Alta: aca no hay nada heredado que tolerar, asi que cualquier issue
+        bloquea. Es lo contrario de `save()`, y a proposito: una entidad NUEVA
+        entra sana o no entra.
+
+        Ojo: un `--meeting` que no existe sigue siendo un error de alta. Ahora
+        llega como issue (via `_issues`) en vez de como `KeyError` suelto, pero
+        bloquea igual. Lo que NO puede hacer es matar una lectura o un `tick`.
+        """
+        issues = self._issues(obj)
         if issues and not force:
             raise ValidationError(kind, issues)
         return issues

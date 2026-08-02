@@ -5,7 +5,7 @@ el registro no mienta. Si alguna afloja, el sistema pasa a ser una minuta con
 mas ceremonia.
 """
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -23,6 +23,7 @@ from fdekit.decide import (
     parse_date,
     referencing,
     safe_close,
+    supersede,
     tick,
     why,
 )
@@ -576,8 +577,15 @@ def test_el_acento_no_desactiva_la_validacion():
 def test_un_meeting_id_inexistente_falla_en_vez_de_apagar_la_validacion(store):
     """El roster es el scope lexico: la unica pieza de determinismo que el
     diseno fabrica. Un `--meeting` mal tipeado devolvia None en silencio y con
-    eso desactivaba la validacion de dueno."""
-    with pytest.raises(KeyError, match="no existe la reunion"):
+    eso desactivaba la validacion de dueno.
+
+    Llega como `ValidationError` y no como `KeyError` suelto porque el roster
+    ilegible pasa a ser un ISSUE: propagar la excepcion desde `_issues` mataba
+    `tick()` entero — un solo .md de reunion ilegible y no se podia vencer ni un
+    compromiso. Sigue bloqueando el alta, que es lo que este test fija: una
+    entidad NUEVA entra sana o no entra.
+    """
+    with pytest.raises(ValidationError, match="no se pudo leer el roster"):
         store.add_decision(mk_decision(meeting_id="comite-mal-tipeado", owner="Pepe"))
 
 
@@ -662,3 +670,75 @@ def test_un_campo_nuevo_en_anchor_o_consent_sobrevive_al_disco(tmp_path):
     assert vuelta.anchor.cita_congelada == "lo consolidamos en una ola"
     assert st.get_meeting("m1").consent.retention_days == 30
     assert st.get_meeting("m1").consent.note == "piloto"
+
+
+# ------------------------------- `save()` valida: una escritura no empeora
+#
+# `save()` era un `write_text` desnudo, y es lo que usan `supersede`,
+# `safe_close` y `tick`. Toda regla escrita en un `validate()` era codigo muerto
+# en los tres caminos que mas la necesitan: el unico que crea un estado nuevo
+# era el unico que nunca pasaba por el validador.
+
+
+def test_save_rechaza_un_issue_NUEVO(store):
+    d = store.add_decision(mk_decision())
+    d.owner = "ALGUIEN QUE NO ESTA EN EL ROSTER"
+    with pytest.raises(ValidationError, match="roster"):
+        store.save(d)
+    assert store.get(d.id).owner == "Marcela"  # no se escribio
+
+
+def test_save_tolera_lo_que_el_archivo_YA_tenia_y_lo_devuelve(store):
+    """La semantica es 'no empeorar', no 'estar sano'.
+
+    Validar contra el vacio haria imposible escribir sobre una entidad ya
+    invalida — y son justamente esas sobre las que hay que poder anotar que algo
+    fallo. Cada arreglo se volveria un bloqueo.
+    """
+    d = store.add_decision(mk_decision())
+    d.owner = "ALGUIEN QUE NO ESTA EN EL ROSTER"
+    store.save(d, force=True)          # queda invalido en disco, a proposito
+
+    d2 = store.get(d.id)
+    d2.rationale = "se corrige el porque sin tocar el dueno"
+    heredados = store.save(d2)         # no bloquea: el issue ya estaba
+
+    assert any("roster" in i for i in heredados)
+    assert "se corrige el porque" in store.get(d.id).rationale
+
+
+def test_tick_sobrevive_a_una_reunion_ilegible(store):
+    """Antes: `_issues` -> `roster_of` -> `get_meeting` -> excepcion, y `tick()`
+    moria entero. Un solo .md de reunion escrito por una version mas nueva y no
+    se podia vencer ni un compromiso en todo el registro.
+
+    El roster ilegible es un ISSUE, no una excepcion: se reporta y se sigue.
+    """
+    d = store.add_decision(mk_decision())
+    c = store.add_commitment(Commitment(
+        id="", decision_id=d.id, what="mover 200 ubicaciones a zona dorada",
+        owner="Marcela", due=HOY - timedelta(days=10), meeting_id="2026-08-01-comite",
+        evidence_of_done="reporte del WMS",
+    ))
+    # la reunion se vuelve ilegible: exactamente el escenario de forward-incompat
+    p = store.root / "meetings" / "2026-08-01-comite.md"
+    p.write_text(p.read_text(encoding="utf-8").replace(
+        'id: "2026-08-01-comite"', 'id: "2026-08-01-comite"\nclase: "COMITE"'), encoding="utf-8")
+
+    r = tick(store, today=HOY, apply=True)
+    assert c.id in r["commitments_vencidos"]
+    assert store.get(c.id).status == "VENCIDO"
+
+
+def test_supersede_ya_no_puede_escribir_una_decision_invalida(store):
+    """`supersede` escribe con `save()`. Antes eso no validaba nada, asi que
+    cualquier regla nueva sobre estados era inalcanzable por el unico camino que
+    los produce."""
+    a = store.add_decision(mk_decision())
+    b = store.add_decision(mk_decision(statement="Reslotear clase A y B con racks nuevos"))
+    a_disco = store.get(a.id)
+    a_disco.owner = "ALGUIEN QUE NO ESTA EN EL ROSTER"
+    with pytest.raises(ValidationError):
+        store.save(a_disco)
+    # y la operacion legitima sigue funcionando
+    assert supersede(store, a.id, b.id, reason="racks nuevos", apply=True, today=HOY)["applied"]
