@@ -265,10 +265,35 @@ class DecideStore:
             path = self._dir(obj.id.split("-")[0]) / f"{obj.id}.md"
         path.write_text(dumps(_to_fm(obj), _body(obj)), encoding="utf-8")
 
-    def add_meeting(self, meeting: Meeting, force: bool = False) -> Meeting:
+    def add_meeting(self, meeting: Meeting, force: bool = False, overwrite: bool = False) -> Meeting:
+        """Registra una reunion. Se niega a pisar una existente.
+
+        `save()` es `write_text` sin modo exclusivo, asi que registrar dos veces
+        el mismo `id` reemplazaba la reunion entera —incluido el **roster**— sin
+        una linea de aviso. El roster es el scope lexico del sistema: es la
+        unica pieza de determinismo que el diseno fabrica, y pisarlo invalida
+        retroactivamente la validacion de dueno de cada decision ya colgada de
+        esa reunion. Nada falla; el registro simplemente pasa a estar validado
+        contra una lista de gente que ya no es la que estuvo.
+
+        `overwrite=True` existe para corregir un roster mal tipeado, que es un
+        caso real. Es explicito a proposito: la correccion es una decision, no
+        un efecto de lado de volver a correr un comando.
+        """
         issues = meeting.validate()
         if issues and not force:
             raise ValidationError("Meeting", issues)
+        path = self.root / "meetings" / f"{meeting.id}.md"
+        if path.exists() and not overwrite:
+            raise ValidationError(
+                "Meeting",
+                [
+                    f"la reunion '{meeting.id}' ya esta registrada. Volver a registrarla "
+                    "reemplazaria su roster, y con el se cae la validacion de dueno de "
+                    "todo lo que ya cuelga de ella. Usar overwrite=True (CLI: --overwrite) "
+                    "si de verdad se quiere corregir."
+                ],
+            )
         self.save(meeting)
         return meeting
 

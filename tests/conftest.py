@@ -115,5 +115,12 @@ def pytest_sessionfinish(session, exitstatus):
     detalle += "".join(f"\n    nuevo:         {p}" for p in nuevos[:20])
     detalle += "".join(f"\n    modificado:    {p}" for p in tocados[:20])
     raise pytest.UsageError(
-        "la suite escribio en el arbol de trabajo — usar tmp_path:" + detalle
+        "el arbol de trabajo cambio durante la corrida:" + detalle + "\n\n"
+        "  Si lo escribio un test: usar `tmp_path` / `tmp_path_factory`. NO agregar el "
+        "archivo a .gitignore — eso esconde el efecto de lado en vez de eliminarlo, y es "
+        "exactamente como nacio el fixture que dependia del cwd.\n"
+        "  Si el archivo lo estaba editando otra cosa (un editor abierto, otra sesion de "
+        "agente sobre el mismo repo), es un falso positivo: volver a correr con el arbol "
+        "quieto. El guardia no puede distinguir las dos causas, y afinarlo para que "
+        "tolere escrituras ajenas lo volveria inutil para la que importa."
     )

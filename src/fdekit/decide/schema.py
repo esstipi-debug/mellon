@@ -11,6 +11,7 @@ adivinar que falta.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
@@ -23,6 +24,58 @@ ASSUMPTION_STATUS = ("VIGENTE", "VENCIDO", "VIOLADO", "VERIFICADO")
 QUESTION_STATUS = ("ABIERTA", "RESUELTA", "EXPIRADA")
 ANCHOR_SOURCE_STATE = ("VIVA", "CADUCADA")
 ALIAS_STATUS = ("VIGENTE", "EN_DISPUTA", "RETIRADO")
+
+# Una decision muerta ya no gobierna nada; lo que cuelga de ella es trabajo
+# contra algo que no rige.
+DEAD_DECISION_STATUS = ("REVERTIDA", "SUPERADA")
+# Un compromiso "vivo" es el que todavia le pide algo a alguien. CUMPLIDO y
+# CANCELADO no: ahi ya no hay nadie ejecutando.
+LIVE_COMMITMENT_STATUS = ("ABIERTO", "VENCIDO", "ZOMBI")
+
+
+def es_zombi(commitment, parent) -> bool:
+    """Gente ejecutando algo que ya se revirtio. La definicion, una sola vez.
+
+    Estaba escrita dos veces con alcances distintos: `tick` solo promovia desde
+    ABIERTO y `metrics.orphans_and_zombies` contaba tambien los VENCIDO. Un
+    compromiso que vencio **antes** de que su decision fuera superada se quedaba
+    VENCIDO para siempre en el registro mientras el tablero lo reportaba zombi.
+    Dos numeros para la misma pregunta es como el registro deja de creerse.
+
+    `parent` es la decision de la que cuelga, o None si no existe.
+    """
+    return (
+        parent is not None
+        and parent.status in DEAD_DECISION_STATUS
+        and commitment.status in LIVE_COMMITMENT_STATUS
+    )
+
+
+# El historial de una decision es la unica fuente de la fecha en que cambio de
+# estado, y `eventlog` lo lee con esta expresion. El formato es un CONTRATO
+# entre quien escribe y quien lee, y por eso los dos viven aca: estaban en
+# archivos distintos, sostenidos por una convencion, y la convencion se rompio.
+# `supersede` escribia "SUPERADA por D-002: motivo" —con el ID entre el estado y
+# los dos puntos— y ninguna supersesion entraba al log. No fallaba: el log
+# salia corto y perfectamente creible.
+HIST_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+([A-Z_]+):")
+
+
+def hist_line(stamp: str, estado: str, detalle: str) -> str:
+    """La unica forma de escribir una linea de historial visible al event log.
+
+    El estado va pegado a los dos puntos. Todo lo demas —IDs, motivos, el
+    statement anterior— va DESPUES, porque es texto para humanos y el lector no
+    lo mira. Una linea en minusculas es deliberadamente invisible: sirve para
+    anotar sin generar un evento de ciclo de vida.
+    """
+    if not HIST_RE.match(f"{stamp} {estado}:"):
+        raise ValueError(
+            f"linea de historial invalida: estado={estado!r} sello={stamp!r}. "
+            "El estado va en MAYUSCULAS sin espacios y el sello en YYYY-MM-DD; "
+            "el detalle va despues de los dos puntos."
+        )
+    return f"{stamp} {estado}: {detalle}"
 
 # Capas del resolutor. El tier dice cuanto se puede confiar en una arista, y
 # acompana a la arista para siempre — es el mismo vocabulario que usa graphify

@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 
-from .schema import Assumption, Commitment, Decision, OpenQuestion
+from .schema import Assumption, Commitment, Decision, OpenQuestion, es_zombi, hist_line
 from .store import DecideStore
 
 # --------------------------------------------------------------- cobertura
@@ -551,7 +551,12 @@ def supersede(
     vieja.version += 1
     # El statement viejo queda aca, consultable, y NO como alias: un alias con
     # el statement de la decision superada fabricaria colisiones a proposito.
-    vieja.historial_statements.append(f"{stamp} SUPERADA por {new_id}: {reason}")
+    #
+    # El ID de la nueva va DESPUES de los dos puntos. Ponerlo entre el estado y
+    # los dos puntos —como estaba— hacia que `eventlog` no reconociera la linea
+    # y que ninguna supersesion apareciera en el log de ciclo de vida.
+    vieja.historial_statements.append(hist_line(stamp, "SUPERADA", f"por {new_id} - {reason}"))
+    # En minusculas a proposito: es una anotacion para humanos, no un evento.
     vieja.historial_statements.append(f"{stamp} statement al momento de superar: {vieja.statement}")
     store.save(vieja)
 
@@ -619,7 +624,7 @@ def safe_close(
                 "sin motivo escrito no se puede explicar seis semanas despues"
             )
         stamp = (today or d.date_decided).isoformat()
-        d.historial_statements.append(f"{stamp} REVERTIDA: {reason}")
+        d.historial_statements.append(hist_line(stamp, "REVERTIDA", reason))
         d.status = "REVERTIDA"
         d.version += 1
         store.save(d)
@@ -660,7 +665,10 @@ def tick(store: DecideStore, today: date, apply: bool = True) -> dict:
     for c in store.commitments():
         new = None
         parent = decisions.get(c.decision_id)
-        if c.status == "ABIERTO" and parent and parent.status in ("REVERTIDA", "SUPERADA"):
+        # `es_zombi` incluye los VENCIDO, no solo los ABIERTO. Un compromiso que
+        # vencio antes de que su decision muriera se quedaba VENCIDO para
+        # siempre aca mientras el tablero lo contaba zombi.
+        if es_zombi(c, parent):
             new = "ZOMBI"
             changes["zombis"].append(c.id)
         elif c.status == "ABIERTO" and c.due < today:

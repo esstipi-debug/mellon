@@ -30,6 +30,7 @@ import numpy as np
 from ..stats import risk_ratio_2x2
 from .eventlog import build_event_log, touches_to_decide
 from .resolve import AliasStore
+from .schema import es_zombi
 from .store import DecideStore
 
 MIN_DECISIONS = 50
@@ -207,10 +208,8 @@ def orphans_and_zombies(store: DecideStore) -> dict:
     for c in store.commitments():
         if not c.decision_id or not c.owner:
             huerfanos.append(c.id)
-        elif c.status in ("ABIERTO", "VENCIDO", "ZOMBI"):
-            padre = decisions.get(c.decision_id)
-            if padre and padre.status in ("REVERTIDA", "SUPERADA"):
-                zombis.append(c.id)
+        elif es_zombi(c, decisions.get(c.decision_id)):
+            zombis.append(c.id)
     return {
         "huerfanos": huerfanos,
         "zombis": zombis,

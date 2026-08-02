@@ -23,19 +23,22 @@ el lunes.
 
 from __future__ import annotations
 
-import re
 from datetime import date
 
 import pandas as pd
 
 from ..processmining import EventLog
+from .schema import HIST_RE
 from .store import DecideStore
 
 # Actividades del ciclo de vida. `DISCUTIDA` y `REABIERTA` son el reproceso:
 # es la lista que se le pasa a `rework_summary`.
 REWORK_ACTIVITIES = ("DISCUTIDA", "REABIERTA")
 
-_RE_HIST = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+([A-Z_]+):")
+# La expresion vive en `schema`, al lado de `hist_line`, que es quien escribe.
+# Tener el lector aca y el escritor alla, unidos solo por una convencion, es
+# exactamente como las supersesiones desaparecieron del log sin que nada fallara.
+_RE_HIST = HIST_RE
 
 
 def build_event_log(store: DecideStore) -> EventLog:

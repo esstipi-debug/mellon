@@ -31,7 +31,11 @@ from fdekit.decide import (
     tick,
     why,
 )
+from fdekit.decide.eventlog import build_event_log
+from fdekit.decide.metrics import orphans_and_zombies
 from fdekit.decide.resolve import AliasStore, confirm
+from fdekit.decide.schema import hist_line
+from fdekit.decide.store import ValidationError
 
 HOY = date(2026, 8, 1)
 ROSTER = ("Marcela", "Fabian", "Rodrigo")
@@ -154,7 +158,10 @@ def test_no_escribe_un_alias_con_el_statement_viejo(store):
 
     assert AliasStore(store.root).load() == []
     hist = " ".join(store.get(a.id).historial_statements)
-    assert f"SUPERADA por {b.id}" in hist
+    # El puntero a la nueva y el statement viejo quedan los dos en el historial.
+    # Se afirma el contenido, no el formato exacto de la linea: el formato es un
+    # contrato con `eventlog` y lo fija `test_la_supersesion_entra_al_event_log`.
+    assert b.id in hist
     assert "zona dorada del CD Pudahuel" in hist
 
 
@@ -291,3 +298,108 @@ def test_safe_close_sigue_bloqueando_una_superada_con_cosas_vivas(store):
     ))
     supersede(store, a.id, b.id, reason="racks", apply=True, today=HOY)
     assert safe_close(store, a.id)["closed"] is False
+
+
+# ------------------------------- lo que el registro le cuenta a la medicion
+#
+# Los tres tests de abajo fijan reglas que el sistema violaba en silencio. Los
+# tres bugs eran de la misma familia: la misma regla escrita dos veces, en dos
+# archivos, sostenida por una convencion — y la convencion se rompio sin que
+# nada fallara.
+
+
+@pytest.mark.parametrize(
+    "operacion, actividad",
+    [("supersede", "SUPERADA"), ("safe_close", "REVERTIDA")],
+)
+def test_toda_transicion_de_estado_entra_al_event_log(store, operacion, actividad):
+    """El event log es la unica fuente de la fecha en que una decision cambio.
+
+    `supersede` escribia `"SUPERADA por D-002: motivo"` —el ID metido entre el
+    estado y los dos puntos— y `eventlog._RE_HIST` no la reconocia. Ninguna
+    supersesion aparecia en `variants`, `rework_summary`, `touches_to_decide` ni
+    `lifecycle_rework`. No fallaba: el log salia corto y perfectamente creible,
+    y `supersede` es la operacion central del diseno.
+
+    Parametrizado a proposito: la regla no es "supersede funciona", es que
+    **toda** operacion que cambia el estado de una decision queda visible. El
+    proximo estado que se agregue tiene que sumarse aca.
+    """
+    a = dec(store, VIEJA)
+    if operacion == "supersede":
+        b = dec(store, NUEVA)
+        supersede(store, a.id, b.id, reason="entraron racks nuevos", apply=True, today=HOY)
+    else:
+        safe_close(store, a.id, apply=True, reason="se revirtio en comite", today=HOY)
+
+    log = build_event_log(store)
+    assert store.get(a.id).status == actividad
+    assert actividad in set(log.df["activity"])
+    fila = log.df[(log.df["case_id"] == a.id) & (log.df["activity"] == actividad)]
+    assert len(fila) == 1
+    assert fila.iloc[0]["timestamp"].date() == HOY
+
+
+def test_la_anotacion_en_minusculas_no_genera_un_evento(store):
+    """`supersede` guarda tambien el statement viejo. Es texto para humanos y no
+    debe volverse una actividad del ciclo de vida: si lo fuera, cada supersesion
+    inventaria un evento con nombre arbitrario en las variantes."""
+    a, b = dec(store, VIEJA), dec(store, NUEVA)
+    supersede(store, a.id, b.id, reason="racks", apply=True, today=HOY)
+
+    hist = store.get(a.id).historial_statements
+    assert any(l.startswith(f"{HOY.isoformat()} statement al momento") for l in hist)
+    assert set(build_event_log(store).df["activity"]) <= {"DECIDIDA", "SUPERADA"}
+
+
+def test_hist_line_rechaza_un_estado_que_el_lector_no_veria(store):
+    """El guardia del formato. Sin el, el proximo escritor repite el bug."""
+    assert hist_line("2026-08-01", "SUPERADA", "por D-002") == "2026-08-01 SUPERADA: por D-002"
+    with pytest.raises(ValueError, match="historial invalida"):
+        hist_line("2026-08-01", "SUPERADA por D-002", "motivo")
+    with pytest.raises(ValueError, match="historial invalida"):
+        hist_line("01-08-2026", "SUPERADA", "motivo")
+
+
+def test_tick_y_el_tablero_coinciden_sobre_que_es_un_zombi(store):
+    """La regla estaba implementada dos veces y ya divergia.
+
+    `tick` solo promovia ABIERTO -> ZOMBI; `orphans_and_zombies` contaba tambien
+    los VENCIDO. Un compromiso que vencio **antes** de que su decision fuera
+    superada quedaba VENCIDO para siempre en el registro mientras el tablero lo
+    reportaba zombi: dos numeros para la misma pregunta.
+    """
+    a, b = dec(store, VIEJA), dec(store, NUEVA)
+    c = store.add_commitment(Commitment(
+        id="", decision_id=a.id, what="mover 200 ubicaciones", owner="Rodrigo",
+        due=date(2026, 7, 1), evidence_of_done="reporte del WMS",
+    ))
+    tick(store, today=HOY, apply=True)
+    assert store.get(c.id).status == "VENCIDO"   # vencio ANTES de la supersesion
+
+    supersede(store, a.id, b.id, reason="racks nuevos", apply=True, today=HOY)
+    tick(store, today=date(2026, 8, 2), apply=True)
+
+    assert store.get(c.id).status == "ZOMBI"
+    assert c.id in orphans_and_zombies(store)["zombis"]
+
+
+def test_registrar_dos_veces_la_misma_reunion_no_pisa_el_roster(store):
+    """El roster es el scope lexico: la unica pieza de determinismo del diseno.
+
+    `add_meeting` usaba `save()`, que es `write_text` sin modo exclusivo. Volver
+    a registrar el mismo id reemplazaba la reunion entera —roster incluido— sin
+    aviso, y con eso la validacion de dueno de todo lo ya colgado pasaba a
+    correr contra una lista de gente que no estuvo.
+    """
+    otra = Meeting(
+        id="m1", date=HOY, roster=("Ajeno", "Distinto"), facilitator="Ajeno",
+        consent=Consent(granted=True, granted_by="Ajeno", basis="contrato"),
+    )
+    with pytest.raises(ValidationError, match="ya esta registrada"):
+        store.add_meeting(otra)
+    assert store.get_meeting("m1").roster == ROSTER
+
+    # Corregir un roster mal tipeado es un caso real, pero es explicito.
+    store.add_meeting(otra, overwrite=True)
+    assert store.get_meeting("m1").roster == ("Ajeno", "Distinto")
