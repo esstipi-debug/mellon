@@ -418,6 +418,25 @@ def test_l1_es_cero_si_no_hay_pedidos_observados():
     assert not [l for l in levers_from_findings(f, arch) if l.key == "L1_productividad"]
 
 
+def test_hallazgos_json_es_json_estricto(tmp_path):
+    """Salia con `NaN` literal —que JSON no admite— porque las observaciones de
+    gemba sin cuantificar llevan None y pandas las vuelve NaN. Python lo escribe
+    y lo relee igual, asi que el kit no se enteraba; cualquier parser estricto de
+    afuera si. `fdekit value --findings` consume este archivo."""
+    import json
+
+    from fdekit.demo import _json_safe
+
+    sucio = {"a": float("nan"), "b": [1.0, float("inf")], "c": {"d": float("-inf")}}
+    limpio = _json_safe(sucio)
+    assert limpio == {"a": None, "b": [1.0, None], "c": {"d": None}}
+
+    # allow_nan=False es el acompanante: si en el futuro se cuela un no-finito
+    # por otro camino, el demo revienta en vez de escribir un archivo invalido.
+    txt = json.dumps(limpio, allow_nan=False)
+    json.loads(txt, parse_constant=lambda c: pytest.fail(f"constante no-JSON: {c}"))
+
+
 def test_numpy_no_se_cuela_en_los_hallazgos():
     # `hallazgos.json` se serializa con json.dump; un np.float64 pasa, pero un
     # np.int64 no. Los dos modulos tienen que devolver tipos nativos.

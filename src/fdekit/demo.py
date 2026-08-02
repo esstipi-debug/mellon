@@ -69,6 +69,34 @@ def _sample_edi() -> dict[str, str]:
     return {"940_ok.edi": ok_940, "945_roto.edi": bad_945, "856_ctt_desalineado.edi": bad_856}
 
 
+def _json_safe(obj):
+    """Convierte NaN/Inf a null antes de serializar.
+
+    `hallazgos.json` salia con `NaN` literal —que JSON no admite— porque las
+    observaciones de gemba sin cuantificar llevan `duration_s=None` y pandas las
+    vuelve NaN al pasar por un DataFrame. Python lo escribe igual y lo relee
+    igual, asi que el kit no se enteraba; cualquier parser estricto de afuera si.
+
+    El acompanante es `allow_nan=False` en el `dumps`: convertir aca y prohibir
+    alla significa que si en el futuro se cuela un no-finito por otro camino,
+    el demo revienta en vez de escribir un archivo invalido en silencio.
+    """
+    import math
+
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return None
+    if isinstance(obj, np.floating):
+        f = float(obj)
+        return f if math.isfinite(f) else None
+    if isinstance(obj, np.integer):
+        return int(obj)
+    return obj
+
+
 def _chunk_medians(values: pd.Series, n_chunks: int) -> list[float]:
     v = np.asarray(values, float)
     return [float(np.median(c)) for c in np.array_split(v, n_chunks) if len(c)]
@@ -306,7 +334,10 @@ def run_full_diagnosis(outdir: str | Path = "out", seed: int = 7, quiet: bool = 
     (out / "A3.md").write_text(a3.to_markdown(), encoding="utf-8")
 
     (out / "hallazgos.json").write_text(
-        json.dumps(results, indent=2, ensure_ascii=False, default=str), encoding="utf-8"
+        json.dumps(
+            _json_safe(results), indent=2, ensure_ascii=False, default=str, allow_nan=False
+        ),
+        encoding="utf-8",
     )
     say(f"\nArtefactos escritos en {out.resolve()}")
     return results
