@@ -21,6 +21,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Iterable
 
+import pandas as pd
+
+from ..layout import Layout
+from ..processmining.log import EventLog
 from .coverage import MeasurementCoverage
 from .homography import FloorHomography
 from .privacy import pseudonymize
@@ -169,4 +173,86 @@ def track_distance_m(points: list[TrackPoint]) -> float:
             math.dist((a.x_m, a.y_m), (b.x_m, b.y_m))
             for a, b in zip(points, points[1:])
         )
+    )
+
+
+def nearest_location(layout: Layout, x_m: float, y_m: float, level: int = 1) -> str:
+    """Ubicacion del layout mas cercana a un punto del piso.
+
+    El nivel se fija en 1 porque una camara cenital no ve altura: la pista dice
+    en que modulo estuvo el carro, no a que altura estiro el brazo el operador.
+    """
+    mejor, mejor_d = None, float("inf")
+    for a in range(1, layout.aisles + 1):
+        for b in range(1, layout.bays + 1):
+            code = layout.location_code(a, b, level)
+            lx, ly = layout.xy(code)
+            d = (lx - x_m) ** 2 + (ly - y_m) ** 2
+            if d < mejor_d:
+                mejor, mejor_d = code, d
+    return mejor
+
+
+def dwell_events(
+    points: list[TrackPoint],
+    layout: Layout,
+    min_dwell_s: float = 4.0,
+    radius_m: float = 1.5,
+) -> list[tuple[float, str]]:
+    """Paradas reales, no lugares por los que se paso.
+
+    Un picker cruza medio CD sin tocar nada. Contar cada ubicacion por la que
+    pasa como una visita infla el conteo, y ese conteo despues infla el caso
+    economico. El umbral de permanencia (`min_dwell_s`) es lo que separa
+    "estuvo ahi" de "paso por ahi".
+    """
+    if not points:
+        return []
+
+    paradas: list[tuple[float, str]] = []
+    ancla = points[0]
+    inicio = points[0].t_s
+    for p in points[1:]:
+        if math.dist((p.x_m, p.y_m), (ancla.x_m, ancla.y_m)) <= radius_m:
+            continue
+        if p.t_s - inicio >= min_dwell_s:
+            paradas.append((inicio, nearest_location(layout, ancla.x_m, ancla.y_m)))
+        ancla, inicio = p, p.t_s
+
+    if points[-1].t_s - inicio >= min_dwell_s:
+        paradas.append((inicio, nearest_location(layout, ancla.x_m, ancla.y_m)))
+    return paradas
+
+
+def tracks_to_eventlog(
+    tracks: dict[str, list[TrackPoint]],
+    layout: Layout,
+    t0: pd.Timestamp,
+    min_dwell_s: float = 4.0,
+) -> EventLog:
+    """Pistas medidas -> el contrato de datos que el kit entero ya sabe leer.
+
+    `t0` es argumento y no `pd.Timestamp.now()` (regla 4): una funcion que lee
+    el reloj no se puede testear, y hay un test que verifica que dos llamadas
+    con el mismo `t0` dan exactamente lo mismo.
+
+    Simplificacion consciente de la etapa 1: una pista = un caso. Segmentar
+    viajes por cercania al DOCK necesita un CD real con dock; sobre la mesa el
+    carro hace un solo viaje. Eso queda para la etapa 3, no esta implementado
+    aca.
+    """
+    filas = []
+    for subject, puntos in tracks.items():
+        for t_s, loc in dwell_events(puntos, layout, min_dwell_s=min_dwell_s):
+            filas.append(
+                {
+                    "case_id": subject,
+                    "activity": "PICK",
+                    "timestamp": t0 + pd.Timedelta(seconds=float(t_s)),
+                    "resource": subject,
+                    "location": loc,
+                }
+            )
+    return EventLog(
+        pd.DataFrame(filas, columns=["case_id", "activity", "timestamp", "resource", "location"])
     )

@@ -5,17 +5,32 @@ video. Ese es el motivo del corte de la regla 2, y el motivo por el que la
 etapa 1 se puede terminar antes de comprar nada.
 """
 
+import pandas as pd
 import pytest
 
 from fdekit.field.homography import FloorHomography
 from fdekit.field.privacy import new_session_salt
-from fdekit.field.tracks import Detection, build_tracks, load_detections, track_distance_m
+from fdekit.field.tracks import (
+    Detection,
+    TrackPoint,
+    build_tracks,
+    dwell_events,
+    load_detections,
+    nearest_location,
+    track_distance_m,
+    tracks_to_eventlog,
+)
+from fdekit.layout import Layout
+from fdekit.timestudy import travel_report
 
 # 100 px = 10 m, escala 0.1.
 H = FloorHomography.from_points(
     [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)],
     [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)],
 )
+
+LAY = Layout(aisles=4, bays=10, levels=2, aisle_pitch=3.0, bay_pitch=1.0)
+T0 = pd.Timestamp("2026-09-14 10:00:00")
 
 
 def _linea(marker: str, n: int, paso_px: float = 10.0) -> list[Detection]:
@@ -214,3 +229,47 @@ def test_parse_detections_acepta_un_csv_normal_sin_bom():
 
     dets = parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,10.5,20.5\nM1,1,11.5,20.5\n"))
     assert dets == [Detection("M1", 0, 10.5, 20.5), Detection("M1", 1, 11.5, 20.5)]
+
+
+def test_nearest_location_cae_en_la_ubicacion_del_layout():
+    # Layout.xy("01-002-1") = (1*3.0, 2*1.0) = (3.0, 2.0)
+    assert nearest_location(LAY, 3.05, 2.05) == "01-002-1"
+    assert nearest_location(LAY, 6.0, 3.0) == "02-003-1"
+
+
+def test_dwell_events_ignora_el_paso_y_marca_la_parada():
+    # Pasa cerca de 01-002-1 medio segundo y se queda 6 s en 02-003-1.
+    puntos = [TrackPoint(0.0, 3.0, 2.0), TrackPoint(0.5, 4.5, 2.5)]
+    puntos += [TrackPoint(1.0 + i, 6.0, 3.0) for i in range(7)]
+
+    paradas = dwell_events(puntos, LAY, min_dwell_s=4.0)
+    assert [loc for _, loc in paradas] == ["02-003-1"]
+
+
+def test_tracks_to_eventlog_produce_algo_que_travel_report_ya_sabe_leer():
+    """El enchufe: si el EventLog es valido, el kit entero funciona sin cambios."""
+    puntos = [TrackPoint(0.0 + i, 3.0, 2.0) for i in range(6)]
+    puntos += [TrackPoint(10.0 + i, 6.0, 3.0) for i in range(6)]
+
+    log = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
+    t = travel_report(log, LAY)
+
+    assert len(t) == 1
+    assert t.loc[0, "n_stops"] == 2
+    assert t.loc[0, "distance_m"] > 0
+
+
+def test_tracks_to_eventlog_no_lee_el_reloj():
+    """Regla 4: t0 es argumento. Dos llamadas con el mismo t0 dan lo mismo."""
+    puntos = [TrackPoint(0.0 + i, 3.0, 2.0) for i in range(6)]
+    a = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
+    b = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
+    assert a.df["timestamp"].tolist() == b.df["timestamp"].tolist()
+
+
+def test_el_eventlog_no_lleva_identidad():
+    from fdekit.field.privacy import assert_no_identity
+
+    puntos = [TrackPoint(0.0 + i, 3.0, 2.0) for i in range(6)]
+    log = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
+    assert_no_identity(log.df.to_dict("records"))

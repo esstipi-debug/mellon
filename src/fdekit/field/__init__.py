@@ -19,8 +19,11 @@ from .tracks import (
     Detection,
     TrackPoint,
     build_tracks,
+    dwell_events,
     load_detections,
+    nearest_location,
     track_distance_m,
+    tracks_to_eventlog,
 )
 
 __all__ = [
@@ -35,6 +38,9 @@ __all__ = [
     "Detection",
     "TrackPoint",
     "build_tracks",
+    "dwell_events",
     "load_detections",
+    "nearest_location",
     "track_distance_m",
+    "tracks_to_eventlog",
 ]
