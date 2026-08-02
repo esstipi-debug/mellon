@@ -19,7 +19,7 @@ import csv
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Iterable
+from typing import IO, Iterable, NamedTuple
 
 import pandas as pd
 
@@ -176,52 +176,138 @@ def track_distance_m(points: list[TrackPoint]) -> float:
     )
 
 
-def nearest_location(layout: Layout, x_m: float, y_m: float, level: int = 1) -> str:
+def nearest_location(
+    layout: Layout,
+    x_m: float,
+    y_m: float,
+    level: int = 1,
+    max_distance_m: float | None = None,
+) -> str | None:
     """Ubicacion del layout mas cercana a un punto del piso.
 
     El nivel se fija en 1 porque una camara cenital no ve altura: la pista dice
     en que modulo estuvo el carro, no a que altura estiro el brazo el operador.
+
+    `max_distance_m` es el limite de confianza (ronda de arreglo 1, hallazgo 3
+    de la tarea 6): sin el, un punto a 500 m del layout -- lo tipico de una
+    homografia mal calibrada -- se mapea en silencio a la ubicacion de borde
+    mas cercana, y el mapa de espagueti sale plausible y falso. Con el limite
+    puesto, ese punto devuelve `None` en vez de inventar una ubicacion, y quien
+    llama puede contar cuantos puntos cayeron afuera en vez de no enterarse
+    nunca.
     """
-    mejor, mejor_d = None, float("inf")
+    mejor, mejor_d2 = None, float("inf")
     for a in range(1, layout.aisles + 1):
         for b in range(1, layout.bays + 1):
             code = layout.location_code(a, b, level)
             lx, ly = layout.xy(code)
-            d = (lx - x_m) ** 2 + (ly - y_m) ** 2
-            if d < mejor_d:
-                mejor, mejor_d = code, d
+            d2 = (lx - x_m) ** 2 + (ly - y_m) ** 2
+            if d2 < mejor_d2:
+                mejor, mejor_d2 = code, d2
+    if mejor is None:
+        return None
+    if max_distance_m is not None and math.sqrt(mejor_d2) > max_distance_m:
+        return None
     return mejor
+
+
+class DwellEvents(NamedTuple):
+    """Resultado de `dwell_events`.
+
+    `discarded_out_of_bounds` va separado de `stops` porque son dos preguntas
+    distintas: cuantas paradas reales hubo, y cuantos puntos de la pista no se
+    pudieron ubicar en el layout (`nearest_location` devolvio `None` por
+    `max_distance_m`). Fusionarlas en un solo numero esconde la segunda
+    pregunta -- la que importa cuando la homografia esta mal calibrada
+    (ronda de arreglo 1, hallazgo 3 de la tarea 6).
+    """
+
+    stops: list[tuple[float, str]]
+    discarded_out_of_bounds: int
 
 
 def dwell_events(
     points: list[TrackPoint],
     layout: Layout,
     min_dwell_s: float = 4.0,
-    radius_m: float = 1.5,
-) -> list[tuple[float, str]]:
-    """Paradas reales, no lugares por los que se paso.
+    max_gap_s: float = 2.0,
+    max_distance_m: float | None = None,
+) -> DwellEvents:
+    """Paradas reales: ni lugares por los que se paso, ni ruido de deteccion.
 
     Un picker cruza medio CD sin tocar nada. Contar cada ubicacion por la que
     pasa como una visita infla el conteo, y ese conteo despues infla el caso
     economico. El umbral de permanencia (`min_dwell_s`) es lo que separa
     "estuvo ahi" de "paso por ahi".
+
+    Algoritmo (ronda de arreglo 1, hallazgo 1 de la tarea 6): cada punto se
+    asigna a su ubicacion mas cercana, y los puntos consecutivos con la misma
+    ubicacion asignada se agrupan. El grupo tolera interrupciones de hasta
+    `max_gap_s` segundos con otra ubicacion asignada -- o ninguna -- sin
+    cortarse: eso es ruido de deteccion normal, no un desplazamiento real. Una
+    interrupcion mas larga que `max_gap_s` si corta el grupo.
+
+    El algoritmo anterior reiniciaba un "ancla" cada vez que un punto se alejaba
+    del radio de ese ancla. Eso fallaba en las dos direcciones: una permanencia
+    real cortada por ruido de deteccion (el marcador visto en diagonal salta
+    unos centimetros entre cuadros) desaparecia porque cada segmento entre
+    anclas medio menos que `min_dwell_s`; y la misma oscilacion, con otro
+    fraseo, contaba dos paradas para la misma ubicacion fisica. Agrupar por
+    ubicacion asignada en vez de por distancia al ultimo punto visto arregla
+    ambos casos a la vez.
+
+    `max_gap_s=2.0` por default: mas largo que el ruido de deteccion tipico
+    entre cuadros consecutivos, y mas corto que un desplazamiento real a otra
+    ubicacion. Subirlo mucho fusiona paradas vecinas en una sola; bajarlo a
+    cero vuelve al bug del ancla (cualquier interrupcion corta el grupo).
+
+    El timestamp de la parada es el `t_s` del PRIMER punto del grupo (la
+    entrada), no el del ultimo (la salida): usar el de salida sobreestima la
+    duracion en un intervalo de muestreo (ronda de arreglo 1, hallazgo 2).
     """
     if not points:
-        return []
+        return DwellEvents([], 0)
+
+    descartados = 0
+    asignaciones: list[str | None] = []
+    for p in points:
+        loc = nearest_location(layout, p.x_m, p.y_m, max_distance_m=max_distance_m)
+        if loc is None and max_distance_m is not None:
+            descartados += 1
+        asignaciones.append(loc)
 
     paradas: list[tuple[float, str]] = []
-    ancla = points[0]
-    inicio = points[0].t_s
-    for p in points[1:]:
-        if math.dist((p.x_m, p.y_m), (ancla.x_m, ancla.y_m)) <= radius_m:
-            continue
-        if p.t_s - inicio >= min_dwell_s:
-            paradas.append((inicio, nearest_location(layout, ancla.x_m, ancla.y_m)))
-        ancla, inicio = p, p.t_s
+    loc_actual: str | None = None
+    t_inicio = 0.0
+    t_ultimo_en_loc = 0.0
 
-    if points[-1].t_s - inicio >= min_dwell_s:
-        paradas.append((inicio, nearest_location(layout, ancla.x_m, ancla.y_m)))
-    return paradas
+    def _cerrar_grupo() -> None:
+        if loc_actual is not None and (t_ultimo_en_loc - t_inicio) >= min_dwell_s:
+            paradas.append((t_inicio, loc_actual))
+
+    for p, loc in zip(points, asignaciones):
+        if loc_actual is None:
+            if loc is not None:
+                loc_actual, t_inicio, t_ultimo_en_loc = loc, p.t_s, p.t_s
+            continue
+
+        if loc == loc_actual:
+            t_ultimo_en_loc = p.t_s
+            continue
+
+        # Punto con otra ubicacion, o sin ubicacion: puede ser ruido de
+        # deteccion (se tolera) o un desplazamiento real (corta el grupo).
+        if p.t_s - t_ultimo_en_loc <= max_gap_s:
+            continue
+
+        _cerrar_grupo()
+        if loc is not None:
+            loc_actual, t_inicio, t_ultimo_en_loc = loc, p.t_s, p.t_s
+        else:
+            loc_actual = None
+
+    _cerrar_grupo()
+    return DwellEvents(paradas, descartados)
 
 
 def tracks_to_eventlog(
@@ -243,7 +329,7 @@ def tracks_to_eventlog(
     """
     filas = []
     for subject, puntos in tracks.items():
-        for t_s, loc in dwell_events(puntos, layout, min_dwell_s=min_dwell_s):
+        for t_s, loc in dwell_events(puntos, layout, min_dwell_s=min_dwell_s).stops:
             filas.append(
                 {
                     "case_id": subject,

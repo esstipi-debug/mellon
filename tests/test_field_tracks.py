@@ -242,7 +242,7 @@ def test_dwell_events_ignora_el_paso_y_marca_la_parada():
     puntos = [TrackPoint(0.0, 3.0, 2.0), TrackPoint(0.5, 4.5, 2.5)]
     puntos += [TrackPoint(1.0 + i, 6.0, 3.0) for i in range(7)]
 
-    paradas = dwell_events(puntos, LAY, min_dwell_s=4.0)
+    paradas = dwell_events(puntos, LAY, min_dwell_s=4.0).stops
     assert [loc for _, loc in paradas] == ["02-003-1"]
 
 
@@ -273,3 +273,78 @@ def test_el_eventlog_no_lleva_identidad():
     puntos = [TrackPoint(0.0 + i, 3.0, 2.0) for i in range(6)]
     log = tracks_to_eventlog({"sub-abc123456789": puntos}, LAY, t0=T0)
     assert_no_identity(log.df.to_dict("records"))
+
+
+# --- Ronda de arreglo 1: el algoritmo del ancla fallaba en las dos
+# direcciones ante oscilaciones (ruido de deteccion normal, no excepcional).
+# M y E son dos ubicaciones bien separadas del layout: M es donde el carro se
+# queda, E es adonde "se escapa" el ruido de deteccion.
+M_XY = LAY.xy("01-002-1")
+E_XY = LAY.xy("03-005-1")
+
+
+def test_dwell_events_junta_excursiones_cortas_de_ruido_en_una_sola_parada():
+    # 21 s reales en M, con una excursion de 1 s a E cada 2 s. El algoritmo
+    # del ancla contaba cada segmento entre anclas (menor que min_dwell_s) y
+    # no detectaba ninguna parada. Agrupando por ubicacion asignada, las
+    # excursiones de 1 s quedan toleradas por max_gap_s (default 2.0) y el
+    # grupo entero cuenta como una sola parada.
+    puntos = [
+        TrackPoint(float(t), *(M_XY if t % 2 == 0 else E_XY))
+        for t in range(0, 21)
+    ]
+    resultado = dwell_events(puntos, LAY)
+    assert [loc for _, loc in resultado.stops] == ["01-002-1"]
+
+
+def test_dwell_events_no_duplica_la_parada_por_una_sola_interrupcion_corta():
+    # 12 s en M interrumpidos por una unica excursion de 1 s a E. El
+    # algoritmo del ancla cerraba el primer tramo (>= min_dwell_s), reiniciaba
+    # el ancla en la excursion y volvia a acumular desde ahi -- dos paradas
+    # para la misma ubicacion fisica. Con el grupo tolerando la interrupcion,
+    # es una sola.
+    puntos = [TrackPoint(float(t), *M_XY) for t in range(0, 6)]
+    puntos.append(TrackPoint(6.0, *E_XY))
+    puntos += [TrackPoint(float(t), *M_XY) for t in range(7, 12)]
+
+    resultado = dwell_events(puntos, LAY)
+    assert [loc for _, loc in resultado.stops] == ["01-002-1"]
+
+
+def test_dwell_events_corta_el_grupo_ante_una_excursion_larga():
+    # Permanencia real en M (0-5 s), despues una excursion a E que dura mas
+    # que max_gap_s, y de nuevo M (11-19 s). Esto SI son dos visitas distintas
+    # -- separadas por un desplazamiento real, no por ruido -- y el resultado
+    # correcto son dos paradas, no una fusionada.
+    puntos = [TrackPoint(float(t), *M_XY) for t in range(0, 6)]
+    puntos.append(TrackPoint(10.0, *E_XY))
+    puntos += [TrackPoint(float(t), *M_XY) for t in range(11, 20)]
+
+    resultado = dwell_events(puntos, LAY)
+    assert [loc for _, loc in resultado.stops] == ["01-002-1", "01-002-1"]
+
+
+def test_dwell_events_marca_el_timestamp_de_entrada_no_el_de_salida():
+    # El timestamp de la parada tiene que ser el del primer punto del grupo
+    # (la entrada), no el del ultimo punto que ya se habia ido (la salida) --
+    # eso sobreestimaria la duracion en un intervalo de muestreo.
+    puntos = [TrackPoint(float(t), *M_XY) for t in range(0, 6)]
+    resultado = dwell_events(puntos, LAY)
+    (t_parada, _), = resultado.stops
+    assert t_parada == puntos[0].t_s
+
+
+def test_nearest_location_con_max_distance_devuelve_none_fuera_de_planta():
+    # Un punto lejos de toda ubicacion del layout -- tipico de una homografia
+    # mal calibrada -- no se mapea en silencio al borde mas cercano: se
+    # rechaza explicitamente si supera max_distance_m.
+    assert nearest_location(LAY, 500.0, 500.0, max_distance_m=5.0) is None
+    assert nearest_location(LAY, 500.0, 500.0) is not None
+
+
+def test_dwell_events_cuenta_los_puntos_descartados_por_estar_fuera_de_planta():
+    puntos = [TrackPoint(float(t), *M_XY) for t in range(0, 6)]
+    puntos.append(TrackPoint(6.0, 500.0, 500.0))
+
+    resultado = dwell_events(puntos, LAY, max_distance_m=5.0)
+    assert resultado.discarded_out_of_bounds == 1

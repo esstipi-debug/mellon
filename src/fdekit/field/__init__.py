@@ -17,6 +17,7 @@ from .privacy import (
 )
 from .tracks import (
     Detection,
+    DwellEvents,
     TrackPoint,
     build_tracks,
     dwell_events,
@@ -36,6 +37,7 @@ __all__ = [
     "new_session_salt",
     "pseudonymize",
     "Detection",
+    "DwellEvents",
     "TrackPoint",
     "build_tracks",
     "dwell_events",
