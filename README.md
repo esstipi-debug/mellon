@@ -108,6 +108,71 @@ fdekit templates --out docs/                  # plantillas en blanco
 
 ---
 
+## La maqueta de mesa — medir en vez de inferir
+
+El espagueti de la herramienta 2 se **calcula** con aritmética sobre el layout.
+`fdekit field` lo **mide**, y la diferencia entre los dos es el hallazgo.
+
+Procedimiento completo, sobre un escritorio, en menos de dos minutos:
+
+1. Imprimir un marcador ArUco del diccionario `DICT_4X4_50` (cualquier
+   generador en línea; sirve papel común) y pegarlo a una taza, que hace de
+   carro de picking.
+2. Marcar cuatro esquinas del escritorio con cinta y medirlas con huincha.
+   Escribir `refs.csv`:
+
+   ```
+   x_px,y_px,x_m,y_m
+   0,0,0,0
+   100,0,10,0
+   100,100,10,10
+   0,100,0,10
+   ```
+
+   Los `x_px,y_px` salen de mirar el primer cuadro del video; los `x_m,y_m` de
+   la huincha. **Cuatro filas exactas, y que no queden alineadas** — cuatro
+   puntos sobre una recta no definen un plano.
+3. Grabar 30 segundos moviendo la taza y deteniéndola unos segundos en dos o
+   tres "ubicaciones".
+4. Convertir el video en detecciones (única parte que necesita OpenCV).
+   `write_detections` ahora recibe el total de cuadros del video (`n`, el
+   segundo valor que devuelve `detect_markers`) y lo graba como la primera
+   línea del CSV — es el dato que sostiene la cobertura más abajo:
+
+   ```bash
+   pip install 'fde-field-kit[vision]'
+   python -c "from fdekit.field.vision import detect_markers, write_detections; d,n=detect_markers('mesa.mp4'); write_detections(d,'det.csv',n); print(n,'frames')"
+   ```
+
+5. Y el análisis, que **no** necesita OpenCV:
+
+   ```bash
+   fdekit field --detections det.csv --refs refs.csv --out out --fps 30 \
+                --aisles 4 --bays 10 --aisle-pitch 3 --bay-pitch 1
+   ```
+
+   Los cuatro flags de geometría describen la maqueta. Sin ellos se usa la del
+   CD (12 pasillos × 50 módulos), y la taza sobre el escritorio quedaría
+   reportada en el pasillo 2 módulo 2 — un número que sale, y que no quiere
+   decir nada.
+
+   Si el CSV de detecciones no trae la línea `# frames_total=<int>` (por
+   ejemplo, uno grabado antes de esta versión de `write_detections`), agregar
+   `--frames <n>` con el total de cuadros del video. Sin ninguno de los dos,
+   `fdekit field` falla en vez de adivinar el denominador de la cobertura.
+
+En `out/espagueti_medido.png` queda el recorrido real. La salida en consola trae
+los metros medidos y la nota de cobertura — qué fracción de los cuadros vio
+efectivamente el marcador. **Un recorrido sin cobertura no se muestra a un
+cliente:** lo que la cámara no vio no está en el número, y callarlo sería el
+error más caro que puede cometer este kit.
+
+Ninguna identidad sale del proceso: el `marker_id` se hashea con una sal de
+sesión que nunca se escribe a disco, y `tests/test_field_privacy.py` lo
+verifica. El sensor ve al operador; el archivo que sale, no.
+
+---
+
 ## Qué encuentra la demo
 
 Sobre el CD sintético, sin ajustar nada:

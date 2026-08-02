@@ -107,6 +107,119 @@ def cmd_travel(a):
     return 0
 
 
+def run_field(detections, refs, out, fps, t0, today, layout=None, frames_total=None) -> dict:
+    """Demo de mesa: CSV de detecciones -> espagueti medido + residual.
+
+    `t0` y `today` son argumentos (regla 4): esta funcion nunca mira el reloj,
+    asi que el mismo `t0` siempre da el mismo resultado. `out` se crea si no
+    existe.
+
+    `layout` tambien es argumento: un escritorio de un metro no es un CD de
+    doce pasillos, y fijar el layout por defecto haria que la taza cayera en
+    "pasillo 2 modulo 2". El numero seguiria saliendo, y no querria decir
+    nada.
+
+    `frames_total` -- el denominador de la cobertura -- sale de una de dos
+    fuentes, en este orden:
+
+    1. La linea de metadatos `# frames_total=<int>` en el CSV de detecciones
+       (la que escribe `vision.write_detections`).
+    2. El parametro `frames_total` de esta funcion, si el CSV no la trae.
+
+    Si ninguna de las dos esta, esta funcion falla en vez de adivinar:
+    derivarlo del frame maximo visto en las detecciones daria siempre 100% de
+    cobertura -- el tramo sin detecciones desaparece del calculo en vez de
+    contar como cuadros sin ver, y eso vacia el modulo de cobertura entero,
+    que es la pieza que sostiene la honestidad de toda la medicion (regla 3).
+    """
+    import csv as _csv
+    from pathlib import Path
+
+    from .field.homography import FloorHomography
+    from .field.privacy import new_session_salt
+    from .field.tracks import build_tracks, load_detections, track_distance_m, tracks_to_eventlog
+    from .layout import Layout
+    from .timestudy.spaghetti import plot_spaghetti
+
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+
+    with open(refs, encoding="utf-8", newline="") as fh:
+        filas = list(_csv.DictReader(fh))
+    if len(filas) != 4:
+        raise ValueError(
+            f"el CSV de referencias necesita exactamente cuatro filas (esquinas "
+            f"del piso con coordenadas conocidas), llegaron {len(filas)}"
+        )
+
+    homografia = FloorHomography.from_points(
+        [(float(f["x_px"]), float(f["y_px"])) for f in filas],
+        [(float(f["x_m"]), float(f["y_m"])) for f in filas],
+    )
+
+    dets, frames_total_csv = load_detections(detections)
+    if frames_total_csv is not None:
+        frames_total_resuelto = frames_total_csv
+    elif frames_total is not None:
+        frames_total_resuelto = frames_total
+    else:
+        raise ValueError(
+            "el CSV de detecciones no declara el total de cuadros del video "
+            "(falta la linea '# frames_total=<int>'), y no se paso "
+            "frames_total explicito: sin ninguno de los dos no hay como "
+            "calcular la cobertura sin inventar un numero. Regenerar el CSV "
+            "con vision.write_detections (que ahora recibe frames_total) o "
+            "pasar --frames en la linea de comandos."
+        )
+
+    lay = layout or Layout()
+    tracks, cobertura = build_tracks(
+        dets, homografia, fps=fps, salt=new_session_salt(), frames_total=frames_total_resuelto
+    )
+    log, cobertura = tracks_to_eventlog(tracks, lay, t0=t0, coverage=cobertura)
+    plot_spaghetti(log, lay, path=str(out / "espagueti_medido.png"))
+
+    return {
+        "tracks": len(tracks),
+        "measured_m_in_window": round(
+            sum(track_distance_m(p) for p in tracks.values()), 1
+        ),
+        "stops": int(len(log)),
+        # Las ubicaciones dependen de la geometria que se paso, y por eso van
+        # en la salida: son lo que deja ver si el layout declarado es el
+        # correcto.
+        "locations": sorted(log.df["location"].dropna().unique().tolist()),
+        "coverage_note": cobertura.note(),
+        "today": today.isoformat(),
+    }
+
+
+def cmd_field(a):
+    """El reloj se lee UNA sola vez, aca en el borde, y nunca en el analisis.
+
+    `run_field` recibe t0 y today como argumentos (regla 4). Esta funcion es
+    el unico lugar del camino que tiene permitido mirar el reloj.
+    """
+    import datetime as _dt
+
+    from .layout import Layout
+
+    out = run_field(
+        detections=a.detections,
+        refs=a.refs,
+        out=a.out,
+        fps=a.fps,
+        t0=pd.Timestamp.now(),
+        today=_dt.date.today(),
+        layout=Layout(
+            aisles=a.aisles, bays=a.bays, aisle_pitch=a.aisle_pitch, bay_pitch=a.bay_pitch
+        ),
+        frames_total=a.frames,
+    )
+    print(json.dumps(out, indent=2, ensure_ascii=False))
+    return 0
+
+
 def cmd_dq(a):
     from .dataquality import audit_master, audit_summary, sampling_plan
 
@@ -303,6 +416,26 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--log", required=True)
     t.add_argument("--plots", help="carpeta de salida de graficos")
     t.set_defaults(func=cmd_travel)
+
+    f = sub.add_parser("field", help="demo de mesa: detecciones -> espagueti medido")
+    f.add_argument("--detections", required=True)
+    f.add_argument("--refs", required=True, help="CSV con 4 esquinas: x_px,y_px,x_m,y_m")
+    f.add_argument("--out", default="out")
+    f.add_argument("--fps", type=float, default=30.0)
+    f.add_argument(
+        "--frames",
+        type=int,
+        default=None,
+        help="total de cuadros del video; solo hace falta si el CSV no trae "
+        "la linea '# frames_total=<int>' (la que escribe write_detections)",
+    )
+    # Geometria: los defaults son los del CD. La maqueta de escritorio pasa la
+    # suya (p.ej. --aisles 4 --bays 10 --aisle-pitch 3 --bay-pitch 1).
+    f.add_argument("--aisles", type=int, default=12)
+    f.add_argument("--bays", type=int, default=50)
+    f.add_argument("--aisle-pitch", type=float, default=3.0)
+    f.add_argument("--bay-pitch", type=float, default=1.2)
+    f.set_defaults(func=cmd_field)
 
     q = sub.add_parser("dq", help="auditoria de datos maestros")
     q.add_argument("--master", required=True)
