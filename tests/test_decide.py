@@ -1,0 +1,549 @@
+"""Fase 1 de fdekit.decide.
+
+Los tests no verifican que el codigo corra: verifican las reglas que hacen que
+el registro no mienta. Si alguna afloja, el sistema pasa a ser una minuta con
+mas ceremonia.
+"""
+
+from datetime import date
+
+import pytest
+
+from fdekit.decide import (
+    Assumption,
+    Commitment,
+    Consent,
+    DecideStore,
+    Decision,
+    Meeting,
+    OpenQuestion,
+    PromotionBudgetExceeded,
+    agenda,
+    implementations,
+    parse_date,
+    referencing,
+    safe_close,
+    tick,
+    why,
+)
+from fdekit.decide.frontmatter import FrontMatterError, dumps, loads
+from fdekit.decide.store import ValidationError
+
+HOY = date(2026, 8, 1)
+ROSTER = ("Marcela", "Fabian", "Rodrigo")
+
+
+def consent() -> Consent:
+    return Consent(granted=True, granted_by="Marcela", basis="interes_legitimo")
+
+
+@pytest.fixture
+def store(tmp_path):
+    st = DecideStore(tmp_path / "decide")
+    st.add_meeting(
+        Meeting(
+            id="2026-08-01-comite",
+            date=HOY,
+            roster=ROSTER,
+            consent=consent(),
+            facilitator="Marcela",
+        )
+    )
+    return st
+
+
+def mk_decision(**kw) -> Decision:
+    base = dict(
+        id="",
+        statement="Reslotear la clase A a la zona dorada del CD Pudahuel",
+        owner="Marcela",
+        date_decided=HOY,
+        criteria="distancia media ponderada bajo 35 m antes del 30-09",
+        rationale="el 69% de las visitas son clase A y solo el 14% esta en zona dorada",
+        meeting_id="2026-08-01-comite",
+    )
+    base.update(kw)
+    return Decision(**base)
+
+
+# ------------------------------------------------------------- front-matter
+
+
+def test_frontmatter_ida_y_vuelta():
+    data = {"id": "D-001", "n": 3, "ok": True, "nada": None, "lista": ["a", "b"], "d": {"x": 1}}
+    got, body = loads(dumps(data, "cuerpo"))
+    assert got == data
+    assert body == "cuerpo"
+
+
+def test_frontmatter_soporta_acentos_y_saltos():
+    data = {"t": "decisión con\nsalto y ñ"}
+    assert loads(dumps(data))[0] == data
+
+
+def test_frontmatter_claves_ordenadas_para_diffs_estables():
+    txt = dumps({"z": 1, "a": 2, "m": 3})
+    assert txt.index("a:") < txt.index("m:") < txt.index("z:")
+
+
+def test_frontmatter_falla_fuerte_ante_edicion_a_mano_invalida():
+    """Estos archivos se editan a mano a proposito. Un parseo silencioso que
+    devuelve datos equivocados es peor que un error."""
+    with pytest.raises(FrontMatterError, match="no es JSON valido"):
+        loads("---\nnombre: Marcela\n---\n")  # falta comillas
+    with pytest.raises(FrontMatterError, match="sin cierre"):
+        loads("---\na: 1\n")
+    with pytest.raises(FrontMatterError, match="no empieza"):
+        loads("a: 1\n")
+    with pytest.raises(FrontMatterError, match="clave repetida"):
+        loads('---\na: 1\na: 2\n---\n')
+    with pytest.raises(FrontMatterError, match="indentacion"):
+        loads('---\na:\n  b: 1\n---\n')
+
+
+# ----------------------------------------------------------- validaciones
+
+
+def test_decision_valida_no_tiene_problemas():
+    assert mk_decision().validate(ROSTER) == []
+
+
+def test_rechaza_intencion_de_decidir_disfrazada_de_decision():
+    """'evaluar si conviene X' no es una decision: es la intencion de decidir
+    mas adelante. Es como el registro empieza a mentir."""
+    d = mk_decision(statement="evaluar si conviene reslotear la clase A")
+    assert any("intencion de decidir" in i for i in d.validate(ROSTER))
+
+
+def test_rechaza_criterio_sin_numero_ni_predicado():
+    d = mk_decision(criteria="que funcione mejor que ahora")
+    assert any("no contiene un numero" in i for i in d.validate(ROSTER))
+
+
+def test_acepta_criterio_con_predicado_verificable_sin_numero():
+    d = mk_decision(criteria="sin excepciones de ubicacion en el turno de manana")
+    assert not any("no contiene un numero" in i for i in d.validate(ROSTER))
+
+
+def test_rechaza_dueno_fuera_del_roster():
+    """El roster es el scope lexico: es lo que hace deterministica la
+    resolucion de duenos, y es la unica pieza que Serena obtiene del compilador
+    y aca hay que declarar."""
+    d = mk_decision(owner="Alguien")
+    assert any("no esta en el roster" in i for i in d.validate(ROSTER))
+
+
+def test_rechaza_decision_sin_rationale():
+    assert any("sin rationale" in i for i in mk_decision(rationale="").validate(ROSTER))
+
+
+def test_rechaza_pregunta_como_decision():
+    d = mk_decision(statement="conviene reslotear la clase A este trimestre?")
+    assert any("es una pregunta" in i for i in d.validate(ROSTER))
+
+
+def test_compromiso_huerfano_es_una_tarea_no_un_compromiso():
+    c = Commitment(id="C-001", decision_id="", what="medir la linea base", owner="Fabian",
+                   due=HOY, evidence_of_done="planilla en el repo")
+    assert any("huerfano" in i for i in c.validate(ROSTER))
+
+
+def test_compromiso_sin_evidencia_se_rechaza():
+    c = Commitment(id="C-001", decision_id="D-001", what="medir la linea base",
+                   owner="Fabian", due=HOY)
+    assert any("evidencia" in i for i in c.validate(ROSTER))
+
+
+def test_fecha_relativa_se_rechaza_con_mensaje_util():
+    with pytest.raises(ValueError, match="no absoluta"):
+        parse_date("el viernes")
+
+
+def test_reapertura_sin_dato_nuevo_se_rechaza():
+    """Para reabrir hay que traer un numero, no una opinion."""
+    q = OpenQuestion(id="Q-001", question="reabrimos el slotting?", resolver="Marcela",
+                     resolve_by=HOY, reopen_of="D-001", new_evidence="creo que no funciono")
+    assert any("dato nuevo" in i for i in q.validate(ROSTER))
+
+    q.new_evidence = "la distancia media subio a 52 m en julio"
+    assert not any("dato nuevo" in i for i in q.validate(ROSTER))
+
+
+def test_meeting_exige_consentimiento_en_el_constructor():
+    """Es la unica pieza de cumplimiento que no se puede retrofitear."""
+    with pytest.raises(ValueError, match="requiere `consent`"):
+        Meeting(id="x", date=HOY, roster=ROSTER, consent=None)
+
+
+def test_meeting_exige_roster():
+    with pytest.raises(ValueError, match="sin roster"):
+        Meeting(id="x", date=HOY, roster=(), consent=consent())
+
+
+def test_grabar_sin_politica_de_retencion_se_marca():
+    c = Consent(granted=True, granted_by="M", basis="interes_legitimo", recording_allowed=True)
+    assert any("retencion" in i for i in c.validate())
+
+
+def test_audio_sin_permiso_de_grabar_se_marca():
+    m = Meeting(id="x", date=HOY, roster=ROSTER, consent=consent(),
+                facilitator="Marcela", audio_ref="a.m4a")
+    assert any("no permite grabar" in i for i in m.validate())
+
+
+# ------------------------------------------------------------------ store
+
+
+def test_el_store_se_niega_a_persistir_algo_invalido(store):
+    with pytest.raises(ValidationError, match="Decision invalido"):
+        store.add_decision(mk_decision(criteria="que quede mejor"))
+    assert store.decisions() == []
+
+
+def test_force_permite_persistir_igual(store):
+    store.add_decision(mk_decision(criteria="que quede mejor"), force=True)
+    assert len(store.decisions()) == 1
+
+
+def test_ids_monotonos_y_persistencia_ida_y_vuelta(store):
+    a = store.add_decision(mk_decision())
+    b = store.add_decision(mk_decision(statement="Nivelar la liberacion de olas contra la dotacion"))
+    assert (a.id, b.id) == ("D-001", "D-002")
+
+    leida = store.get("D-001")
+    assert leida.statement == a.statement
+    assert leida.date_decided == HOY
+    assert leida.owner == "Marcela"
+
+
+def test_presupuesto_de_siete_promociones_por_reunion(store):
+    for i in range(7):
+        store.add_decision(mk_decision(statement=f"Decision numero {i} sobre el slotting del CD"))
+    with pytest.raises(PromotionBudgetExceeded, match="minuta hibrida"):
+        store.add_decision(mk_decision(statement="La octava decision de esta misma reunion"))
+
+
+def test_el_presupuesto_es_por_reunion_no_global(store):
+    store.add_meeting(Meeting(id="2026-08-08-comite", date=date(2026, 8, 8), roster=ROSTER,
+                              consent=consent(), facilitator="Marcela"))
+    for i in range(7):
+        store.add_decision(mk_decision(statement=f"Decision {i} del comite de agosto uno"))
+    otra = store.add_decision(
+        mk_decision(statement="Decision de la reunion siguiente", meeting_id="2026-08-08-comite")
+    )
+    assert otra.id == "D-008"
+
+
+def test_compromiso_contra_decision_inexistente_falla(store):
+    with pytest.raises(KeyError):
+        store.add_commitment(Commitment(id="", decision_id="D-999", what="algo que hacer",
+                                        owner="Fabian", due=HOY, evidence_of_done="x"))
+
+
+def test_campo_desconocido_en_el_archivo_falla_al_leer(store, tmp_path):
+    store.add_decision(mk_decision())
+    p = tmp_path / "decide" / "decisions" / "D-001.md"
+    p.write_text(p.read_text(encoding="utf-8").replace("---\n", '---\ninventado: 1\n', 1), encoding="utf-8")
+    with pytest.raises(ValidationError, match="campos desconocidos"):
+        store.decisions()
+
+
+def test_indice_es_derivado_y_regenerable(store):
+    store.add_decision(mk_decision())
+    idx = store.rebuild_index()
+    assert idx["decisions"][0]["id"] == "D-001"
+    (store.root / "index.json").unlink()
+    assert len(store.decisions()) == 1  # ninguna lectura depende del indice
+
+
+def test_git_commit_no_levanta_fuera_de_un_repo(store):
+    assert isinstance(store.git_commit("prueba"), str)
+
+
+# ----------------------------------------------------------------- agenda
+
+
+def test_agenda_vacia_propone_cancelar(store):
+    ag = agenda(store, "2026-08-01-comite", today=HOY)
+    assert ag.is_empty
+    assert ag.verdict == "proponer cancelar"
+    assert "No hay nada que decidir" in ag.to_markdown()
+
+
+def test_agenda_lista_compromisos_vencidos_por_atraso(store):
+    store.add_decision(mk_decision())
+    store.add_commitment(Commitment(id="", decision_id="D-001", what="medir la linea base",
+                                    owner="Fabian", due=date(2026, 7, 1),
+                                    evidence_of_done="planilla en el repo"))
+    store.add_commitment(Commitment(id="", decision_id="D-001", what="auditar el maestro",
+                                    owner="Rodrigo", due=date(2026, 7, 25),
+                                    evidence_of_done="csv de auditoria"))
+    ag = agenda(store, "2026-08-01-comite", today=HOY)
+    assert not ag.is_empty
+    assert [c.id for c, _ in ag.overdue_commitments] == ["C-001", "C-002"]  # mas atrasado primero
+    assert ag.overdue_commitments[0][1] == 31
+
+
+def test_gate_rechaza_pregunta_sin_resolver_en_el_roster(store):
+    store.add_question(OpenQuestion(id="", question="aprobamos el presupuesto?",
+                                    resolver="Externo", resolve_by=HOY))
+    ag = agenda(store, "2026-08-01-comite", today=HOY)
+    assert ag.open_questions == []
+    assert "no esta en el roster" in ag.gate_rejections[0]["reason"]
+
+
+def test_gate_rechaza_pregunta_no_cerrable(store):
+    """'como lo hacemos?' es una charla con signo de interrogacion."""
+    store.add_question(OpenQuestion(id="", question="como mejoramos el picking?",
+                                    resolver="Marcela", resolve_by=HOY))
+    ag = agenda(store, "2026-08-01-comite", today=HOY)
+    assert ag.open_questions == []
+    assert "no admite cierre" in ag.gate_rejections[0]["reason"]
+
+
+def test_gate_agenda_el_dato_bloqueante_no_el_tema(store):
+    """Si falta el dato que bloquea, no se agenda el tema: se agenda obtener el
+    dato. El bucle no se mide despues — no se produce."""
+    store.add_question(OpenQuestion(id="", question="cerramos el turno de noche?",
+                                    resolver="Marcela", resolve_by=HOY, blocks=[]))
+    store.add_question(OpenQuestion(id="", question="cual fue el volumen real de julio?",
+                                    resolver="Rodrigo", resolve_by=HOY, blocks=["Q-001"]))
+    ag = agenda(store, "2026-08-01-comite", today=HOY)
+    ids = [q.id for q in ag.open_questions]
+    assert "Q-001" not in ids
+    rej = next(r for r in ag.gate_rejections if r["id"] == "Q-001")
+    assert "bloqueada por Q-002" in rej["reason"]
+    assert "agendar la obtencion del dato" in rej["action"]
+
+
+def test_gate_deja_pasar_una_pregunta_cerrable_con_dueno(store):
+    store.add_question(OpenQuestion(id="", question="aprobamos el reslotting de la zona B?",
+                                    resolver="Marcela", resolve_by=date(2026, 8, 15)))
+    ag = agenda(store, "2026-08-01-comite", today=HOY)
+    assert [q.id for q in ag.open_questions] == ["Q-001"]
+    assert ag.verdict == "reunion justificada"
+
+
+def test_la_pregunta_que_vencio_sin_respuesta_no_desaparece(store):
+    """El bucle hecho visible. Si al expirar saliera de la agenda, el sistema
+    recomendaria cancelar una reunion que justamente tenia algo que resolver, y
+    el bucle seguiria corriendo invisible — que es el problema entero."""
+    store.add_question(OpenQuestion(id="", question="cerramos el turno de noche?",
+                                    resolver="Marcela", resolve_by=date(2026, 7, 20)))
+    futuro = date(2026, 8, 25)
+    tick(store, futuro)
+    assert store.get("Q-001").status == "EXPIRADA"
+
+    ag = agenda(store, "2026-08-01-comite", today=futuro)
+    assert not ag.is_empty
+    assert ag.verdict == "reunion justificada"
+    q, dias = ag.expired_questions[0]
+    assert q.id == "Q-001" and dias == 36
+    assert "vencieron sin respuesta" in ag.to_markdown()
+
+
+def test_solicitud_de_reapertura_va_a_su_propio_bloque(store):
+    store.add_decision(mk_decision())
+    store.add_question(OpenQuestion(id="", question="reabrimos D-001?", resolver="Marcela",
+                                    resolve_by=date(2026, 8, 15), reopen_of="D-001",
+                                    new_evidence="la distancia media subio a 52 m"))
+    ag = agenda(store, "2026-08-01-comite", today=HOY)
+    assert [q.id for q in ag.reopen_requests] == ["Q-001"]
+
+
+def test_supuesto_sin_fuente_aparece_como_aviso_no_bloquea(store):
+    store.add_decision(mk_decision())
+    store.add_assumption(Assumption(id="", decision_id="D-001",
+                                    statement="el volumen se mantiene en 800 pedidos",
+                                    check_by=date(2026, 9, 1)))
+    ag = agenda(store, "2026-08-01-comite", today=HOY)
+    assert any("sin fuente" in a for a in ag.advisories)
+
+
+# ------------------------------------------------------------------- tick
+
+
+def test_tick_vence_compromisos_y_supuestos(store):
+    store.add_decision(mk_decision())
+    store.add_commitment(Commitment(id="", decision_id="D-001", what="medir la linea base",
+                                    owner="Fabian", due=date(2026, 7, 1),
+                                    evidence_of_done="planilla"))
+    store.add_assumption(Assumption(id="", decision_id="D-001",
+                                    statement="el layout no cambia hasta septiembre",
+                                    check_by=date(2026, 7, 15), source="jefe de operaciones"))
+
+    r = tick(store, HOY)
+    assert r["commitments_vencidos"] == ["C-001"]
+    assert r["supuestos_vencidos"] == ["A-001"]
+    assert r["decisiones_en_riesgo"] == ["D-001"]
+    assert store.get("D-001").status == "EN_RIESGO"
+
+
+def test_tick_es_idempotente(store):
+    store.add_decision(mk_decision())
+    store.add_assumption(Assumption(id="", decision_id="D-001", statement="el layout no cambia",
+                                    check_by=date(2026, 7, 15), source="jefe"))
+    tick(store, HOY)
+    segundo = tick(store, HOY)
+    assert segundo["sin_cambios"] is True
+
+
+def test_tick_no_toca_lo_que_no_vencio(store):
+    store.add_decision(mk_decision())
+    store.add_assumption(Assumption(id="", decision_id="D-001", statement="el layout no cambia",
+                                    check_by=date(2026, 12, 1), source="jefe"))
+    r = tick(store, HOY)
+    assert r["sin_cambios"] is True
+    assert store.get("D-001").status == "VIGENTE"
+
+
+def test_tick_dry_run_no_escribe(store):
+    store.add_decision(mk_decision())
+    store.add_assumption(Assumption(id="", decision_id="D-001", statement="el layout no cambia",
+                                    check_by=date(2026, 7, 1), source="jefe"))
+    tick(store, HOY, apply=False)
+    assert store.get("A-001").status == "VIGENTE"
+
+
+def test_tick_detecta_zombis(store):
+    """Un compromiso abierto colgando de una decision revertida es gente
+    ejecutando algo que ya se revirtio: un bug real, silencioso, y hoy
+    estructuralmente invisible."""
+    d = store.add_decision(mk_decision())
+    store.add_commitment(Commitment(id="", decision_id="D-001", what="comprar los racks nuevos",
+                                    owner="Rodrigo", due=date(2026, 12, 1),
+                                    evidence_of_done="orden de compra"))
+    d.status = "REVERTIDA"
+    store.save(d)
+
+    r = tick(store, HOY)
+    assert r["zombis"] == ["C-001"]
+    assert store.get("C-001").status == "ZOMBI"
+    ag = agenda(store, "2026-08-01-comite", today=HOY)
+    assert any("zombi" in a for a in ag.advisories)
+
+
+def test_el_lazo_se_cierra_solo_supuesto_vencido_llega_a_la_agenda(store):
+    """Nadie tiene que acordarse de nada. Ese es el mecanismo."""
+    store.add_decision(mk_decision())
+    store.add_assumption(Assumption(id="", decision_id="D-001",
+                                    statement="el volumen se mantiene bajo 900 pedidos",
+                                    check_by=date(2026, 7, 20), source="planificacion"))
+    assert agenda(store, "2026-08-01-comite", today=HOY).is_empty
+
+    tick(store, HOY)
+    ag = agenda(store, "2026-08-01-comite", today=HOY)
+    assert not ag.is_empty
+    assert ag.at_risk_decisions[0][0].id == "D-001"
+
+
+# ------------------------------------------------------- navegacion y cierre
+
+
+def test_why_devuelve_rationale_y_supuestos_y_declara_que_no_hay_cita(store):
+    store.add_decision(mk_decision())
+    store.add_assumption(Assumption(id="", decision_id="D-001", statement="el layout no cambia",
+                                    check_by=date(2026, 9, 1), source="jefe"))
+    r = why(store, "D-001")
+    assert "69%" in r["rationale"]
+    assert r["assumptions"][0]["id"] == "A-001"
+    assert r["cita"] is None
+    assert "sin canal HABLADA" in r["nota_cita"]
+    assert r["fuente"] == "sin ancla"
+
+
+def test_referencing_declara_siempre_su_cobertura(store):
+    """Serena puede prometer completitud porque abajo tiene un compilador.
+    Nosotros no, y callarlo seria el error mas grave del diseno."""
+    store.add_decision(mk_decision())
+    r = referencing(store, "D-001")
+    assert r["coverage_completa"] is False
+    assert "SOLO enlaces puestos a mano" in r["coverage"]
+
+
+def test_referencing_encuentra_todo_lo_que_cuelga(store):
+    store.add_decision(mk_decision())
+    store.add_decision(mk_decision(statement="Comprar racks para la zona dorada ampliada",
+                                   depends_on=["D-001"]))
+    store.add_commitment(Commitment(id="", decision_id="D-001", what="ejecutar el reslotting",
+                                    owner="Rodrigo", due=date(2026, 9, 1),
+                                    evidence_of_done="reporte del WMS"))
+    store.add_assumption(Assumption(id="", decision_id="D-001", statement="el layout no cambia",
+                                    check_by=date(2026, 9, 1), source="jefe"))
+    store.add_question(OpenQuestion(id="", question="ampliamos la zona dorada?",
+                                    resolver="Marcela", resolve_by=date(2026, 9, 1),
+                                    blocks=["D-001"]))
+    r = referencing(store, "D-001")
+    assert r["total_referencias"] == 4
+    assert r["depends_on_this"][0]["id"] == "D-002"
+    assert r["open_commitments"][0]["id"] == "C-001"
+    assert r["blocked_questions"][0]["id"] == "Q-001"
+
+
+def test_referencing_en_profundidad_dos(store):
+    store.add_decision(mk_decision())
+    store.add_decision(mk_decision(statement="Comprar racks para la zona ampliada",
+                                   depends_on=["D-001"]))
+    store.add_decision(mk_decision(statement="Contratar el montaje de los racks nuevos",
+                                   depends_on=["D-002"]))
+    assert len(referencing(store, "D-001", depth=1)["depends_on_this"]) == 1
+    assert len(referencing(store, "D-001", depth=2)["depends_on_this"]) == 2
+
+
+def test_safe_close_se_niega_y_lista_lo_que_cuelga(store):
+    store.add_decision(mk_decision())
+    store.add_commitment(Commitment(id="", decision_id="D-001", what="ejecutar el reslotting",
+                                    owner="Rodrigo", due=date(2026, 9, 1),
+                                    evidence_of_done="reporte del WMS"))
+    r = safe_close(store, "D-001")
+    assert r["closed"] is False
+    assert "C-001" in r["blockers"][0]
+    assert "empieza a mentir" in r["reason"]
+
+
+def test_safe_close_cierra_cuando_no_cuelga_nada(store):
+    store.add_decision(mk_decision())
+    r = safe_close(store, "D-001")
+    assert r["closed"] is True
+    assert r["applied"] is False
+    assert store.get("D-001").status == "VIGENTE"  # sin --apply no toca nada
+
+
+def test_safe_close_con_apply_exige_motivo(store):
+    """Una decision que cambia de estado sin motivo escrito no se puede
+    explicar seis semanas despues, que es el problema que el registro existe
+    para resolver."""
+    store.add_decision(mk_decision())
+    with pytest.raises(ValueError, match="exige un motivo"):
+        safe_close(store, "D-001", apply=True)
+
+
+def test_safe_close_con_apply_revierte_y_deja_historial(store):
+    store.add_decision(mk_decision())
+    r = safe_close(store, "D-001", apply=True, reason="el CD cambia de layout en octubre",
+                   today=HOY)
+    assert r["applied"] is True
+    d = store.get("D-001")
+    assert d.status == "REVERTIDA"
+    assert d.version == 2
+    assert "2026-08-01 REVERTIDA: el CD cambia de layout" in d.historial_statements[0]
+
+
+def test_safe_close_bloquea_por_supuesto_sin_verificar(store):
+    store.add_decision(mk_decision())
+    store.add_assumption(Assumption(id="", decision_id="D-001", statement="el layout no cambia",
+                                    check_by=date(2026, 9, 1), source="jefe"))
+    assert safe_close(store, "D-001")["closed"] is False
+
+    a = store.get("A-001")
+    a.status = "VERIFICADO"
+    store.save(a)
+    assert safe_close(store, "D-001")["closed"] is True
+
+
+def test_implementations_es_una_relacion_real(store):
+    store.add_decision(mk_decision())
+    store.add_commitment(Commitment(id="", decision_id="D-001", what="ejecutar el reslotting",
+                                    owner="Rodrigo", due=date(2026, 9, 1),
+                                    evidence_of_done="reporte"))
+    assert [c.id for c in implementations(store, "D-001")] == ["C-001"]

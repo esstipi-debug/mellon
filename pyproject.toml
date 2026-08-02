@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fde-field-kit"
+version = "0.1.0"
+description = "Kit de terreno para Forward Deployed Engineers con perfil de supply chain: gemba estructurado, process mining, calidad de datos maestros, simulacion, linea base y SPC."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "scipy>=1.10",
+    "simpy>=4.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+# torch NO es dependencia del nucleo: el kit tiene que correr en el notebook
+# prestado de un CD, sin GPU y sin permisos de instalacion.
+audio = ["transformers>=4.44", "torch>=2.2", "accelerate"]
+
+[project.scripts]
+fdekit = "fdekit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

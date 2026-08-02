@@ -1,0 +1,175 @@
+"""El canal HABLADA: log de enunciados con tiempo, y su hash.
+
+Propiedades opuestas a las del canal DECIDIDA, y por eso vive aparte:
+
+    DECIDIDA   bajo volumen, alta densidad, direccionable, versionable,
+               con dueno y estado, diffeable.        -> es codigo fuente, va a git
+    HABLADA    alto volumen, baja densidad, no direccionable, efimera,
+               sin dueno, irrepetible.               -> es un log de ejecucion
+
+`Utterance` NO es una entidad navegable, a proposito. Es un ancla. La navegacion
+va siempre DECIDIDA -> HABLADA, nunca al reves. Hacer navegable la transcripcion
+produce miles de nodos vagos que nadie consulta dos veces, y multiplica por diez
+la superficie donde el sistema puede resolver mal.
+
+Retencion: el canal HABLADA tiene fecha de vencimiento y el DECIDIDA no. Por eso
+la cita se **copia** al momento de confirmar y no se enlaza — un puntero a un
+recurso con politica de retencion es un puntero colgante por diseno.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from dataclasses import dataclass, field
+from datetime import date, timedelta
+from pathlib import Path
+
+
+@dataclass
+class Utterance:
+    idx: int
+    text: str
+    t_start: float | None = None
+    t_end: float | None = None
+    speaker_hint: str = ""
+
+    def to_dict(self) -> dict:
+        return dict(self.__dict__)
+
+
+def mmss(seconds: float | None) -> str:
+    """El formato con el que se cita en una reunion. `why()` lo devuelve para
+    que alguien pueda ir a escuchar el minuto exacto."""
+    if seconds is None:
+        return "--:--"
+    s = int(round(seconds))
+    return f"{s // 60:02d}:{s % 60:02d}"
+
+
+class TranscriptStore:
+    """JSONL append-only por reunion, mas el hash del contenido.
+
+    El hash es lo que permite decir, seis meses despues, si la cita congelada
+    todavia corresponde a la fuente o si la fuente cambio. Sin eso, una cita es
+    una afirmacion sin respaldo.
+    """
+
+    def __init__(self, root: str | Path, meeting_id: str):
+        self.root = Path(root)
+        self.meeting_id = meeting_id
+        self.path = self.root / "hablada" / f"{meeting_id}.jsonl"
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    # ------------------------------------------------------------- escritura
+
+    def write(self, utterances: list[Utterance]) -> str:
+        self.path.write_text(
+            "\n".join(json.dumps(u.to_dict(), ensure_ascii=False) for u in utterances) + "\n",
+            encoding="utf-8",
+        )
+        return self.sha256()
+
+    def ingest_text(self, text: str) -> list[Utterance]:
+        """Texto plano (transcript nativo de Teams/Meet). Sin timestamps: el
+        ancla va a quedar sin `mm:ss` y eso se dice, no se finge."""
+        import re
+
+        partes = [p.strip() for p in re.split(r"(?<=[.!?])\s+|\n+", text) if p.strip()]
+        utts = [Utterance(idx=i, text=p) for i, p in enumerate(partes)]
+        self.write(utts)
+        return utts
+
+    def ingest_segments(self, segments: list[dict]) -> list[Utterance]:
+        """Segmentos de Whisper: traen `start`/`end`, asi que el ancla si queda
+        con minuto."""
+        utts = [
+            Utterance(
+                idx=i,
+                text=(s.get("text") or "").strip(),
+                t_start=s.get("start"),
+                t_end=s.get("end"),
+            )
+            for i, s in enumerate(segments)
+            if (s.get("text") or "").strip()
+        ]
+        self.write(utts)
+        return utts
+
+    # -------------------------------------------------------------- lectura
+
+    def exists(self) -> bool:
+        return self.path.exists()
+
+    def load(self) -> list[Utterance]:
+        if not self.path.exists():
+            return []
+        return [
+            Utterance(**json.loads(line))
+            for line in self.path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+
+    def sha256(self) -> str:
+        if not self.path.exists():
+            return ""
+        return hashlib.sha256(self.path.read_bytes()).hexdigest()
+
+    def window(self, idx: int, before: int = 1, after: int = 1) -> list[Utterance]:
+        """Vecindad de un enunciado. Presupuesto acotado: el agente nunca carga
+        el transcripto entero — resuelve el simbolo y trae solo lo que lo
+        referencia. Un transcripto de 60 min son ~9k tokens y una serie de 20
+        reuniones son ~180k: inmanejable de otra forma."""
+        utts = self.load()
+        lo = max(0, idx - before)
+        return utts[lo : idx + after + 1]
+
+    # ------------------------------------------------------------ retencion
+
+    def purge(self, today: date, retention_days: int) -> bool:
+        """Borra el canal HABLADA vencido. El DECIDIDA no se toca: sobrevive
+        porque la cita fue copiada, no enlazada.
+
+        En Chile la Ley 21.719 rige desde el 1-dic-2026 y exige politica de
+        retencion declarada. Esto son veinte lineas justamente porque la parte
+        dificil —que el registro sobreviva al borrado— se resolvio en el diseno
+        del ancla, no aca.
+        """
+        if not self.path.exists():
+            return False
+        mtime = date.fromtimestamp(self.path.stat().st_mtime)
+        if today - mtime <= timedelta(days=retention_days):
+            return False
+        self.path.unlink()
+        return True
+
+
+def transcribe_meeting(
+    audio_path: str | Path,
+    root: str | Path,
+    meeting_id: str,
+    vocabulary: list[str] | None = None,
+    **kwargs,
+) -> tuple[list[Utterance], str]:
+    """Audio -> canal HABLADA, con Whisper local.
+
+    Requiere el extra `audio`. Reusa `fdekit.gemba.transcribe.transcribe()` — la
+    misma pieza que ya transcribe entrevistas de pasillo — y le suma el
+    vocabulario de decisiones al prompt inicial.
+
+    Honestidad de costo: una hora de audio de sala en CPU con `large-v3-turbo`
+    son 25-45 minutos reales, no 5. Y la calidad en sala (4-8 personas, microfono
+    a distancia, gente que se pisa) es sustancialmente peor que la del pasillo
+    para el que se calibro `fdekit.gemba`. Implicancia de diseno: el transcripto
+    sirve para anclaje y busqueda, **no para citar textual sin revision** — por
+    eso la cita congelada la lee un humano al ratificar.
+    """
+    from ..gemba.transcribe import WAREHOUSE_VOCAB, transcribe
+    from .lexicon import DECISION_VOCAB
+
+    vocab = vocabulary if vocabulary is not None else [*DECISION_VOCAB, *WAREHOUSE_VOCAB]
+    tr = transcribe(audio_path, vocabulary=vocab, **kwargs)
+
+    store = TranscriptStore(root, meeting_id)
+    utts = store.ingest_segments(tr.segments) if tr.segments else store.ingest_text(tr.text)
+    return utts, store.sha256()
