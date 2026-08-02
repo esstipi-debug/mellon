@@ -23,6 +23,7 @@ from fdekit.decide import (
 )
 from fdekit.decide.eventlog import (
     REWORK_ACTIVITIES,
+    touches_excluidas,
     build_event_log,
     lifecycle_rework,
     touches_to_decide,
@@ -625,3 +626,89 @@ def test_la_nota_del_corpus_dice_de_que_universo_salio_el_numero(tmp_path):
 
     _meet(st, "wa-w32", canal="ASINCRONICO")
     assert "canal asincronico" in st.corpus().nota()
+
+
+# ----------------------------- dos columnas de toques, no un filtro
+#
+# El diseno original filtraba y devolvia UNA columna, con este argumento: "un
+# caso que pertenece tiene por construccion al menos su propia reunion (el +1),
+# asi que ningun filtro puede deflacionarlo a 1". Es FALSO: el +1 es una
+# constante, no la reunion propia.
+
+
+def _tema_con_vueltas(st, mid_decision, vueltas_fuera=0, vueltas_dentro=0):
+    """Una decision cerrada en `mid_decision`, con vueltas previas repartidas."""
+    f = date(2026, 8, 1)
+    d = st.add_decision(Decision(
+        id="", statement="Consolidar el picking de Pudahuel en una sola ola", owner="Marcela",
+        date_decided=f, criteria="100% de los SKU clase A antes del 30-09",
+        rationale="cambio el mix de pedidos", meeting_id=mid_decision))
+    for j in range(vueltas_fuera):
+        _meet(st, f"daily-{j}", clase="HANDOVER")
+        st.add_question(OpenQuestion(id="", question="consolidamos la ola?", resolver="Marcela",
+                                     resolve_by=f, blocks=[d.id], meeting_id=f"daily-{j}"))
+    for j in range(vueltas_dentro):
+        _meet(st, f"comite-prev-{j}")
+        st.add_question(OpenQuestion(id="", question="consolidamos la ola?", resolver="Marcela",
+                                     resolve_by=f, blocks=[d.id], meeting_id=f"comite-prev-{j}"))
+    return d
+
+
+def test_un_tema_masticado_fuera_del_corpus_se_deflacta_al_piso(tmp_path):
+    """Tres cambios de turno y un comite: 4 toques reales, 1 en serie. La
+    diferencia no se esconde — se publica, porque el trabajo ocurrio."""
+    st = DecideStore(tmp_path / "decide")
+    _meet(st, "comite")
+    _tema_con_vueltas(st, "comite", vueltas_fuera=3)
+
+    t = touches_to_decide(st)
+    assert t.loc[0, "toques"] == 4
+    assert t.loc[0, "toques_en_serie"] == 1
+    assert t.loc[0, "en_corpus"] is True or bool(t.loc[0, "en_corpus"])
+
+    ex = touches_excluidas(st)
+    assert ex["casos_deflacionados_al_piso"] == 1
+    assert ex["toques_no_contados"] == 3
+    assert "el trabajo ocurrio" in ex["nota"]
+
+
+def test_las_dos_columnas_coinciden_si_todo_paso_en_el_corpus(tmp_path):
+    st = DecideStore(tmp_path / "decide")
+    _meet(st, "comite")
+    _tema_con_vueltas(st, "comite", vueltas_dentro=2)
+
+    t = touches_to_decide(st)
+    assert t.loc[0, "toques"] == t.loc[0, "toques_en_serie"] == 3
+    assert touches_excluidas(st)["casos_deflacionados_al_piso"] == 0
+
+
+def test_el_event_log_gana_una_columna_pero_no_pierde_filas(tmp_path):
+    """Si se le sacaran los eventos de sesiones fuera del corpus,
+    `lifecycle_rework` sub-reportaria el reproceso: un daily donde el tema volvio
+    OCURRIO. Un log de eventos al que se le sacan eventos es la mentira
+    silenciosa que la regla 3 prohibe."""
+    st = DecideStore(tmp_path / "decide")
+    _meet(st, "comite")
+    _tema_con_vueltas(st, "comite", vueltas_fuera=3)
+
+    df = build_event_log(st).df
+    assert (df["activity"] == "DISCUTIDA").sum() == 3      # las tres siguen ahi
+    assert df[df["activity"] == "DISCUTIDA"]["en_serie"].sum() == 0
+    assert lifecycle_rework(st)["reuniones_extra"] == 3    # el reproceso se ve entero
+
+
+def test_la_linea_base_recuerda_con_que_columna_se_congelo(serie_xmr):
+    """Cambiar la definicion de un punto bajo limites congelados corrompe el
+    grafico igual que recalcular los limites. Medido sobre la misma data:
+    center 3,33 -> 2,42 y ucl 7,20 -> 3,87."""
+    freeze_baseline(serie_xmr, date(2026, 8, 2), columna="toques")
+    assert touches_xmr(serie_xmr)["columna"] == "toques"
+    assert touches_xmr(serie_xmr, columna="toques")["ok"] is True
+
+    with pytest.raises(ValueError, match="se congelo con 'toques'"):
+        touches_xmr(serie_xmr, columna="toques_en_serie")
+
+
+def test_congelar_con_una_columna_invalida_falla_temprano(serie_xmr):
+    with pytest.raises(ValueError, match="columna desconocida"):
+        freeze_baseline(serie_xmr, date(2026, 8, 2), columna="toques_inventados")

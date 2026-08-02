@@ -41,8 +41,12 @@ REWORK_ACTIVITIES = ("DISCUTIDA", "REABIERTA")
 _RE_HIST = HIST_RE
 
 
-def build_event_log(store: DecideStore) -> EventLog:
-    """Construye el log de ciclo de vida de las decisiones."""
+def build_event_log(store: DecideStore, c=None) -> EventLog:
+    """Construye el log de ciclo de vida de las decisiones.
+
+    `c` es un `Corpus` ya calculado; se pasa para no recalcularlo por cada
+    llamada en cadena. Si falta, se calcula.
+    """
     decisions = store.decisions()
     questions = store.questions()
     meetings = {m.id: m for m in store.meetings()}
@@ -94,6 +98,15 @@ def build_event_log(store: DecideStore) -> EventLog:
     df = pd.DataFrame(rows, columns=["case_id", "activity", "timestamp", "resource", "owner"])
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df["location"] = df.pop("owner")
+    # El log GANA una columna, no pierde filas. Si se le sacaran los eventos de
+    # las sesiones fuera del corpus, `lifecycle_rework` sub-reportaria el
+    # reproceso —un daily donde el tema volvio OCURRIO— y `circular_minutes`
+    # cambiaria de significado el set `con_avance`. Un log de eventos al que se
+    # le sacan eventos es la mentira silenciosa que la regla 3 prohibe.
+    #
+    # Las metricas de CONTROL filtran por esta columna; las DESCRIPTIVAS no.
+    en_corpus = (c or store.corpus()).meeting_ids
+    df["en_serie"] = df["resource"].isin(en_corpus)
     return EventLog(df)
 
 
@@ -163,16 +176,43 @@ def lifecycle_rework(store: DecideStore) -> dict:
     }
 
 
-def touches_to_decide(store: DecideStore) -> pd.DataFrame:
+TOUCH_COLUMNS = ("toques", "toques_en_serie")
+
+
+def touches_to_decide(store: DecideStore, c=None) -> pd.DataFrame:
     """Reuniones en que un tema aparecio hasta su primer DECIDIDA.
 
     Es la metrica central del bucle. Un tema que necesito cinco vueltas para
     cerrarse no es un tema dificil: casi siempre es un tema al que le faltaba un
     dato que nadie fue a buscar.
+
+    Devuelve **dos columnas y no una**, porque son dos preguntas distintas:
+
+      `toques`           todas las vueltas. Cuanto trabajo costo de verdad.
+      `toques_en_serie`  solo las de sesiones del corpus. Comparable entre si.
+
+    El diseno original filtraba y devolvia una sola, con este argumento: "un
+    caso que pertenece tiene por construccion al menos su propia reunion (el
+    +1), asi que ningun filtro puede deflacionarlo a 1". **Es falso.** El `+1`
+    es una constante, no la reunion propia: cuando TODAS las vueltas previas
+    ocurrieron fuera del corpus, el caso cae al piso. Medido — un tema masticado
+    en tres cambios de turno y cerrado en el comite pasa de 4 toques a 1, y el
+    trabajo real desaparece del numero.
+
+    Y hay una razon mas fuerte para no elegir por el llamador: los limites del
+    XmR estan CONGELADOS (regla 6). Cambiar cual columna alimenta la serie
+    corrompe el grafico exactamente igual que recalcular los limites — medido,
+    center 3,33 -> 2,42 y ucl 7,20 -> 3,87 sobre la misma data. Por eso
+    `freeze_baseline` guarda con QUE columna se congelo, y `touches_xmr` se
+    niega a mezclar.
     """
-    log = build_event_log(store)
+    corpus = c or store.corpus()
+    log = build_event_log(store, corpus)
     if len(log) == 0:
-        return pd.DataFrame(columns=["case_id", "toques", "dias_hasta_decidir", "decidida"])
+        return pd.DataFrame(
+            columns=["case_id", "toques", "toques_en_serie", "en_corpus",
+                     "dias_hasta_decidir", "decidida"]
+        )
 
     df = log.df
     rows = []
@@ -187,8 +227,38 @@ def touches_to_decide(store: DecideStore) -> pd.DataFrame:
             {
                 "case_id": cid,
                 "toques": int(previas["resource"].nunique()) + 1,
+                "toques_en_serie": int(previas[previas["en_serie"]]["resource"].nunique()) + 1,
+                # El CASO entra a la serie solo si su propia sesion esta en el
+                # corpus. Es el filtro de caso, distinto del de toque.
+                "en_corpus": cid in corpus.decision_ids,
                 "dias_hasta_decidir": int((t_dec - primera).days),
                 "decidida": t_dec.date().isoformat(),
             }
         )
     return pd.DataFrame(rows).sort_values("toques", ascending=False).reset_index(drop=True)
+
+
+def touches_excluidas(store: DecideStore, c=None) -> dict:
+    """Que se dejo afuera al pasar de `toques` a `toques_en_serie`.
+
+    Va SIEMPRE al lado del grafico. Un filtro que no publica lo que filtro es la
+    forma mas barata de mejorar un numero.
+    """
+    t = touches_to_decide(store, c)
+    if t.empty:
+        return {"casos": 0, "casos_fuera_del_corpus": 0, "casos_deflacionados_al_piso": 0}
+
+    deflacionados = t[(t["toques"] > 1) & (t["toques_en_serie"] == 1)]
+    perdidos = int((t["toques"] - t["toques_en_serie"]).sum())
+    return {
+        "casos": len(t),
+        "casos_fuera_del_corpus": int((~t["en_corpus"]).sum()),
+        "casos_deflacionados_al_piso": len(deflacionados),
+        "ids_deflacionados": list(deflacionados["case_id"]),
+        "toques_no_contados": perdidos,
+        "nota": (
+            f"{len(deflacionados)} caso(s) perdieron TODAS sus vueltas previas al filtrar "
+            "por corpus: el trabajo ocurrio, pero fuera de una serie de decision. "
+            f"En total no se cuentan {perdidos} toque(s)."
+        ) if perdidos else "ninguna vuelta quedo fuera de la serie.",
+    }

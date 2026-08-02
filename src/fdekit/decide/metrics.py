@@ -28,7 +28,7 @@ from pathlib import Path
 import numpy as np
 
 from ..stats import risk_ratio_2x2
-from .eventlog import build_event_log, touches_to_decide
+from .eventlog import TOUCH_COLUMNS, build_event_log, touches_excluidas, touches_to_decide
 from .resolve import AliasStore
 from .schema import es_zombi
 from .store import DecideStore
@@ -312,7 +312,8 @@ def index_quality(store: DecideStore) -> dict:
 BASELINE_FILE = "xmr_baseline.json"
 
 
-def freeze_baseline(store: DecideStore, today: date, baseline: int = XMR_BASELINE) -> dict:
+def freeze_baseline(store: DecideStore, today: date, baseline: int = XMR_BASELINE,
+                    columna: str = "toques") -> dict:
     """Congela la linea base del XmR **en disco**. Se corre una sola vez.
 
     Sin esto, "congelado" era una palabra del docstring y no un hecho:
@@ -330,6 +331,8 @@ def freeze_baseline(store: DecideStore, today: date, baseline: int = XMR_BASELIN
     `compute_limits` los reproduzca identicos; y los `case_id`, que es lo que
     permite despues detectar que los datos se movieron debajo.
     """
+    if columna not in TOUCH_COLUMNS:
+        raise ValueError(f"columna desconocida: {columna!r}. Validas: {TOUCH_COLUMNS}")
     t = touches_to_decide(store)
     if len(t) < baseline:
         raise ValueError(
@@ -342,7 +345,11 @@ def freeze_baseline(store: DecideStore, today: date, baseline: int = XMR_BASELIN
         "congelada_el": today.isoformat(),
         "n_baseline": baseline,
         "case_ids": list(puntos["case_id"]),
-        "toques": [float(x) for x in puntos["toques"]],
+        # Con QUE definicion se congelo. Cambiar de columna despues corrompe el
+        # grafico exactamente igual que recalcular los limites: medido, center
+        # 3,33 -> 2,42 y ucl 7,20 -> 3,87 sobre la MISMA data.
+        "columna": columna,
+        "toques": [float(x) for x in puntos[columna]],
         "hasta": str(puntos["decidida"].max()),
         "nota": (
             "NO editar a mano ni regenerar para 'actualizar' los limites. Si el "
@@ -356,7 +363,8 @@ def freeze_baseline(store: DecideStore, today: date, baseline: int = XMR_BASELIN
     return datos
 
 
-def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE) -> dict:
+def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE,
+                columna: str | None = None) -> dict:
     """Grafico de control de toques-para-decidir, con limites CONGELADOS.
 
     Solo desde la reunion ~15: antes es ruido. Los limites salen de la linea
@@ -391,13 +399,21 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE) -> dict:
 
     if path.exists():
         fija = json.loads(path.read_text(encoding="utf-8"))
+        col = fija.get("columna", "toques")
+        if columna is not None and columna != col:
+            raise ValueError(
+                f"la linea base se congelo con '{col}' y se esta pidiendo '{columna}'. "
+                "Cambiar la definicion de un punto bajo limites congelados corrompe el "
+                "grafico igual que recalcular los limites. Si de verdad hay que cambiarla, "
+                "se congela una linea base NUEVA y se conserva esta al lado."
+            )
         congelados = list(fija["case_ids"])
         base = [float(x) for x in fija["toques"]]
         # Todo lo que NO es de la linea base es monitoreo — incluida una decision
         # fechada hacia atras. Que entre al monitoreo y no a la base es el punto:
         # la base es un periodo declarado, no los primeros N por fecha.
         en_base = set(congelados)
-        mon = [float(x) for x in orden[~orden["case_id"].isin(en_base)]["toques"]]
+        mon = [float(x) for x in orden[~orden["case_id"].isin(en_base)][col]]
 
         actuales = set(orden["case_id"])
         faltan = [c for c in congelados if c not in actuales]
@@ -420,7 +436,8 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE) -> dict:
             )
         congelada, cuando = True, fija["congelada_el"]
     else:
-        serie = [float(x) for x in orden["toques"]]
+        col = columna or "toques"
+        serie = [float(x) for x in orden[col]]
         base, mon = serie[:baseline], serie[baseline:]
         congelada, cuando = False, None
         avisos.append(
@@ -439,6 +456,8 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE) -> dict:
         "ok": True,
         "congelada": congelada,
         "congelada_el": cuando,
+        "columna": col,
+        "excluidas": touches_excluidas(store),
         "limites": alarm["limits"],
         "veredicto": veredicto,
         "violaciones_criticas": alarm["critical_violations"],
