@@ -45,13 +45,36 @@ class TrackPoint:
 
 def parse_detections(handle: IO[str]) -> list[Detection]:
     reader = csv.DictReader(handle)
-    faltan = [c for c in _COLUMNAS if c not in (reader.fieldnames or [])]
+    fieldnames = reader.fieldnames or []
+
+    # Chequear BOM antes que "falta la columna": si un fieldname arranca con
+    # ﻿, la columna SI esta en el CSV, solo que con un caracter invisible
+    # pegado adelante. "no en fieldnames" no distingue eso de "no esta", y
+    # decir "falta la columna" manda a revisar el archivo en vez del encoding
+    # -- que es el defecto real, no donde estaba el open().
+    con_bom = [f for f in fieldnames if f.startswith("﻿")]
+    if con_bom:
+        raise ValueError(
+            "el CSV de detecciones tiene marca de orden de bytes (BOM) pegada "
+            f"a la cabecera {con_bom!r}; abrir el archivo con "
+            "encoding='utf-8-sig' en vez de 'utf-8' para leerlo bien"
+        )
+
+    faltan = [c for c in _COLUMNAS if c not in fieldnames]
     if faltan:
         raise ValueError(f"al CSV de detecciones le falta(n) la(s) columna(s): {faltan}")
 
     detecciones = []
     # Arranca en 2: la fila 1 es la cabecera, la primera fila de datos es la 2.
     for numero_fila, r in enumerate(reader, start=2):
+        sobrantes = r.get(None)
+        if sobrantes:
+            raise ValueError(
+                f"fila {numero_fila} del CSV de detecciones tiene "
+                f"{len(sobrantes)} valor(es) de mas respecto de la cabecera; "
+                "causa probable: un campo con una coma sin comillas que corrio "
+                "las columnas siguientes, revisar esa fila en el archivo original"
+            )
         faltantes = [c for c in _COLUMNAS if r.get(c) is None]
         if faltantes:
             raise ValueError(
@@ -59,8 +82,15 @@ def parse_detections(handle: IO[str]) -> list[Detection]:
                 f"falta(n) valor(es) en columna(s) {faltantes}, revisar que "
                 "la fila tenga las mismas columnas que la cabecera"
             )
+        frame = int(r["frame"])
+        if frame < 0:
+            raise ValueError(
+                f"fila {numero_fila} del CSV de detecciones: frame negativo "
+                f"({frame}), un numero de cuadro no puede ser negativo, "
+                "revisar el detector que genero el CSV"
+            )
         detecciones.append(
-            Detection(r["marker_id"], int(r["frame"]), float(r["x_px"]), float(r["y_px"]))
+            Detection(r["marker_id"], frame, float(r["x_px"]), float(r["y_px"]))
         )
     return detecciones
 

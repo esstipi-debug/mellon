@@ -153,3 +153,64 @@ def test_build_tracks_sin_frames_total_es_un_error_de_argumento():
     # no una cobertura falsa y silenciosa.
     with pytest.raises(TypeError):
         build_tracks(_linea("M1", 5), H, 10.0, new_session_salt())
+
+
+def test_parse_detections_fila_mas_larga_que_la_cabecera_da_valueerror():
+    # Ronda de arreglo 2, hallazgo 1: una fila mas larga que la cabecera
+    # sugiere que un campo tenia una coma sin comillas, y corrio todas las
+    # columnas siguientes. Aceptar esa fila en silencio significa que los
+    # cuatro primeros valores pueden no ser marker_id/frame/x_px/y_px sino
+    # pedazos de un campo roto -- coordenadas plausibles y equivocadas.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    with pytest.raises(ValueError, match="coma"):
+        parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,1.0,2.0,999,888\n"))
+
+
+def test_parse_detections_bom_menciona_el_bom_y_no_una_columna():
+    # Ronda de arreglo 2, hallazgo 2: el defecto real no era donde estaba el
+    # open(), sino que "columna no en fieldnames" no distingue "no esta" de
+    # "esta pero con un caracter invisible pegado adelante". El mensaje tiene
+    # que nombrar el BOM explicitamente para no mandar a buscar en el lugar
+    # equivocado.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    con_bom = io.StringIO("﻿marker_id,frame,x_px,y_px\nM1,0,1.0,2.0\n")
+    with pytest.raises(ValueError, match="BOM"):
+        parse_detections(con_bom)
+
+
+def test_parse_detections_frame_negativo_da_valueerror():
+    # Ronda de arreglo 2, hallazgo 3: un frame negativo no puede existir en un
+    # video real, es senal de datos corruptos aguas arriba.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    with pytest.raises(ValueError, match="negativo"):
+        parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,-1,1.0,2.0\n"))
+
+
+def test_parse_detections_acepta_notacion_cientifica_en_coordenadas():
+    # Caso legitimo: notacion cientifica es un float valido para Python y no
+    # tiene que activar ninguno de los rechazos nuevos.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    dets = parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,1e2,2.5e-1\n"))
+    assert dets == [Detection("M1", 0, 100.0, 0.25)]
+
+
+def test_parse_detections_acepta_un_csv_normal_sin_bom():
+    # Caso legitimo: un CSV comun, sin BOM, sigue andando igual que siempre.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    dets = parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,10.5,20.5\nM1,1,11.5,20.5\n"))
+    assert dets == [Detection("M1", 0, 10.5, 20.5), Detection("M1", 1, 11.5, 20.5)]
