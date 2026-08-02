@@ -495,6 +495,32 @@ def cmd_refs(a):
     return 0
 
 
+def cmd_supersede(a):
+    from .query import supersede
+
+    r = supersede(_store(a), a.id, a.by, reason=a.reason, apply=a.apply, today=_date.today())
+    _out(r)
+    if r["triage"]:
+        print(
+            f"\n{r['referencias_a_resolver']} referencia(s) siguen apuntando a {a.id}.\n"
+            "supersede NO las reasigna: en codigo renombrar arregla las referencias,\n"
+            "aca cambiar el alcance las invalida. Resolverlas a mano."
+        )
+    if not a.apply:
+        print("\n(reporte de triage: no se escribio nada. Agregar --apply)")
+    return 0
+
+
+def cmd_head(a):
+    from .query import head_of
+
+    r = head_of(_store(a), a.id)
+    _out(r)
+    if r.get("head") and r["head"] != a.id:
+        print(f"\n{a.id} fue superada. La que rige hoy es {r['head']}.")
+    return 0
+
+
 def cmd_close(a):
     r = safe_close(_store(a), a.id, apply=a.apply, reason=a.reason, today=_date.today())
     _out(r)
@@ -675,6 +701,17 @@ def register(subparsers):
     r.add_argument("--actor", default="")
     r.add_argument("--in-room", action="store_true", dest="in_room")
     r.set_defaults(func=_guarded(cmd_refs))
+
+    sp = sub.add_parser("supersede", help="marca SUPERADA y lista lo que hay que retriar")
+    sp.add_argument("id", help="la decision que queda superada")
+    sp.add_argument("--by", required=True, help="la decision que la reemplaza")
+    sp.add_argument("--reason", default="")
+    sp.add_argument("--apply", action="store_true", help="escribe; exige --reason")
+    sp.set_defaults(func=_guarded(cmd_supersede))
+
+    hd = sub.add_parser("head", help="sigue la cadena de supersesion hasta la que rige hoy")
+    hd.add_argument("id")
+    hd.set_defaults(func=_guarded(cmd_head))
 
     cl = sub.add_parser("close", help="cierra si nada cuelga; si algo cuelga, lo lista")
     cl.add_argument("id")

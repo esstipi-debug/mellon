@@ -100,29 +100,145 @@ def audit_master(
     return out.reset_index(names="sku_id")
 
 
-def audit_summary(audit: pd.DataFrame, population: int | None = None, confidence: float = 0.95) -> dict:
+DEFECT_FLAGS = ("dim_out_of_tol", "weight_out_of_tol", "location_mismatch", "any_defect")
+
+
+def _wilson(k: float, n: float, z: float) -> tuple[float, float, float]:
+    """Intervalo de Wilson. Acepta k y n no enteros para poder recibir el tamano
+    de muestra efectivo del estimador estratificado."""
+    if n <= 0:
+        return (0.0, 0.0, 0.0)
+    ph = min(max(k / n, 0.0), 1.0)
+    d = 1 + z**2 / n
+    c = (ph + z**2 / (2 * n)) / d
+    h = z * np.sqrt(ph * (1 - ph) / n + z**2 / (4 * n**2)) / d
+    return (
+        round(float(ph) * 100, 1),
+        round(float(max(0, c - h)) * 100, 1),
+        round(float(min(1, c + h)) * 100, 1),
+    )
+
+
+def _post_stratified(
+    audit: pd.DataFrame, flag: str, weights: dict, z: float
+) -> tuple[float, float, float, int, float]:
+    """Estimador post-estratificado por clase ABC.
+
+        p = suma_c (N_c / N) * p_c
+
+    Devuelve (punto, ci_low, ci_high, n_efectivo, cobertura_pct).
+
+    Por que hace falta: `stratified_sample` sobre-representa la clase A 3:1 a
+    proposito, y el promedio crudo `k/n` sobre esa muestra NO es la tasa
+    poblacional — es la tasa de una muestra sesgada hacia donde el error duele
+    mas. En el CD sintetico la clase C tiene mas defectos que la A, asi que el
+    sesgo va hacia abajo y `projected_defective_skus` subestima el trabajo de
+    correccion. Muestrear con un diseno y agregar con otro es un error de una
+    linea que produce un numero perfectamente creible.
+
+    El intervalo sale de la varianza estratificada, con correccion por poblacion
+    finita, convertida a un tamano efectivo que se pasa por Wilson. Se hace asi
+    y no con un Wald directo porque Wilson se comporta cuando la tasa se acerca
+    a 0 o a 1, que es justo donde queda una clase chica y limpia. La correccion
+    finita tambien da la propiedad correcta en el limite: auditar el catalogo
+    entero (censo) colapsa el intervalo a cero, que es la razon economica de
+    poner un cubicador en recepcion.
+    """
+    n_total_pop = float(sum(weights.values()))
+    p_st = var = var_srs = 0.0
+    covered = 0.0
+
+    for cls, n_c_pop in weights.items():
+        sub = audit[audit["abc_class"] == cls]
+        n_c = len(sub)
+        if n_c == 0 or n_c_pop <= 0:
+            continue  # clase de la poblacion sin representacion en la muestra
+        covered += float(n_c_pop)
+
+    if covered <= 0:
+        return (0.0, 0.0, 0.0, 0, 0.0)
+
+    for cls, n_c_pop in weights.items():
+        sub = audit[audit["abc_class"] == cls]
+        n_c = len(sub)
+        if n_c == 0 or n_c_pop <= 0:
+            continue
+        # El peso se renormaliza sobre la poblacion efectivamente cubierta, y la
+        # cobertura se reporta: una clase entera sin auditar es un hueco que hay
+        # que ver, no un cero que se promedia.
+        w = float(n_c_pop) / covered
+        p_c = float(sub[flag].mean())
+        fpc = max(0.0, 1.0 - n_c / float(n_c_pop))
+        p_st += w * p_c
+        var += w**2 * p_c * (1 - p_c) / n_c * fpc
+        var_srs += w**2 * p_c * (1 - p_c) / n_c
+
+    if var > 0 and 0 < p_st < 1:
+        n_eff = p_st * (1 - p_st) / var
+    elif var_srs > 0:
+        # La varianza se anulo por la correccion finita y no por falta de
+        # dispersion: se audito el estrato completo. Es censo, y un censo no
+        # tiene error de muestreo. Colapsar el intervalo aca es lo correcto, y
+        # es exactamente el retorno de convertir la auditoria manual en medicion
+        # automatica: el intervalo deja de existir en vez de solo achicarse.
+        return (
+            round(p_st * 100, 1),
+            round(p_st * 100, 1),
+            round(p_st * 100, 1),
+            int(covered),
+            round(covered / n_total_pop * 100, 1),
+        )
+    else:
+        # Ni dispersion ni censo: todos los estratos dieron 0% o 100%. El
+        # estimador puntual existe, el intervalo se apoya en la muestra.
+        n_eff = float(len(audit))
+    n_eff = min(n_eff, covered)
+
+    pt, lo, hi = _wilson(p_st * n_eff, n_eff, z)
+    return (pt, lo, hi, int(round(n_eff)), round(covered / n_total_pop * 100, 1))
+
+
+def audit_summary(
+    audit: pd.DataFrame,
+    population: int | None = None,
+    confidence: float = 0.95,
+    population_by_class: dict | pd.Series | None = None,
+) -> dict:
     """Tasas de defecto con intervalo de confianza (Wilson).
 
     El intervalo importa: "18% de defectos" y "18% +-3%" son la misma medicion,
     pero solo la segunda sobrevive a la pregunta del CFO.
+
+    `population_by_class` son los SKU de la poblacion por clase ABC. Cuando se
+    pasa, la tasa se post-estratifica y deja de estar sesgada por el diseno de
+    muestreo (ver `_post_stratified`). Cuando no se pasa, el resultado sigue
+    siendo la tasa **de la muestra** y el campo `weighting` lo dice en voz alta
+    en vez de dejar que se lea como poblacional.
     """
     n = len(audit)
     z = stats.norm.ppf(1 - (1 - confidence) / 2)
 
-    def wilson(k: int) -> tuple[float, float, float]:
-        if n == 0:
-            return (0.0, 0.0, 0.0)
-        ph = k / n
-        d = 1 + z**2 / n
-        c = (ph + z**2 / (2 * n)) / d
-        h = z * np.sqrt(ph * (1 - ph) / n + z**2 / (4 * n**2)) / d
-        return (round(ph * 100, 1), round(max(0, c - h) * 100, 1), round(min(1, c + h) * 100, 1))
+    weights = dict(population_by_class) if population_by_class is not None else None
+    if weights and population is None:
+        population = int(sum(weights.values()))
+    stratified = bool(weights) and "abc_class" in audit
 
     metrics = {}
-    for flag in ("dim_out_of_tol", "weight_out_of_tol", "location_mismatch", "any_defect"):
+    for flag in DEFECT_FLAGS:
         k = int(audit[flag].sum())
-        pt, lo, hi = wilson(k)
-        metrics[flag] = {"defects": k, "rate_pct": pt, "ci_low_pct": lo, "ci_high_pct": hi}
+        if stratified:
+            pt, lo, hi, n_eff, coverage = _post_stratified(audit, flag, weights, z)
+            metrics[flag] = {
+                "defects": k,
+                "rate_pct": pt,
+                "ci_low_pct": lo,
+                "ci_high_pct": hi,
+                "sample_rate_pct": _wilson(k, n, z)[0],
+                "effective_n": n_eff,
+            }
+        else:
+            pt, lo, hi = _wilson(k, n, z)
+            metrics[flag] = {"defects": k, "rate_pct": pt, "ci_low_pct": lo, "ci_high_pct": hi}
 
     cube = audit["cube_err_pct"].dropna()
     by_class = (
@@ -134,6 +250,18 @@ def audit_summary(audit: pd.DataFrame, population: int | None = None, confidence
     out = {
         "sample_size": n,
         "confidence": confidence,
+        # Procedencia del agregado. Sin este campo, una tasa de muestra sesgada y
+        # una tasa poblacional se ven identicas en la tabla y en el A3.
+        "weighting": (
+            "post-estratificado por abc_class contra la poblacion"
+            if stratified
+            else "SIN PONDERAR: es la tasa de la muestra. Si la muestra fue "
+            "estratificada (stratified_sample sobre-representa la clase A 3:1) "
+            "esta tasa NO es la poblacional. Pasar population_by_class."
+        ),
+        "population_coverage_pct": (
+            _post_stratified(audit, "any_defect", weights, z)[4] if stratified else None
+        ),
         "rates": metrics,
         "cube_error": {
             # La mediana sobre TODO el catalogo suele dar 0 (la mayoria de los

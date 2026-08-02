@@ -64,10 +64,19 @@ def travel_stats(log: EventLog, layout: Layout | None = None, walk_speed: float 
     }
 
 
-def location_frequency(log: EventLog) -> pd.DataFrame:
-    """Visitas por ubicacion — insumo del mapa de calor y del reslotting."""
+def location_frequency(log: EventLog, activities=PICK_ACTIVITIES) -> pd.DataFrame:
+    """Visitas por ubicacion — insumo del mapa de calor y del reslotting.
+
+    Cuenta las mismas actividades que `_pick_paths`, y eso es una correccion, no
+    una ampliacion. Filtrar solo `PICK` dejaba fuera `PICK_EXCEPTION_LOCATION` y
+    `SHORT_PICK`, que son exactamente las visitas a ubicaciones con el maestro
+    vencido: las que mas veces se recorren y las unicas que el reslotting tiene
+    que ver. El mapa de calor mostraba el CD que el WMS cree, no el que el
+    picker camina — y el sesgo apuntaba justo contra el hallazgo.
+    """
     df = log.df
-    df = df[df["activity"] == "PICK"].dropna(subset=["location"])
+    df = df[df["activity"].isin(activities)].dropna(subset=["location"])
+    df = df[df["location"] != DOCK]
     return df["location"].value_counts().rename("visits").rename_axis("location").reset_index()
 
 

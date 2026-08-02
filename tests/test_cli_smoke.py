@@ -24,6 +24,7 @@ COMANDOS = [
     ["decide", "add", "assumption"], ["decide", "add", "question"],
     ["decide", "draft"], ["decide", "review"], ["decide", "agenda"], ["decide", "why"],
     ["decide", "refs"], ["decide", "close"], ["decide", "tick"],
+    ["decide", "supersede"], ["decide", "head"],
     ["decide", "transcribe"], ["decide", "resolve"], ["decide", "confirm"],
     ["decide", "unalias"], ["decide", "aliases"], ["decide", "metrics"],
     ["decide", "mine"], ["decide", "export"],

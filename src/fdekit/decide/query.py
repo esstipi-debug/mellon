@@ -271,6 +271,12 @@ def why(store: DecideStore, decision_id: str) -> dict:
              "check_by": a.check_by.isoformat(), "source": a.source}
             for a in sup
         ],
+        # Si esta superada, decirlo y decir cual rige. Es la friccion que nombra
+        # el diseno: "las dos personas citando versiones distintas".
+        "superseded_by": d.superseded_by or None,
+        "vigente_hoy": (
+            None if not d.superseded_by else head_of(store, decision_id).get("head")
+        ),
         "cita": None if d.anchor.empty else d.anchor.cita_congelada,
         "cita_formateada": _cita(d),
         "minuto": None if d.anchor.empty else _mmss(d.anchor.t_start),
@@ -391,6 +397,176 @@ def _coverage(store: DecideStore, explicit: int) -> Coverage:
         unresolved_mentions=len(ms) - resueltas - ambiguas,
         phase=3,
     )
+
+
+def head_of(store: DecideStore, decision_id: str, max_saltos: int = 50) -> dict:
+    """Sigue la cadena de `superseded_by` hasta la decision que rige hoy.
+
+    Es lo que ataca la friccion que nombra el diseno: "las dos personas citando
+    versiones distintas". Con la cadena escrita, cual esta vigente deja de ser
+    una discusion y pasa a ser una consulta.
+    """
+    cadena = [decision_id]
+    actual = store.get(decision_id)
+    vistos = {decision_id}
+    for _ in range(max_saltos):
+        if not actual.superseded_by:
+            break
+        if actual.superseded_by in vistos:
+            return {
+                "id": decision_id,
+                "head": None,
+                "cadena": cadena,
+                "error": f"ciclo de supersesion detectado en {actual.superseded_by}",
+            }
+        vistos.add(actual.superseded_by)
+        cadena.append(actual.superseded_by)
+        actual = store.get(actual.superseded_by)
+    return {
+        "id": decision_id,
+        "head": actual.id,
+        "vigente": actual.id != decision_id,
+        "cadena": cadena,
+        "saltos": len(cadena) - 1,
+        "statement_vigente": actual.statement,
+        "status_vigente": actual.status,
+    }
+
+
+def supersede(
+    store: DecideStore,
+    old_id: str,
+    new_id: str,
+    reason: str = "",
+    today: date | None = None,
+    apply: bool = False,
+) -> dict:
+    """`rename`. Marca SUPERADA, escribe punteros en ambos sentidos, y **lista
+    las referencias que ahora apuntan a una decision superada** para que se
+    resuelvan explicitamente.
+
+    No borra nada. **No propaga.** Y esa es la parte importante: en codigo,
+    renombrar arregla las referencias; aca, cambiar el alcance de una decision
+    **no arregla los compromisos, los invalida**. Lo maximo honesto es
+    enumerarlos y forzar triage humano. Prometer propagacion automatica se
+    descubre la primera vez que se usa y quema la confianza en todo el sistema.
+
+    Tampoco escribe un alias con el statement viejo: fabricaria colisiones a
+    proposito. El statement viejo queda en `historial_statements`, que es
+    consultable pero **no es indice de resolucion**.
+
+    Sin `apply` es solo el reporte de triage y no toca nada.
+    """
+    if old_id == new_id:
+        raise ValueError("una decision no se puede superar a si misma")
+
+    vieja, nueva = store.get(old_id), store.get(new_id)
+
+    if nueva.status in ("SUPERADA", "REVERTIDA"):
+        raise ValueError(
+            f"{new_id} esta {nueva.status}: no puede reemplazar a nadie. "
+            "Superar con una decision muerta deja la cadena apuntando a la nada."
+        )
+    if vieja.status == "SUPERADA":
+        h = head_of(store, old_id)
+        raise ValueError(
+            f"{old_id} ya fue superada por {vieja.superseded_by}. La que rige hoy es "
+            f"{h.get('head')}: superar esa, no una version vieja de la cadena."
+        )
+    cadena_nueva = head_of(store, new_id)
+    if old_id in cadena_nueva.get("cadena", []):
+        raise ValueError(
+            f"ciclo: {new_id} ya cuelga de {old_id} ({' -> '.join(cadena_nueva['cadena'])})"
+        )
+
+    ref = referencing(store, old_id)
+    triage: list[dict] = []
+
+    for c in ref["open_commitments"]:
+        triage.append({
+            "tipo": "compromiso", "id": c["id"], "que": f"{c['owner']}: {c['what']}",
+            "accion": (
+                f"reasignar a {new_id} o cancelar. Cambiar el alcance de la decision "
+                "NO arregla el compromiso: lo invalida"
+            ),
+        })
+    for a in ref["live_assumptions"]:
+        triage.append({
+            "tipo": "supuesto", "id": a["id"], "que": a["statement"],
+            "accion": f"re-colgar de {new_id} si sigue sosteniendola, o marcarlo VIOLADO",
+        })
+    for d in ref["depends_on_this"]:
+        triage.append({
+            "tipo": "decision_dependiente", "id": d["id"], "que": d["statement"],
+            "accion": f"revisar si su premisa sigue en pie con {new_id}",
+        })
+    for q in ref["blocked_questions"]:
+        triage.append({
+            "tipo": "pregunta", "id": q["id"], "que": q["question"],
+            "accion": f"re-apuntar a {new_id} o cerrarla",
+        })
+
+    from .resolve import AliasStore
+
+    astore = AliasStore(store.root)
+    aliases = [
+        a.surface_norm
+        for a in astore.load()
+        if a.symbol_id == old_id and a.estado == "VIGENTE"
+    ]
+    for surface in aliases:
+        triage.append({
+            "tipo": "alias", "id": surface, "que": f"'{surface}' -> {old_id}",
+            "accion": (
+                "decidir a mano si sigue significando la decision vieja (caso normal: "
+                f"si) o si hay que cerrar su vigencia y confirmarlo contra {new_id}"
+            ),
+        })
+
+    out = {
+        "old": old_id,
+        "new": new_id,
+        "applied": False,
+        "referencias_a_resolver": len(triage),
+        "triage": triage,
+        "nota_no_propaga": (
+            "supersede no reasigna nada. En codigo renombrar arregla las referencias; "
+            "aca cambiar el alcance las invalida, y lo unico honesto es enumerarlas."
+        ),
+    }
+
+    if not apply:
+        out["nota"] = "reporte de triage: no se toco nada. Usar --apply para escribir."
+        return out
+
+    if not reason:
+        raise ValueError(
+            "superar exige un motivo: una decision que cambia de estado sin motivo "
+            "escrito no se puede explicar seis semanas despues"
+        )
+
+    stamp = (today or nueva.date_decided).isoformat()
+    vieja.status = "SUPERADA"
+    vieja.superseded_by = new_id
+    vieja.version += 1
+    # El statement viejo queda aca, consultable, y NO como alias: un alias con
+    # el statement de la decision superada fabricaria colisiones a proposito.
+    vieja.historial_statements.append(f"{stamp} SUPERADA por {new_id}: {reason}")
+    vieja.historial_statements.append(f"{stamp} statement al momento de superar: {vieja.statement}")
+    store.save(vieja)
+
+    if old_id not in nueva.supersedes:
+        nueva.supersedes.append(old_id)
+    nueva.historial_statements.append(f"{stamp} supera a {old_id}: {reason}")
+    store.save(nueva)
+
+    out["applied"] = True
+    out["nota"] = (
+        f"{old_id} quedo SUPERADA por {new_id}. Las {len(triage)} referencia(s) de arriba "
+        "siguen apuntando a la vieja: resolverlas a mano. `tick()` va a marcar ZOMBI a los "
+        "compromisos abiertos que queden colgando."
+    )
+    return out
 
 
 def safe_close(
