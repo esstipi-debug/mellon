@@ -50,7 +50,7 @@ def test_la_nota_menciona_lo_descartado():
 
 
 def test_track_pct_es_none_cuando_tracks_expected_es_none():
-    # Caso explícito: cuando no se sabe cuántos viajes hubo.
+    # Caso explicito: cuando no se sabe cuantos viajes hubo.
     c = MeasurementCoverage(frames_total=100, frames_with_marker=90, tracks_seen=3)
     assert c.track_pct is None
 
