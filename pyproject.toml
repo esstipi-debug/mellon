@@ -22,6 +22,11 @@ dev = ["pytest>=7.4"]
 # torch NO es dependencia del nucleo: el kit tiene que correr en el notebook
 # prestado de un CD, sin GPU y sin permisos de instalacion.
 audio = ["transformers>=4.44", "torch>=2.2", "accelerate"]
+# cv2 tampoco: `vision` solo hace falta para convertir un video en un CSV de
+# detecciones. Con el CSV ya hecho, todo el analisis corre sin OpenCV.
+# 4.6-4.8 instalan sin error pero revientan en runtime contra numpy 2.x con
+# AttributeError: _ARRAY_API not found (problema de ABI, no de metadatos).
+vision = ["opencv-contrib-python>=4.10.0.84"]
 
 [project.scripts]
 fdekit = "fdekit.cli:main"
@@ -31,3 +36,5 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["vision: necesita OpenCV y un video de muestra"]
+addopts = "-m 'not vision'"

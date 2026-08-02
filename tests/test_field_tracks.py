@@ -118,8 +118,37 @@ def test_load_detections_lee_el_csv_del_detector(tmp_path):
     csv.write_text(
         "marker_id,frame,x_px,y_px\nM1,0,10.5,20.5\nM1,1,11.5,20.5\n", encoding="utf-8"
     )
-    dets = load_detections(csv)
+    dets, frames_total = load_detections(csv)
     assert dets == [Detection("M1", 0, 10.5, 20.5), Detection("M1", 1, 11.5, 20.5)]
+    assert frames_total is None
+
+
+def test_load_detections_sin_metadata_da_frames_total_none():
+    # Regla 3: un CSV sin la linea de metadatos no permite afirmar cobertura.
+    # frames_total tiene que ser None, no una suposicion (como derivarlo de
+    # las detecciones, que siempre daria 100%).
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    dets, frames_total = parse_detections(
+        io.StringIO("marker_id,frame,x_px,y_px\nM1,0,10.5,20.5\n")
+    )
+    assert dets == [Detection("M1", 0, 10.5, 20.5)]
+    assert frames_total is None
+
+
+def test_load_detections_lee_la_linea_de_metadatos_de_frames_total(tmp_path):
+    # Contrato entre vision.write_detections y tracks.load_detections: la
+    # primera linea del CSV, comentada, con el total de frames del video.
+    csv = tmp_path / "detecciones.csv"
+    csv.write_text(
+        "# frames_total=137\nmarker_id,frame,x_px,y_px\nM1,0,10.5,20.5\n",
+        encoding="utf-8",
+    )
+    dets, frames_total = load_detections(csv)
+    assert dets == [Detection("M1", 0, 10.5, 20.5)]
+    assert frames_total == 137
 
 
 def test_load_detections_rechaza_un_csv_sin_las_columnas():
@@ -146,7 +175,7 @@ def test_load_detections_lee_un_csv_con_bom():
     with tempfile.TemporaryDirectory() as tmp:
         ruta = Path(tmp) / "con_bom.csv"
         _escribir_con_bom(ruta)
-        dets = load_detections(ruta)
+        dets, _ = load_detections(ruta)
         assert dets == [Detection("M1", 0, 10.5, 20.5)]
 
 
@@ -185,6 +214,17 @@ def test_parse_detections_fila_mas_larga_que_la_cabecera_da_valueerror():
         parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,1.0,2.0,999,888\n"))
 
 
+def test_parse_detections_devuelve_las_detecciones_y_el_frames_total():
+    # Forma general del contrato: parse_detections siempre devuelve la tupla,
+    # con o sin la linea de metadatos.
+    import io
+
+    from fdekit.field.tracks import parse_detections
+
+    resultado = parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,1.0,2.0\n"))
+    assert resultado == ([Detection("M1", 0, 1.0, 2.0)], None)
+
+
 def test_parse_detections_bom_menciona_el_bom_y_no_una_columna():
     # Ronda de arreglo 2, hallazgo 2: el defecto real no era donde estaba el
     # open(), sino que "columna no en fieldnames" no distingue "no esta" de
@@ -218,7 +258,7 @@ def test_parse_detections_acepta_notacion_cientifica_en_coordenadas():
 
     from fdekit.field.tracks import parse_detections
 
-    dets = parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,1e2,2.5e-1\n"))
+    dets, _ = parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,1e2,2.5e-1\n"))
     assert dets == [Detection("M1", 0, 100.0, 0.25)]
 
 
@@ -228,7 +268,7 @@ def test_parse_detections_acepta_un_csv_normal_sin_bom():
 
     from fdekit.field.tracks import parse_detections
 
-    dets = parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,10.5,20.5\nM1,1,11.5,20.5\n"))
+    dets, _ = parse_detections(io.StringIO("marker_id,frame,x_px,y_px\nM1,0,10.5,20.5\nM1,1,11.5,20.5\n"))
     assert dets == [Detection("M1", 0, 10.5, 20.5), Detection("M1", 1, 11.5, 20.5)]
 
 

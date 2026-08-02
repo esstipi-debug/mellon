@@ -4,19 +4,26 @@ Frontera del toolkit: de aca para abajo no hay camara, no hay cv2 y no hay
 video — hay una lista de tuplas. Un CSV de detecciones grabado una vez permite
 desarrollar y testear el 100% de la logica sin hardware.
 
-Limite conocido: el CSV de detecciones no guarda el total de cuadros del
-video, solo los cuadros donde algo se vio. `build_tracks` exige `frames_total`
-por afuera; `detect_markers` lo devuelve junto con las detecciones en el mismo
-proceso de deteccion. Quien solo tenga un CSV ya grabado (sin ese numero al
-lado) no puede reconstruirlo desde el archivo. Resolver esto -- por ejemplo
-grabando `frames_total` en el propio CSV o en un archivo companero -- queda
-para una tarea futura.
+Contrato de metadatos con `vision.py` (la unica pieza que toca cv2):
+`vision.write_detections` graba el total de cuadros del video en la primera
+linea del CSV, comentada, con el formato exacto `# frames_total=<int>`, antes
+de la cabecera `marker_id,frame,x_px,y_px`. `parse_detections` y
+`load_detections` saltean esa linea si esta presente y devuelven su valor
+junto con las detecciones, como `tuple[list[Detection], int | None]`.
+
+Si la linea no esta, `frames_total` es `None` -- y eso no se rellena con una
+suposicion. Derivarlo de las detecciones (p.ej. el frame maximo visto) daria
+siempre una cobertura mentirosa: el tramo sin detecciones desapareceria del
+calculo en vez de contar como cuadros sin ver. Un CSV sin esa linea es un CSV
+del que no se puede afirmar cobertura (regla 3): quien llame a `build_tracks`
+con esos datos tiene que proveer `frames_total` por su cuenta o fallar.
 """
 
 from __future__ import annotations
 
 import csv
 import dataclasses
+import itertools
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -48,8 +55,26 @@ class TrackPoint:
     y_m: float
 
 
-def parse_detections(handle: IO[str]) -> list[Detection]:
-    reader = csv.DictReader(handle)
+_PREFIJO_METADATA = "# frames_total="
+
+
+def parse_detections(handle: IO[str]) -> tuple[list[Detection], int | None]:
+    """Lee detecciones de un handle de texto CSV.
+
+    Antes de la cabecera puede haber una linea de metadatos comentada,
+    `# frames_total=<int>` -- ver el contrato de metadatos en el docstring
+    del modulo. Si esta, se saltea y su valor se devuelve junto con las
+    detecciones; si no esta, se devuelve `None` en su lugar, sin adivinar.
+    """
+    primera_linea = handle.readline()
+    if primera_linea.startswith(_PREFIJO_METADATA):
+        frames_total = int(primera_linea[len(_PREFIJO_METADATA) :].strip())
+        fuente = handle
+    else:
+        frames_total = None
+        fuente = itertools.chain([primera_linea], handle)
+
+    reader = csv.DictReader(fuente)
     fieldnames = reader.fieldnames or []
 
     # Chequear BOM antes que "falta la columna": si un fieldname arranca con
@@ -97,10 +122,10 @@ def parse_detections(handle: IO[str]) -> list[Detection]:
         detecciones.append(
             Detection(r["marker_id"], frame, float(r["x_px"]), float(r["y_px"]))
         )
-    return detecciones
+    return detecciones, frames_total
 
 
-def load_detections(path: str | Path) -> list[Detection]:
+def load_detections(path: str | Path) -> tuple[list[Detection], int | None]:
     # utf-8-sig: un CSV guardado como "CSV UTF-8" desde Excel en Windows lleva
     # BOM. Con "utf-8" a secas, DictReader deja el BOM pegado al primer
     # nombre de columna ('﻿marker_id') y el chequeo de columnas de arriba
