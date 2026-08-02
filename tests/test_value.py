@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -17,16 +16,6 @@ from fdekit.value import (
 )
 from fdekit.value.levers import _attr, _knee_savings
 from fdekit.value.pricing import model_ladder
-
-
-@pytest.fixture(scope="module")
-def findings():
-    p = Path("out/hallazgos.json")
-    if not p.exists():
-        from fdekit.demo import run_full_diagnosis
-
-        return run_full_diagnosis("out", quiet=True)
-    return json.loads(p.read_text(encoding="utf-8"))
 
 
 def case(findings, key="RETAIL_OMNI", scale="grande", control=True, sites=1):
