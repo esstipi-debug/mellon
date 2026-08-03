@@ -45,6 +45,12 @@ ARCHIVOS_CON_ACENTOS_A_PROPOSITO = {
         "acentuado es parte del caso que revela el bug. Sin acentos, el test "
         "no atraparia el problema."
     ),
+    "tests/test_decide_seed.py": (
+        "Siembra el alias 'Lo del Córte' y despues resuelve 'lo del corte'. Es la "
+        "trampa central de H4: sin el `_norm` canonico, `_l1` nunca hace match, la "
+        "siembra escribe 30 filas, el comando dice que funciono, y el resolutor "
+        "jamas las usa. El acento ES el caso bajo prueba."
+    ),
     "src/fdekit/gemba/transcribe.py": (
         "Este modulo normaliza acentos en transcripciones. Necesita ejemplos "
         "acentuados (dia, quizas, etc.) para probar que los quita correctamente."
