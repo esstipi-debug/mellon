@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from fdekit.baseline import diff_in_diff, parallel_trends_check, pre_post
-from fdekit.baseline.design import BaselineSpec, mde, required_days
+from fdekit.baseline.design import BaselineSpec, icc_from_log, mde, required_days
 from fdekit.dataquality import (
     audit_master,
     audit_summary,
@@ -338,3 +338,104 @@ def test_sin_periodos_suficientes_no_se_afirma_nada():
     r = parallel_trends_check(_panel_tendencias(2, 0.0, 1.0), "ciclo", "grupo", "dia", CORTE)
     assert r["parallel_trends_ok"] is None
     assert r["conclusive"] is False
+
+
+# ------------------------------------------------------------- ICC medido
+
+
+def _panel_icc(n_days: int, k: int, sd_between: float, sd_within: float, seed: int = 0):
+    """Panel con ICC conocido por construccion: sd_b^2 / (sd_b^2 + sd_w^2)."""
+    rng = np.random.default_rng(seed)
+    vals, dias = [], []
+    for d in range(n_days):
+        mu = rng.normal(0, sd_between)
+        vals += list(mu + rng.normal(0, sd_within, k))
+        dias += [d] * k
+    return np.array(vals), np.array(dias)
+
+
+@pytest.mark.parametrize("sd_b,sd_w", [(0.0, 10.0), (1.43, 10.0), (5.0, 10.0)])
+def test_icc_recupera_el_valor_construido(sd_b, sd_w):
+    """Si el estimador no recupera un ICC que uno mismo inyecto, no sirve para
+    reemplazar la constante que venia a reemplazar."""
+    teorico = sd_b**2 / (sd_b**2 + sd_w**2)
+    v, g = _panel_icc(30, 200, sd_b, sd_w)
+    r = icc_from_log(v, g)
+
+    assert r["usable"]
+    assert r["ci_low"] <= teorico <= r["ci_high"]
+
+
+def test_el_icc_puntual_sobre_pocos_dias_es_blando_y_el_intervalo_lo_muestra():
+    """El punto solo es la misma clase de numero que el 0,02 que reemplaza. Con
+    pocos grupos el intervalo tiene que ser ancho, y el campo `reason` tiene que
+    decirlo en vez de dejar pasar una precision falsa."""
+    v, g = _panel_icc(5, 200, 2.0, 10.0)
+    r = icc_from_log(v, g)
+
+    assert r["ci_high"] - r["ci_low"] > 0.05
+    assert "4 semanas" in r["reason"]
+
+
+def test_un_icc_negativo_no_baja_el_tamano_de_muestra():
+    """Un ICC negativo es ruido, no una propiedad. Llevarlo al diseno daria un
+    efecto de diseno bajo 1 —clustering que 'ayuda'— y subestimaria la muestra.
+    Se reporta crudo y se acota a 0 para el calculo."""
+    rng = np.random.default_rng(3)
+    # Dias con MENOS dispersion entre si que adentro: el ICC estimado da < 0.
+    v = np.concatenate([rng.normal(0, 10, 50) for _ in range(8)])
+    g = np.repeat(np.arange(8), 50)
+    v = v - np.repeat([v[g == d].mean() for d in range(8)], 50)  # medias iguales a cero
+
+    r = icc_from_log(v, g)
+    assert r["icc"] <= 0
+    assert r["icc_for_design"] == 0.0
+    assert required_days(sd=10, effect=2, units_per_day=300, icc=r["icc_for_design"])[
+        "design_effect"
+    ] == pytest.approx(1.0)
+
+
+def test_sin_grupos_suficientes_el_icc_queda_sin_medir_no_en_cero():
+    """`None` es 'no se midio'. Devolver 0 seria afirmar que no hay correlacion
+    intra-dia, que es justo el supuesto que hace que un piloto significativo no
+    se replique."""
+    v, g = _panel_icc(1, 200, 2.0, 10.0)
+    r = icc_from_log(v, g)
+
+    assert r["usable"] is False
+    assert r["icc"] is None
+    assert "SIN MEDIR" in r["reason"]
+    assert "mas ventana historica" in r["reason"]
+
+
+def test_un_log_agregado_por_dia_no_permite_estimar_icc():
+    """Con un solo valor por dia la varianza intra-dia es cero: hay que pedir el
+    log a nivel de pedido, y decirlo en vez de devolver un numero."""
+    r = icc_from_log(np.arange(10.0), np.arange(10))
+    assert r["usable"] is False
+    assert "nivel de pedido" in r["reason"]
+
+
+def test_un_cambio_de_nivel_conocido_infla_el_icc_si_no_se_remueve():
+    """Lo que siempre aparece en una ventana historica real: un peak. Sin
+    removerlo se cuela como si fuera correlacion intra-dia. Es la diferencia
+    entre medir el ruido del dia y medir la estacionalidad."""
+    v, g = _panel_icc(12, 200, 1.0, 10.0, seed=7)
+    periodo = np.where(g < 6, "normal", "peak")
+    v_peak = v + np.where(periodo == "peak", 12.0, 0.0)  # el peak sube el nivel
+
+    inflado = icc_from_log(v_peak, g)
+    corregido = icc_from_log(v_peak, g, strata=periodo)
+
+    assert inflado["icc"] > corregido["icc"]
+    assert corregido["strata_removed"] is True
+
+
+def test_el_tamano_de_grupo_efectivo_no_es_el_promedio_con_dias_desparejos():
+    """Usar el promedio simple sesga el ICC hacia arriba justo cuando hay dias
+    de peak, que es cuando importa."""
+    v = np.concatenate([np.random.default_rng(1).normal(0, 1, n) for n in (50, 50, 500)])
+    g = np.concatenate([np.repeat(0, 50), np.repeat(1, 50), np.repeat(2, 500)])
+    r = icc_from_log(v, g)
+
+    assert r["mean_group_size_effective"] < 200.0  # el promedio simple es 200

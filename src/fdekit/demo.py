@@ -15,7 +15,7 @@ import pandas as pd
 
 from .a3 import build_a3_from_findings
 from .baseline import BaselineSpec, diff_in_diff, parallel_trends_check, pre_post
-from .baseline import required_days, sd_from_log
+from .baseline import icc_from_log, required_days, sd_from_log
 from .dataquality import audit_master, audit_summary, link_defects_to_rework, sampling_plan, stratified_sample
 from .gemba import GembaSession, Observation
 from .layout import Layout
@@ -303,14 +303,61 @@ def run_full_diagnosis(outdir: str | Path = "out", seed: int = 7, quiet: bool = 
     (out / "spec_linea_base.md").write_text(spec.to_markdown(), encoding="utf-8")
     results["baseline_spec_issues"] = spec.validate()
 
+    panel, did, naive, trends = _baseline_experiment(seed)
+    panel.to_csv(out / "panel_experimento.csv", index=False)
+
+    # El ICC sale de la ventana historica, no de una constante. Es el parametro
+    # de mayor apalancamiento del dimensionamiento —multiplica la muestra por
+    # ~17 con 300 pedidos al dia— y estaba puesto a mano en 0,02. No necesita
+    # ningun sensor: necesita el log que el cliente ya tiene.
+    #
+    # La ventana historica aca es el periodo PRE, que es lo que existe cuando
+    # hay que dimensionar. Los dos grupos corren con la misma configuracion en
+    # el pre, asi que no hay nivel que remover; en un log real donde el pre
+    # incluya un peak conocido, `strata` es el argumento para sacarlo.
+    pre = panel[panel["period"] == "pre"]
+    icc = icc_from_log(pre["cycle_min"], pre["day_seed"])
+    results["icc_medido"] = icc
+
     cyc = log.case_durations()["cycle_time_s"] / 60
     sd = sd_from_log(cyc)
     results["baseline_sizing"] = required_days(
-        sd=sd, effect=0.15 * float(cyc.median()), units_per_day=dc.config.n_orders, icc=0.02
+        sd=sd,
+        effect=0.15 * float(cyc.median()),
+        units_per_day=dc.config.n_orders,
+        icc=icc["icc_for_design"] if icc["usable"] else 0.0,
     )
+    # Si el ICC no se pudo medir, el dimensionamiento corre con 0 —el unico
+    # valor que no inventa correlacion— y lo dice. Un `days_per_group` calculado
+    # sobre un ICC ausente es el numero que hace que un piloto "significativo"
+    # no se replique.
+    results["baseline_sizing"]["icc_source"] = (
+        f"medido sobre {icc['n_groups']} dias de la ventana pre "
+        f"(IC95 {icc['ci_low']}-{icc['ci_high']})"
+        if icc["usable"]
+        else f"NO MEDIDO — se uso 0: {icc['reason']}"
+    )
+    if icc["usable"]:
+        # Cuantos dias hacen falta en cada extremo del IC del ICC. El punto solo
+        # es la misma clase de numero que el 0,02 que vino a reemplazar: el
+        # dimensionamiento es tan sensible al ICC que un intervalo de 0,017 a
+        # 0,22 mueve la ventana de medicion de semanas a meses. Es la cifra que
+        # hay que llevar a la reunion donde se compromete el cronograma.
+        results["baseline_sizing"]["days_per_group_por_ic_del_icc"] = {
+            "icc_low": required_days(
+                sd=sd,
+                effect=0.15 * float(cyc.median()),
+                units_per_day=dc.config.n_orders,
+                icc=max(0.0, icc["ci_low"]),
+            )["days_per_group"],
+            "icc_high": required_days(
+                sd=sd,
+                effect=0.15 * float(cyc.median()),
+                units_per_day=dc.config.n_orders,
+                icc=max(0.0, icc["ci_high"]),
+            )["days_per_group"],
+        }
 
-    panel, did, naive, trends = _baseline_experiment(seed)
-    panel.to_csv(out / "panel_experimento.csv", index=False)
     results["pre_post_naive"] = naive
     results["parallel_trends"] = trends
     results["diff_in_diff"] = did

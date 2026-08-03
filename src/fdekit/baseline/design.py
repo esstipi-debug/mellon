@@ -104,3 +104,133 @@ def sd_from_log(values) -> float:
     v = np.asarray(values, dtype=float)
     q1, q3 = np.nanpercentile(v, [25, 75])
     return float((q3 - q1) / 1.349)
+
+
+def icc_from_log(values, groups, strata=None, confidence: float = 0.95) -> dict:
+    """Correlacion intraclase entre unidades del mismo grupo, medida del log.
+
+    El `icc` de `required_days` era el parametro de mayor apalancamiento del
+    bloque de medicion —multiplica el tamano de muestra por 17 con 300 pedidos
+    al dia— y estaba puesto a mano. No hace falta ningun sensor para medirlo:
+    hace falta la ventana historica que el cliente ya tiene. Esta funcion la
+    convierte en un numero, que es la unica forma de que `days_per_group` deje
+    de ser una opinion.
+
+    ANOVA de una via de efectos aleatorios, que es el estimador estandar:
+
+        ICC = (MSB - MSW) / (MSB + (k0 - 1) * MSW)
+
+    `k0` es el tamano de grupo efectivo, que NO es el promedio cuando los dias
+    traen distinta cantidad de pedidos — usar el promedio simple sesga el ICC
+    hacia arriba justo cuando hay dias de peak, que es cuando importa.
+
+    `strata` resta la media de cada estrato antes de estimar. Sirve para lo que
+    siempre aparece en una ventana historica real: un cambio de nivel conocido
+    —peak, cambio de layout, alta de dotacion— que sin remover se cuela como si
+    fuera correlacion intra-dia e infla el ICC. Removerlo es la diferencia entre
+    medir el ruido del dia y medir la estacionalidad.
+
+    Devuelve intervalo por la F (Searle) porque un ICC puntual sobre pocos dias
+    es tan blando como el 0,02 que vino a reemplazar: con 6 dias el intervalo es
+    ancho, y eso hay que verlo antes de comprometer una ventana de medicion.
+    """
+    v = np.asarray(values, dtype=float)
+    g = np.asarray(groups)
+    if strata is not None:
+        s = np.asarray(strata)
+        v = v.copy()
+        for lab in np.unique(s):
+            m = s == lab
+            v[m] = v[m] - v[m].mean()
+
+    ok = ~np.isnan(v)
+    v, g = v[ok], g[ok]
+    labels, counts = np.unique(g, return_counts=True)
+    m, n = len(labels), len(v)
+
+    base = {
+        "n_groups": int(m),
+        "n_units": int(n),
+        "strata_removed": strata is not None,
+    }
+    # Los dos modos de fallar son distintos y la accion que piden tambien, asi
+    # que se diagnostican por separado: con un solo dia hay que pedir mas
+    # ventana, con un valor por dia hay que pedir otro nivel de grano.
+    if m < 2:
+        return {
+            **base,
+            "icc": None,
+            "icc_for_design": None,
+            "usable": False,
+            "reason": (
+                f"{m} grupo(s): hacen falta al menos 2 dias para separar la varianza entre "
+                "dias de la de adentro del dia. El ICC queda SIN MEDIR, que no es lo mismo "
+                "que cero — pedir mas ventana historica."
+            ),
+        }
+    if n <= m:
+        return {
+            **base,
+            "icc": None,
+            "icc_for_design": None,
+            "usable": False,
+            "reason": (
+                f"{n} unidades en {m} grupos: hay un solo valor por dia. El log viene "
+                "agregado y no queda varianza intra-dia que medir — hay que pedirlo a "
+                "nivel de pedido. El ICC queda SIN MEDIR, que no es lo mismo que cero."
+            ),
+        }
+
+    grand = v.mean()
+    means = np.array([v[g == lab].mean() for lab in labels])
+    ssb = float((counts * (means - grand) ** 2).sum())
+    ssw = float(sum(((v[g == lab] - mu) ** 2).sum() for lab, mu in zip(labels, means)))
+    df_b, df_w = m - 1, n - m
+    msb, msw = ssb / df_b, ssw / df_w
+
+    # Tamano de grupo efectivo. Con grupos iguales coincide con el tamano.
+    k0 = (n - (counts.astype(float) ** 2).sum() / n) / df_b
+
+    if msw <= 0:
+        return {
+            **base,
+            "icc": None,
+            "icc_for_design": None,
+            "usable": False,
+            "reason": (
+                "varianza intra-grupo cero: el log esta agregado a nivel de dia, o todas "
+                "las unidades del dia son identicas. Con un solo valor por dia no hay ICC "
+                "que estimar — hay que pedir el log a nivel de pedido."
+            ),
+        }
+
+    icc = (msb - msw) / (msb + (k0 - 1) * msw)
+    f = msb / msw
+    a = 1 - confidence
+    f_hi = float(stats.f.ppf(1 - a / 2, df_b, df_w))
+    f_lo = float(stats.f.ppf(1 - a / 2, df_w, df_b))
+    fl, fu = f / f_hi, f * f_lo
+
+    def to_icc(fv: float) -> float:
+        return (fv - 1) / (fv + k0 - 1)
+
+    return {
+        **base,
+        "icc": round(float(icc), 4),
+        # Un ICC negativo es ruido, no una propiedad: significa que las unidades
+        # del mismo dia se parecen MENOS que al azar. Llevarlo al diseno daria un
+        # efecto de diseno bajo 1 —clustering que "ayuda"— y subestimaria la
+        # muestra. Se reporta crudo y se acota a 0 para el calculo.
+        "icc_for_design": round(max(0.0, float(icc)), 4),
+        "ci_low": round(float(to_icc(fl)), 4),
+        "ci_high": round(float(to_icc(fu)), 4),
+        "mean_group_size_effective": round(float(k0), 1),
+        "f_stat": round(float(f), 2),
+        "usable": True,
+        "reason": (
+            ""
+            if m >= 10
+            else f"solo {m} grupos: el ICC puntual es blando y el intervalo lo muestra. "
+            "Para comprometer una ventana de medicion, estimarlo sobre 4 semanas."
+        ),
+    }
