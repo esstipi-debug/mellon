@@ -711,14 +711,31 @@ class Meeting:
                 "una ventana asincronica no tiene clase de reunion: es una ventana de "
                 "chat o de correo, no una sesion"
             )
-        if self.clase in MEETING_CLASS and not profile_of(self.clase).recording_allowed                 and self.consent.recording_allowed:
+        if (
+            self.clase in MEETING_CLASS
+            and not profile_of(self.clase).recording_allowed
+            and self.consent.recording_allowed
+        ):
             issues.append(
                 f"la clase {self.clase} no admite grabacion ({profile_of(self.clase).nota}), "
                 "y el consentimiento la permite"
             )
-        if not self.facilitator:
+        # El facilitador existe para que ALGUIEN diga la frase-marcador en voz
+        # alta. Exigirlo donde no hay ritual es pedir un dato inventado: en una
+        # ventana de chat el marcador se escribe, y en un gemba walk o un cambio
+        # de turno no hay quien facilite. Se deriva de lo que ya esta declarado
+        # —canal y perfil— en vez de agregar un campo que se desincroniza.
+        requiere_facilitador = (
+            self.canal == "SINCRONICO"
+            and self.clase in MEETING_CLASS
+            and profile_of(self.clase).gate_agenda
+        )
+        if requiere_facilitador and not self.facilitator:
             issues.append("sin facilitador: nadie va a decir la frase-marcador")
-        elif self.facilitator not in self.roster:
+        elif self.facilitator and self.facilitator not in self.roster:
+            # Solo si HAY facilitador declarado. Sin este `and`, una ventana de
+            # chat —que legitimamente no tiene— salia con "facilitador '' fuera
+            # del roster", que es un mensaje sobre un campo que no aplica.
             issues.append(f"facilitador '{self.facilitator}' fuera del roster")
         if len(self.roster) > 9:
             issues.append(

@@ -929,3 +929,32 @@ def test_el_perfil_apaga_el_gate_pero_lo_deja_anotado(tmp_path):
     assert len(a_inc.gate_bypassed) == 1
     assert any("gate de agenda DESACTIVADO" in x for x in a_inc.advisories)
     assert "Entraron con el gate APAGADO" in a_inc.to_markdown()
+
+
+def test_el_facilitador_se_exige_solo_donde_hay_ritual():
+    """El facilitador existe para que ALGUIEN diga la frase-marcador en voz
+    alta. Exigirlo donde no hay ritual es pedir un dato inventado: en una
+    ventana de chat el marcador se ESCRIBE, y en un gemba walk o un cambio de
+    turno no hay quien facilite.
+
+    Se deriva de lo que ya esta declarado —canal y perfil— en vez de agregar un
+    campo que se desincroniza. Es el cabo suelto que dejo H7 y que H5 necesita:
+    sin esto, ninguna ventana asincronica podia registrarse sin inventar un
+    facilitador.
+    """
+    def m(**kw):
+        return Meeting(id="x", date=HOY, roster=ROSTER, facilitator="",
+                       consent=consent(), **kw).validate()
+
+    assert any("sin facilitador" in i for i in m(clase="COMITE"))
+    for kw in (dict(canal="ASINCRONICO"), dict(clase="TERRENO"),
+               dict(clase="HANDOVER"), dict(clase="INCIDENTE")):
+        assert m(**kw) == [], f"{kw} no deberia exigir facilitador"
+
+
+def test_un_facilitador_declarado_sigue_teniendo_que_estar_en_el_roster():
+    """El `elif` sin guardia reportaba "facilitador '' fuera del roster" sobre
+    una ventana de chat, que es un mensaje sobre un campo que no aplica."""
+    fuera = Meeting(id="x", date=HOY, roster=ROSTER, facilitator="Ajeno",
+                    consent=consent()).validate()
+    assert any("fuera del roster" in i for i in fuera)
