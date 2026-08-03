@@ -43,7 +43,10 @@ L2_MIN_SCORE = 0.35
 # Dos candidatos dentro de este margen son un empate, no un ganador.
 L2_TIE_MARGIN = 0.08
 
-_RE_ID = re.compile(r"\b([DCAQ])-?(\d{1,4})\b", re.IGNORECASE)
+# El autor es opcional y va en el medio: `D-041`, `D041`, `D-JM-041`. Sin el
+# grupo del medio, un registro multi-FDE pierde L0 entero — la capa mas barata y
+# mas segura del resolutor, la unica deterministica al 100%.
+_RE_ID = re.compile(r"\b([DCAQ])-?(?:([A-Za-z]{2,4})-)?(\d{1,4})\b", re.IGNORECASE)
 
 
 @dataclass
@@ -167,7 +170,8 @@ def _l0(surface: str, agenda_symbol: str | None) -> Resolution | None:
     """Anclas duras. Deterministico, EXTRACTED, confianza 1,0."""
     m = _RE_ID.search(surface)
     if m:
-        sid = f"{m.group(1).upper()}-{int(m.group(2)):03d}"
+        autor = f"{m.group(2).upper()}-" if m.group(2) else ""
+        sid = f"{m.group(1).upper()}-{autor}{int(m.group(3)):03d}"
         return Resolution(sid, TIER_EXTRACTED, "L0", 1.0, (sid,), f"ID literal '{m.group(0)}'")
     if agenda_symbol:
         # Herencia del punto de agenda: el analogo del nombre totalmente

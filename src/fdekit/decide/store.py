@@ -14,6 +14,8 @@ vea el estado sin parsear 300 archivos.
 
 from __future__ import annotations
 
+import re
+
 import json
 import subprocess
 from dataclasses import dataclass
@@ -96,6 +98,30 @@ def _check_budget_ceiling() -> None:
 
 
 _check_budget_ceiling()
+
+# Iniciales del autor dentro del ID: `D-JM-041`. Dos FDE trabajando sin red
+# sobre la misma cuenta asignan `D-041` los dos, y el conflicto no aparece hasta
+# el merge — cuando ya hay compromisos, supuestos y alias colgando de dos
+# `D-041` distintos. Un archivo de lock no lo resuelve: sin filesystem
+# compartido no hay lock que valga.
+#
+# Dos a cuatro letras y nada mas: un guion parte el ID en pedazos y `get` deja
+# de encontrarlo, y un autor largo vuelve ilegible cada referencia del registro.
+_RE_AUTOR = re.compile(r"^[A-Z]{2,4}$")
+
+
+def _check_autor(autor: str) -> str:
+    if not autor:
+        return ""
+    if not _RE_AUTOR.match(autor):
+        raise ValueError(
+            f"autor invalido: {autor!r}. Van 2 a 4 letras mayusculas sin guiones ni "
+            "espacios (las iniciales: 'JM', 'AR'). El autor viaja DENTRO del id "
+            "—`D-JM-041`— asi que un guion ahi parte el id y el registro deja de "
+            "poder leerse a si mismo."
+        )
+    return autor
+
 
 _KINDS = {
     "D": ("decisions", Decision),
@@ -294,8 +320,9 @@ class DecideStore:
         "!hablada/*.purgado.json\n"
     )
 
-    def __init__(self, root: str | Path):
+    def __init__(self, root: str | Path, autor: str = ""):
         self.root = Path(root)
+        self.autor = _check_autor(autor)
         for sub in ("decisions", "commitments", "assumptions", "questions", "meetings"):
             (self.root / sub).mkdir(parents=True, exist_ok=True)
         gi = self.root / ".gitignore"
@@ -445,12 +472,24 @@ class DecideStore:
     # ---------------------------------------------------------- escrituras
 
     def _next_id(self, prefix: str) -> str:
-        nums = [
-            int(p.stem.split("-")[1])
-            for p in self._dir(prefix).glob(f"{prefix}-*.md")
-            if p.stem.split("-")[1].isdigit()
-        ]
-        return f"{prefix}-{(max(nums) + 1) if nums else 1:03d}"
+        """`D-041` sin autor, `D-JM-041` con autor.
+
+        **Cada autor lleva su propia serie.** Si la serie fuera global, el
+        segundo FDE arrancaria en 002 y el numero dejaria de decir cuantas
+        escribio el — que es lo unico que el numero significa cuando hay dos
+        personas escribiendo sin verse.
+        """
+        patron = f"{prefix}-{self.autor}-*.md" if self.autor else f"{prefix}-*.md"
+        nums = []
+        for p in self._dir(prefix).glob(patron):
+            partes = p.stem.split("-")
+            # Sin autor, `D-JM-041` no es de esta serie: su parte[1] no es un
+            # numero. Con autor, el glob ya filtro y parte[2] es el correlativo.
+            cola = partes[-1]
+            if len(partes) == (3 if self.autor else 2) and cola.isdigit():
+                nums.append(int(cola))
+        n = (max(nums) + 1) if nums else 1
+        return f"{prefix}-{self.autor}-{n:03d}" if self.autor else f"{prefix}-{n:03d}"
 
     def _write_new(self, prefix: str, obj) -> None:
         """Crea el archivo en modo exclusivo. `open(..., 'x')` es atomico en

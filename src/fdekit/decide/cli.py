@@ -36,7 +36,9 @@ def _print(df):
 
 
 def _store(a) -> DecideStore:
-    return DecideStore(Path(a.root))
+    # `--autor` solo importa cuando hay dos FDE trabajando sin red sobre la
+    # misma cuenta. Sin el, los ids son los de siempre.
+    return DecideStore(Path(a.root), autor=getattr(a, "autor", "") or "")
 
 
 def _csv(value: str | None) -> list[str]:
@@ -785,6 +787,9 @@ def register(subparsers):
         "decide", help="canal DECIDIDA: registro de decisiones de reunion (fases 0-4)"
     )
     p.add_argument("--root", default="decide", help="directorio del registro")
+    p.add_argument("--autor", default="",
+                   help="iniciales del FDE (2-4 letras). Los ids pasan a D-JM-041: "
+                        "evita la colision cuando dos personas trabajan sin red")
     p.add_argument("--force", action="store_true", help="persistir aunque validate() falle")
     sub = p.add_subparsers(dest="decide_cmd", required=True)
 
