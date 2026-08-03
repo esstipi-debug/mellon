@@ -36,5 +36,8 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["vision: necesita OpenCV y un video de muestra"]
+markers = [
+    "vision: necesita OpenCV y un video de muestra",
+    "historia: recorre la historia completa del repo, lento",
+]
 addopts = "-m 'not vision'"
