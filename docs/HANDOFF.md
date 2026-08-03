@@ -2,7 +2,7 @@
 
 **Repo:** https://github.com/esstipi-debug/mytra-fde (privado)
 **Local:** `C:\fde\fde-field-kit` · **Rama activa:** `harness/plan-1`
-**Estado:** 852 tests verdes, 1 deselected
+**Estado:** 932 tests verdes, 1 deselected
 
 ### Montaje desde cero
 
@@ -168,6 +168,9 @@ críticos que la refutación encontró contra la propia fundación).
 | `42516c8` | **H6** — el estado de captura se DERIVA |
 | `10b5bdf` | **H5a** — ingesta de chat (WhatsApp/Teams) |
 | `99617ee` | **H5b** — CONFLICTO y NO_DECISION |
+| `b3fbbe5` | **el carril declarado es paralelo al techo de la sala** |
+| `7484000` | **el portal de alias** rechaza el símbolo sin slots |
+| `8bb5f6c` | **H4** — la siembra del arranque en frío |
 
 Más seis bugs vivos encontrados en el camino, todos de clase *"no falla,
 miente"* y todos reproducidos antes de tocarlos.
@@ -176,28 +179,46 @@ miente"* y todos reproducidos antes de tocarlos.
 
 ## Lo que sigue
 
-### 1. H4 — la siembra (lo único que falta de los huecos)
+### 1. H4 — la siembra: hecho, salvo la ingesta de actas
 
-Las 15-30 decisiones vigentes declaradas en el kickoff, los alias iniciales y la
-ingesta de actas históricas. El documento lo llama *"el mejor retorno del
-proyecto entero"*: el día 1 el registro está vacío y compite contra 3 años de
-historial, así que `why()` y `referencing()` devuelven vacío justo en las 4
-semanas donde se juega la adopción.
+`src/fdekit/decide/seed.py` + `fdekit decide seed`. Las 15-30 decisiones
+vigentes declaradas en el kickoff y los alias iniciales ya entran.
 
-Sus cuatro críticos ya están resueltos en `fundacion-huecos.md`. El principal
-—`origen` sin ruta de escritura fuera de `seed.py`— **dejó de existir** cuando
-el campo aterrizó con el Corpus.
+```bash
+fdekit decide meeting --id kickoff --clase KICKOFF --scope pudahuel ...
+fdekit decide seed --meeting kickoff --file planilla.csv --by "Marcela Perez"
+```
 
-Lo que hay que respetar al construirlo:
+La planilla es CSV con separador `;` — no `,`, porque las filas de criterio
+llevan comas y un CSV con comas se parte en la mitad de la única columna que la
+regla 1 exige completa. Sale con código 2 si algo quedó afuera.
+
+Lo que sostiene el diseño, por si alguien lo toca:
 
 - Las sembradas van con `origen=SIEMBRA`, y por lo tanto **no son `auditable`**:
   quedan fuera del Corpus y no abren la compuerta de la regla 5.
-- Sembrar 15-30 decisiones contra un `meeting_id` explota en la octava por el
-  techo de 7. El carril de siembra es paralelo, no una excepción al techo.
-- **Poblar `slots`** con `extract_slots(statement + " " + criteria)`: sin slots,
-  `mark_disputed` no puede disputar nunca los alias sembrados, y 30 alias
-  declarados de memoria resuelven `EXTRACTED 1.0` de forma permanente e
-  irrevisable.
+- **`promotion_ceiling(clase, origen)` es el único techo del sistema** y
+  `add_decision` cuenta por `(meeting_id, origen)`. El carril declarado es
+  paralelo (`DECLARED_BUDGET = 30`), no una excepción: sembrar contra un
+  `meeting_id` explotaba en la octava, y la única salida era borrar el
+  `--meeting` — justo la ruta donde no hay roster ni consentimiento.
+- **`slots` poblados** con `extract_slots(statement + " " + criteria)`.
+  `AliasStore.add` es ahora un portal que **rechaza el símbolo sin slots**: sin
+  ellos `mark_disputed` no puede disputar y `_l2` no puede proponer, así que L1
+  sería la única vía y sería indisputable.
+- `why()` dice `origen` / `auditable` / `nota_origen`. Antes una sembrada
+  devolvía el mismo objeto que una decidida en sala.
+- `decide add decision --origen` cierra el agujero por el que un acta histórica
+  aterrizaba como REUNION con fecha de hace seis meses: sería la línea base
+  entera del XmR.
+
+**Lo que falta de H4:** `seed_minutes()`, la ingesta de 6 meses de actas por
+`draft_decisions()`. Tres condiciones ya escritas en el diseño: ningún borrador
+sale `ready` (todos llevan `sigue_vigente` en `missing`), la fecha base sale del
+**nombre del archivo** y un acta sin fecha se rechaza en vez de procesarse
+contra hoy, y el lote lleva expiración propia (`DecisionDraft.expira_en_horas`)
+en vez de subir la constante global de 24 h — hoy una ingesta histórica revisada
+al día siguiente se evapora, y el único rastro es una línea impresa en consola.
 
 ### 2. Correr la fase 0 con gente real
 
