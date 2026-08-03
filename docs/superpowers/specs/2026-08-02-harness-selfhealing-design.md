@@ -11,7 +11,7 @@ publica al lado cuánto **no** vigila.
 
 El HANDOFF del repo nombra el patrón de error dominante: **el bug que no falla,
 sólo miente** — un número plausible producido por una unidad importada sin
-pensar, o por un mismo texto alimentando dos campos. Van ocho.
+pensar, o por un mismo texto alimentando dos campos. Van 17.
 
 Dos guardias del repo nacieron cada uno de un bug real: el de convenciones
 (tildes en `.py`) y el de higiene (efectos de lado en el árbol). Los dos fueron
@@ -340,15 +340,15 @@ Un harness que genera tests es **infalsable por defecto**: puede producir
 guardias para siempre sin que nadie sepa si sirven. Es exactamente el hallazgo
 que reordenó este proyecto, así que aplicarlo al harness no es opcional.
 
-El HANDOFF lista **ocho bugs que no fallaron, sólo mintieron**. Ese es el
-conjunto de validación, y ya existe.
+El HANDOFF lista **17 bugs que no fallaron, solo mintieron**. Ese es el
+conjunto de validacion, y ya existe.
 
 Se toma uno con su par de commits — la anualización doble es el candidato
 natural, tiene rama propia (`fix/anualizacion-unica`) — se le da al harness el
 árbol **anterior** al arreglo, y se le pregunta si produce un guardia que atrape
 el bug. La respuesta es un sí o un no ejecutable.
 
-El número honesto no es 8/8: es **cuántos de los ocho atrapa, publicado**. Si
+El número honesto no es 17/17: es **cuántos de los 17 atrapa, publicado**. Si
 atrapa dos, el harness atrapa dos, y `CoberturaGuardia` lo dice con esas
 palabras.
 
@@ -380,7 +380,7 @@ que en ningún lado porque el corpus se ordena por fecha.
 
 El harness sirve si, y sólo si:
 
-1. Reproduce guardias para al menos uno de los ocho bugs históricos, con el
+1. Reproduce guardias para al menos uno de los 17 bugs históricos, con el
    número exacto publicado (§7.1).
 2. Rechaza un test vacuo plantado a propósito (§7.2).
 3. Una cosecha sobre evidencia sin lección devuelve cero guardias sin
@@ -399,10 +399,10 @@ implementación, no uno.**
 
 **Plan 1 — el contrato y la capa 1.** `fdekit.guard` (`hallazgo`, `guardia`,
 `cobertura`), después `tools/harness/` completo, y cierra con el test de
-falsificación de §7.1 sobre los ocho bugs históricos.
+falsificación de §7.1 sobre los 17 bugs históricos.
 
 Es el que va primero porque el criterio de éxito entero vive acá: si el harness
-no atrapa ninguno de los ocho, la capa 2 no vale la pena.
+no atrapa ninguno de los 17, la capa 2 no vale la pena.
 
 **Plan 2 — la capa 2.** `instrumento.py` y `calibracion.py`, que consumen el
 contrato ya estable y no dependen de una sola línea de `tools/`. Arranca cuando
