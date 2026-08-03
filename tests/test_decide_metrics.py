@@ -810,3 +810,39 @@ def test_la_hoja_dice_de_que_muestra_salen_los_numeros(tmp_path):
     hoja = report(st)
     assert "1 de 2 sesiones sin captura" in hoja
     assert "SIN_REGISTRO" in hoja
+
+
+def test_el_xmr_usa_la_columna_de_CORPUS_y_no_la_descriptiva(tmp_path):
+    """El XmR es la metrica de CONTROL, y las de control filtran — las
+    descriptivas no. Usaba `toques` por default, que es la descriptiva.
+
+    Medido: una pregunta abierta desde una ventana de WhatsApp contra una
+    decision de sala le suma un toque (3 -> 4) en la columna descriptiva. La
+    ventana no es una serie de decision y no puede aportar puntos a un grafico
+    de control.
+
+    (No pude reproducir que el veredicto se diera vuelta, que es lo que el
+    refutador reporto: las preguntas de chat quedan fechadas despues de la
+    decision y `touches_to_decide` solo cuenta las previas. El defecto
+    estructural si es real y es el que se arregla aca.)
+    """
+    st = DecideStore(tmp_path / "d")
+    _meet(st, "comite")
+    d = _tema_con_vueltas(st, "comite", vueltas_dentro=2)
+
+    # la ventana de chat bloqueando la misma decision, ANTES de que se decidiera
+    _meet(st, "wa-35", canal="ASINCRONICO")
+    st.add_question(OpenQuestion(
+        id="", question="esto contradice lo del comite?", resolver="Marcela",
+        resolve_by=date(2026, 8, 1), blocks=[d.id], meeting_id="wa-35"), force=True)
+
+    t = touches_to_decide(st)
+    assert t.loc[0, "toques"] == 4            # la descriptiva ve la vuelta de chat
+    assert t.loc[0, "toques_en_serie"] == 3   # la de control, no
+
+    # y la linea base se congela con la columna de control, no con la descriptiva
+    import json
+    freeze_baseline(st, date(2026, 8, 2), baseline=1)
+    fija = json.loads((st.root / "xmr_baseline.json").read_text(encoding="utf-8"))
+    assert fija["columna"] == "toques_en_serie"
+    assert fija["toques"] == [3.0]          # el valor de control, no el 4 descriptivo

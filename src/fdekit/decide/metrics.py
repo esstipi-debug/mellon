@@ -432,7 +432,7 @@ BASELINE_FILE = "xmr_baseline.json"
 
 
 def freeze_baseline(store: DecideStore, today: date, baseline: int = XMR_BASELINE,
-                    columna: str = "toques") -> dict:
+                    columna: str = "toques_en_serie") -> dict:
     """Congela la linea base del XmR **en disco**. Se corre una sola vez.
 
     Sin esto, "congelado" era una palabra del docstring y no un hecho:
@@ -489,6 +489,16 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE,
     Solo desde la reunion ~15: antes es ruido. Los limites salen de la linea
     base persistida por `freeze_baseline` y no se recalculan nunca.
 
+    Usa `toques_en_serie` por default, que es la columna de CORPUS. El XmR es la
+    metrica de CONTROL, y las de control filtran — las descriptivas no. Con la
+    columna descriptiva, una pregunta abierta desde una ventana de WhatsApp
+    contra una decision de sala le suma un toque: medido, 3 -> 4. La ventana no
+    es una serie de decision y no puede aportar puntos a un grafico de control.
+
+    Una linea base ya congelada CONSERVA su columna: cambiarla bajo limites
+    congelados corrompe el grafico igual que recalcular los limites, que es la
+    razon por la que `freeze_baseline` la guarda.
+
     Si no hay linea base congelada, los limites se calculan igual pero salen
     marcados `congelada=False` y con el veredicto diciendolo: un grafico de
     control cuyos limites se mueven solos no es un grafico de control, y
@@ -502,6 +512,7 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE,
             "necesarios": baseline + 4,
             "ok": False,
             "congelada": False,
+            "columna": columna or "toques_en_serie",
             "veredicto": (
                 f"{len(t)} decisiones cerradas: hacen falta al menos {baseline + 4} para "
                 "una linea base creible. Antes de eso el grafico dibuja ruido con "
@@ -518,7 +529,7 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE,
 
     if path.exists():
         fija = json.loads(path.read_text(encoding="utf-8"))
-        col = fija.get("columna", "toques")
+        col = fija.get("columna", "toques")  # las bases viejas conservan la suya
         if columna is not None and columna != col:
             raise ValueError(
                 f"la linea base se congelo con '{col}' y se esta pidiendo '{columna}'. "
@@ -555,7 +566,7 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE,
             )
         congelada, cuando = True, fija["congelada_el"]
     else:
-        col = columna or "toques"
+        col = columna or "toques_en_serie"
         serie = [float(x) for x in orden[col]]
         base, mon = serie[:baseline], serie[baseline:]
         congelada, cuando = False, None
