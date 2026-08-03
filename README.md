@@ -1,6 +1,15 @@
-# fde-field-kit
+# Mytra FDE
 
 Kit de terreno para **Forward Deployed Engineers con perfil de supply chain**.
+
+> **Para retomar el trabajo: [`docs/HANDOFF.md`](docs/HANDOFF.md).** Estado,
+> montaje, las 8 reglas duras que no se rompen, y qué sigue.
+>
+> El paquete Python se llama `fdekit` y el directorio local `fde-field-kit`;
+> Mytra FDE es el nombre del proyecto. No se renombró el paquete porque el
+> import aparece en 858 tests y en cada docstring, y un renombre masivo es
+> exactamente el tipo de cambio que este repo trata de evitar: mucho diff, cero
+> comportamiento nuevo.
 
 Nueve herramientas que llevan un despliegue del log crudo del WMS a un A3 con
 números, en un comando. Incluye un centro de distribución sintético con defectos

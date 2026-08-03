@@ -4,12 +4,39 @@
 **Local:** `C:\fde\fde-field-kit` · **Rama activa:** `harness/plan-1`
 **Estado:** 852 tests verdes, 1 deselected
 
+### Montaje desde cero
+
 ```bash
-cd C:\fde\fde-field-kit && python -m pytest -q
+git clone https://github.com/esstipi-debug/mytra-fde.git
+cd mytra-fde
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e .
+python -m pytest -q
 ```
+
+En Unix, `source .venv/bin/activate`.
+
+Python 3.11. Núcleo: numpy, pandas, matplotlib, scipy, simpy. **`torch` vive en
+el extra `audio` a propósito** — el kit tiene que correr en el notebook prestado
+de un CD, sin GPU y sin permisos de instalación. Esa restricción es
+**estructural, no una preferencia**: hay decisiones de diseño que existen sólo
+por ella (el front-matter propio en vez de PyYAML, el grafo como
+`dict[str, list[str]]` en vez de networkx). Para transcripción local:
+`pip install -e ".[audio]"`.
 
 El deselected es el marcador `vision` (`pyproject.toml`): necesita OpenCV y un
 video de muestra. Correr aparte con `-m vision`.
+
+---
+
+## Por dónde empezar
+
+1. Este archivo entero (son cinco minutos).
+2. `docs/decide-fundacion-huecos.md` si vas a hacer **H4** — ahí están las 7
+   decisiones estructurales y los 11 críticos ya resueltos.
+3. `docs/HISTORIA.md` cuando algo del código parezca arbitrario: casi todo lo
+   que parece raro está ahí explicado con el bug que lo causó.
 
 ---
 
