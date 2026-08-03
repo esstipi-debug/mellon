@@ -84,7 +84,7 @@ fdekit decide metrics                   # con compuerta de volumen
 
 ---
 
-## Las 8 reglas duras
+## Las 9 reglas duras
 
 Romper una rompe la tesis del repo. Están documentadas en el código con el
 porqué, y hay tests que las fijan.
@@ -99,6 +99,56 @@ porqué, y hay tests que las fijan.
 6. **Límites de control congelados.**
 7. **Presupuesto de 7 decisiones por reunión.** No levantarlo.
 8. **Una sola anualización**, donde vive `operating_days`.
+9. **El sensor ve al operador; el archivo que sale del sensor, no.** La
+   agregación no es una promesa en un documento: es una propiedad del código,
+   verificada por `tests/test_field_privacy.py`. Es el argumento central de
+   `fdekit.field` — casi todos los vendors venden vigilancia disfrazada de
+   productividad; acá la medición viene con olvido diseñado.
+
+---
+
+## Las dos mitades que no son `decide`
+
+El grueso del trabajo reciente fue en `fdekit.decide`, así que estos dos quedan
+fáciles de pasar por alto. **No son menores: `field` solo tiene 167 tests.**
+
+### `fdekit.field` — sensores que miden lo que el WMS *infiere*
+
+El WMS dice que un picker recorrió una ruta; `field` la **mide**. Video →
+detecciones → pistas en metros, con cobertura declarada.
+
+El corte que gobierna el paquete: **`vision` es la única pieza que toca cv2**, y
+sólo produce detecciones crudas. Todo lo demás es Python puro sobre un CSV, y
+por eso se testea sin cámara — mismo patrón que `transcribe` con torch, y por la
+misma razón estructural (regla 2).
+
+| pieza | qué |
+|---|---|
+| `vision.py` | video → CSV de detecciones. La única que necesita OpenCV; su test lleva el marcador `vision` y sale del corrido por defecto |
+| `homography.py` | proyección del plano de la imagen al plano del piso |
+| `tracks.py` | detecciones crudas → pistas en metros, **con cobertura** |
+| `coverage.py` | honestidad de una medición de terreno: mismo contrato que `Coverage` en `decide` |
+| `privacy.py` | la regla 9, hecha código |
+
+**Un límite conocido y declarado** (vale conocerlo antes de prometer nada): con
+dos operadores por zona, el umbral *k* no impide deducir quién es quién. Lo
+mitiga, no lo elimina. Está en la sección 6 del spec y en el docstring.
+
+Se usa desde el CLI: `fdekit field ...`
+
+### `fdekit.guard` — el harness de auto-verificación
+
+Contrato compartido entre la capa agéntica y la de terreno: `Hallazgo` (el dato
+que cruza las dos capas, con procedencia obligatoria), `Guardia` (un predicado
+**con su motivo escrito al lado**) y `cobertura` (misma doctrina que `Coverage`:
+nombra primero lo que NO vigila).
+
+**Stdlib pura a propósito.** Este subpaquete viaja al notebook prestado de un
+CD, donde no hay GPU, ni red, ni permisos de instalación. Cualquier import
+pesado que entre ahí rompe la regla 2.
+
+Es trabajo en curso de otra sesión — ver `docs/superpowers/plans/` para el plan
+vigente antes de tocarlo.
 
 ---
 
