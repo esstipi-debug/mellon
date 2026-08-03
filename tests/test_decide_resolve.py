@@ -443,7 +443,7 @@ def test_purge_borra_el_canal_hablada_vencido_y_la_cita_sobrevive(env):
 
 
 def test_el_reloj_de_retencion_es_la_reunion_y_no_el_mtime(env):
-    """El bug: `purge` medía contra `mtime`, y un `git clone` o un `checkout`
+    """El bug: `purge` media contra `mtime`, y un `git clone` o un `checkout`
     reescriben los mtimes con la fecha del checkout. Reproducido — una reunion
     de enero de 2025 con retencion de 90 dias, consultada en agosto de 2026,
     devolvia False y el habla textual seguia ahi para siempre.
