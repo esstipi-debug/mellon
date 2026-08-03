@@ -64,6 +64,19 @@ def verify(anchor: Anchor, store: TranscriptStore) -> tuple[bool, str]:
     (alguien reproceso el audio), o fuente borrada por retencion. En los tres
     casos la cita sigue sirviendo — esa es la gracia de haberla copiado — pero
     conviene saber en cual estamos antes de usarla como evidencia.
+
+    **El limite, declarado (H12).** El hash sirve para detectar *mutacion
+    mientras la fuente vive*. No sirve para reauditar despues del vencimiento:
+    congelar un `sha256` y despues destruir la fuente por TTL deja un hash que
+    no verifica contra nada, y un hash presente se lee como si verificara algo.
+    Por eso el tercer caso devuelve `False` y lo dice con todas las letras en
+    vez de callar.
+
+    Si el proyecto quiere reauditabilidad **despues** del vencimiento, la unica
+    forma es conservar el segmento citado —no el transcripto entero— fuera del
+    TTL. Eso hay que decidirlo en el kickoff y escribirlo en la politica de
+    datos: retrofitearlo es imposible, porque para cuando se nota el problema la
+    fuente ya no esta.
     """
     if not anchor.transcript_sha256:
         return False, "el ancla no guardo hash: no es verificable"

@@ -28,7 +28,7 @@ COMANDOS = [
     ["decide", "transcribe"], ["decide", "resolve"], ["decide", "confirm"],
     ["decide", "unalias"], ["decide", "aliases"], ["decide", "metrics"],
     ["decide", "mine"], ["decide", "export"], ["decide", "seed"], ["decide", "minutes"], ["decide", "slip"], ["decide", "brief"], ["decide", "reassign"],
-    ["decide", "orphans"], ["decide", "card"], ["decide", "publish"], ["decide", "handover"],
+    ["decide", "orphans"], ["decide", "card"], ["decide", "publish"], ["decide", "handover"], ["decide", "transcript"],
     ["decide", "pilot", "init"], ["decide", "pilot", "baseline"],
     ["decide", "pilot", "score"], ["decide", "pilot", "survey"],
     ["decide", "pilot", "verdict"],

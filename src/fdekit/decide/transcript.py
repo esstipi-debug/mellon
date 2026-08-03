@@ -250,6 +250,66 @@ class TranscriptStore:
         return True
 
 
+def transcripto_para_participantes(store, meeting_id: str) -> str:
+    """El transcripto legible, para los que estuvieron (H16).
+
+    Es el artefacto que convierte la conversacion de consentimiento de
+    "queremos grabarlos" en "el transcripto queda disponible para todos". Nadie
+    en el estudio de diseno menciono al participante con discapacidad auditiva,
+    ni al remoto con mal audio, ni al no-hispanohablante del equipo global; para
+    los tres esto es **la diferencia entre participar y asistir**.
+
+    Cuesta cero tecnicamente y es probablemente el argumento mas fuerte que
+    tiene el proyecto para que le dejen grabar. Pero solo cuenta si de verdad se
+    puede ejercer: sin esta funcion, "disponible para los participantes" es una
+    frase del kickoff que nadie puede reclamar.
+
+    **No es una puerta trasera al consentimiento.** Si la sesion no autorizo
+    grabar, no hay transcripto que entregar y decirlo es la respuesta correcta.
+    """
+    m = store.get_meeting(meeting_id)
+    if not m.consent.recording_allowed:
+        raise ValueError(
+            f"la sesion {meeting_id} no autorizo grabar (consent.recording_allowed es "
+            "False): no hay transcripto que entregar. La accesibilidad no es una puerta "
+            "trasera al consentimiento."
+        )
+
+    ts = TranscriptStore(store.root, meeting_id)
+    dias = m.consent.retention_days
+    cab = [
+        f"# Transcripto — {meeting_id} ({m.date.isoformat()})",
+        "",
+        "Se entrega por **accesibilidad**: para quien no escucho bien, para quien no "
+        "pudo estar y para quien sigue la reunion en su segunda lengua. Es de todos "
+        "los que estuvieron, no del consultor.",
+        "",
+        f"Participantes: {', '.join(m.roster)}.",
+    ]
+    if dias is not None:
+        cab += [
+            "",
+            f"**Se destruye a los {dias} dias de la sesion**, por politica de retencion. "
+            "Guardar una copia aparte rompe esa politica en silencio: lo que hay que "
+            "conservar se promueve al registro de decisiones, que no vence.",
+        ]
+
+    if not ts.exists():
+        motivo = (
+            "El canal HABLADA de esta sesion **ya fue destruido** por politica de "
+            "retencion. No es una falla: es la politica funcionando. Lo que se decidio "
+            "sobrevive en el registro, porque las citas se copiaron y no se enlazaron."
+            if ts.lapida.exists() else
+            "No hay transcripto para esta sesion: no se grabo, o el pipeline no corrio."
+        )
+        return "\n".join([*cab, "", "---", "", motivo, ""])
+
+    L = [*cab, "", "---", ""]
+    for u in ts.load():
+        L.append(f"**{mmss(u.t_start)}** {u.text}")
+    return "\n".join(L) + "\n"
+
+
 def transcribe_meeting(
     audio_path: str | Path,
     root: str | Path,

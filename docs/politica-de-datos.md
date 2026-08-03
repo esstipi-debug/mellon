@@ -133,7 +133,50 @@ un fallo al escribir deja al cliente sin registro y sin habla, y de eso no se
 vuelve. La operación además se niega a correr si queda cola de borradores sin
 revisar.
 
-## 9. Accesibilidad
+## 9. Qué prueba el hash, y qué no
+
+Cada cita congelada guarda el `sha256` del transcripto del que salió. Sirve para
+detectar **mutación mientras la fuente vive**: si alguien reprocesa el audio, la
+cita queda marcada como no verificable.
+
+**No sirve para reauditar después del vencimiento.** Cuando la retención destruye
+el transcripto, queda un hash que no verifica contra nada — y un hash presente se
+lee como si verificara algo. El sistema devuelve explícitamente *"la fuente ya no
+existe (retención): la cita sobrevive, el audio no"* en vez de callarlo.
+
+**Decisión del kickoff:** si el proyecto necesita reauditabilidad después del
+vencimiento, la única forma es conservar **el segmento citado** —no el
+transcripto entero— fuera del TTL. Retrofitearlo es imposible: para cuando se
+nota el problema, la fuente ya no está.
+
+## 10. Idioma
+
+El registro se escribe en español, el reporte a la matriz suele ser en inglés, y
+en la sala se habla mezclado — *"hay que hacer el cutover el viernes"*. Tres
+consecuencias:
+
+- El léxico y los slots son **bilingües por término**: "reslotear" y "slotting"
+  producen el mismo valor canónico. Si produjeran valores distintos, dos
+  menciones del mismo proceso no se reconocerían como la misma cosa.
+- El vocabulario técnico en inglés va en el prompt inicial de la transcripción.
+  Whisper con `language="es"` degrada notoriamente en frases mixtas y ésta es la
+  contramedida que el modelo ya soporta.
+- La traducción de un enunciado se carga **una vez, al promover**
+  (`Decision.enunciado_en`). No se traduce automáticamente: una traducción
+  automática de un enunciado de decisión cambia justo el matiz que lo hace útil.
+  Sin traducción se muestra el original y se dice.
+
+## 11. Ningún número entra al criterio desde el ASR
+
+*"El corte es 500"* transcrito como *"5000"* es un error silencioso, de alto
+costo, y cae justo en el único campo donde el diseño exige que haya un número.
+
+**Regla: el número del criterio se tipea o se lee de vuelta en voz alta al
+ratificar.** El sistema avisa cuando el criterio trae un número que no aparece en
+la cita congelada — avisa, no bloquea: la cita viene del canal HABLADA, que es de
+peor calidad por construcción, y bloquear le daría autoridad al canal equivocado.
+
+## 12. Accesibilidad
 
 El canal HABLADA se ofrece como **accesibilidad**, no como vigilancia: el
 transcripto queda disponible para todos los participantes. Para quien tiene
@@ -144,3 +187,17 @@ asistir.
 No cuesta nada técnicamente y cambia la política de la conversación de
 consentimiento. Es probablemente el argumento más fuerte que tiene el proyecto
 para que le dejen grabar.
+
+Pero sólo cuenta si se puede **ejercer**, y por eso son dos cosas del sistema y
+no una frase del kickoff:
+
+- `fdekit decide transcript --meeting <id>` entrega el transcripto legible a
+  quien estuvo, con su fecha de destrucción escrita arriba. Si la sesión no
+  autorizó grabar, no hay nada que entregar y lo dice: la accesibilidad no es
+  una puerta trasera al consentimiento.
+- La página del cliente **nunca señala nada sólo con color**. Riesgo y
+  vencimiento llevan su etiqueta en texto, declara su idioma para el lector de
+  pantalla, no salta niveles de encabezado y respeta el esquema de color del
+  sistema. La mitad de las veces esa página se imprime en blanco y negro, y
+  alrededor del 8% de los hombres no distingue rojo de verde: para los dos
+  casos, un borde de color es exactamente cero información.

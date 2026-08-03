@@ -471,6 +471,21 @@ def cmd_brief(a):
     return 0
 
 
+def cmd_transcript(a):
+    """El transcripto para los que estuvieron. H16: accesibilidad, no vigilancia."""
+    from .transcript import transcripto_para_participantes
+
+    texto = transcripto_para_participantes(_store(a), a.meeting)
+    if a.out:
+        p = Path(a.out)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(texto, encoding="utf-8")
+        print(f"escrito: {p}")
+    else:
+        print(texto)
+    return 0
+
+
 def cmd_handover(a):
     """El cierre del proyecto: entrega, destruccion y constancia."""
     from .cierre import entregar
@@ -919,6 +934,12 @@ def register(subparsers):
     br.add_argument("--scope", default="", help="acota por CD o area; vacio trae todo")
     br.add_argument("--json", action="store_true")
     br.set_defaults(func=_guarded(cmd_brief))
+
+    tp = sub.add_parser("transcript",
+                        help="el transcripto legible, para los participantes (accesibilidad)")
+    tp.add_argument("--meeting", required=True)
+    tp.add_argument("--out", default="", help="archivo .md; sin esto sale por pantalla")
+    tp.set_defaults(func=_guarded(cmd_transcript))
 
     ho = sub.add_parser("handover", help="cierre: entrega el DECIDIDA y destruye el HABLADA")
     ho.add_argument("--out", required=True, help="carpeta de entrega al cliente")

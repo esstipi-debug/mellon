@@ -36,10 +36,22 @@ from pathlib import Path
 from .schema import DEAD_DECISION_STATUS, LIVE_COMMITMENT_STATUS
 from .store import DecideStore
 
+# El color NUNCA es la unica senal (H16, y WCAG 1.4.1). La mitad de las veces
+# esta pagina se imprime en blanco y negro, y alrededor del 8% de los hombres no
+# distingue rojo de verde: para los dos casos, un borde de color es exactamente
+# cero informacion. Cada estado que importa lleva ademas su etiqueta en texto.
 _CSS = """
-:root { color-scheme: light }
+:root { color-scheme: light dark }
 body { font: 16px/1.6 system-ui, sans-serif; max-width: 46rem; margin: 2rem auto;
-       padding: 0 1rem; color: #1a1a1a }
+       padding: 0 1rem; color: #1a1a1a; background: #fff }
+@media (prefers-color-scheme: dark) {
+  body { color: #e8e8e8; background: #16181c }
+  .nota { background: #22262c; border-left-color: #777; color: #cfcfcf }
+  .id, .meta { color: #a8b0ba }
+  .marca { background: #4a2530; color: #ffc9d4 }
+  h2, footer { border-color: #39404a }
+  li.vencido { color: #ff9b9b }
+}
 h1 { font-size: 1.5rem; margin-bottom: .2rem }
 h2 { font-size: 1.1rem; margin-top: 2.5rem; border-bottom: 1px solid #ddd;
      padding-bottom: .3rem }
@@ -162,9 +174,14 @@ def render_html(
         )
         aviso = ' <span class="marca">sin traducir</span>' if cayo else ""
 
+        # La etiqueta en TEXTO, no solo el borde de color.
+        riesgo = (
+            ' <span class="marca">EN RIESGO — un supuesto se cayo</span>'
+            if en_riesgo else ""
+        )
         L += [
             f'<div class="decision{" riesgo" if en_riesgo else ""}">',
-            f'<span class="id">{escape(d.id)}</span>{marca}{aviso}',
+            f'<span class="id">{escape(d.id)}</span>{marca}{aviso}{riesgo}',
             f"<p><strong>{escape(redactar(texto))}</strong></p>",
             f'<p class="meta">Responsable: {escape(d.owner)} · desde '
             f"{d.date_decided.isoformat()} · estado {escape(d.status)}</p>",
@@ -182,12 +199,14 @@ def render_html(
             L.append('<ul class="cuelga">')
             for c in sorted(cuelgan, key=lambda x: x.due):
                 clase = ' class="vencido"' if c.status == "VENCIDO" else ""
+                # "VENCIDO" escrito, no solo el rojo: ver el comentario de _CSS.
+                estado = " [VENCIDO]" if c.status == "VENCIDO" else ""
                 corridas = (
                     f" — la fecha se corrio {c.slips_hacia_adelante} vez/veces"
                     if c.slips_hacia_adelante else ""
                 )
                 L.append(
-                    f"<li{clase}><span class='id'>{escape(c.id)}</span> "
+                    f"<li{clase}><span class='id'>{escape(c.id)}</span>{estado} "
                     f"{escape(_redactor(store, c.owner)(c.what))} — {escape(c.owner)}, "
                     f"para el {c.due.isoformat()}{corridas}</li>"
                 )
