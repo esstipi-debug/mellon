@@ -64,12 +64,21 @@ def cosechar(
             descartados.append((_id(ep), f"estado {ep.estado}: no se procesa"))
             continue
 
-        propuesta = destilar(ep)
+        try:
+            propuesta = destilar(ep)
+        except Exception as exc:  # destilar es el punto agentico: no determinista
+            descartados.append((_id(ep), f"destilar exploto: {exc!r}"))
+            continue
+
         if propuesta is None:
             descartados.append((_id(ep), "sin leccion: el episodio no generaliza a ninguna regla"))
             continue
 
-        nombre, familia, test_id, tocados = propuesta
+        try:
+            nombre, familia, test_id, tocados = propuesta
+        except (TypeError, ValueError) as exc:
+            descartados.append((_id(ep), f"destilar devolvio una forma invalida: {propuesta!r} ({exc})"))
+            continue
 
         invadidos = viola_frontera("testigo", tocados)
         if invadidos:
@@ -82,7 +91,8 @@ def cosechar(
             continue
 
         guardias.append(nombre)
-        familias.append(familia)
+        if familia not in familias:
+            familias.append(familia)
 
     return Resultado(
         guardias=tuple(guardias),

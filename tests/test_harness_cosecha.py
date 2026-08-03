@@ -190,3 +190,63 @@ def test_los_descartados_dicen_por_que_uno_por_uno():
     )
     assert len(r.descartados) == 2
     assert all(motivo for _id, motivo in r.descartados)
+
+
+def test_un_destilar_con_forma_invalida_no_tumba_la_cosecha():
+    """destilar es el punto agentico, no determinista: una tupla de largo
+    inesperado no puede llevarse puestos los episodios ya acumulados de la
+    corrida. El episodio culpable se descarta con su motivo y se sigue."""
+
+    llamadas = []
+
+    def destilar_raro(ep):
+        llamadas.append(ep)
+        if len(llamadas) == 1:
+            return ("solo_tres", "familia", "test_id")
+        return _destilar_ok(ep)
+
+    r = cosechar(
+        [_ep(commit_antes="a"), _ep(commit_antes="antes")],
+        destilar=destilar_raro,
+        correr=_correr_ok,
+        today="2026-08-02",
+    )
+    assert r.guardias == ("test_g",)
+    assert len(r.descartados) == 1
+    assert "solo_tres" in r.descartados[0][1]
+
+
+def test_las_familias_se_deduplican_preservando_el_orden_de_aparicion():
+    """Dos episodios de la misma clase de error no deben listarse dos veces:
+    el campo dice que familias vigila, no cuantos guardias entraron."""
+
+    r = cosechar(
+        [_ep(commit_antes="antes"), _ep(commit_antes="antes")],
+        destilar=_destilar_ok,
+        correr=_correr_ok,
+        today="2026-08-02",
+    )
+    assert r.guardias == ("test_g", "test_g")
+    assert r.cobertura.familias_vigiladas == ("anualizacion",)
+
+
+def test_la_frontera_se_chequea_antes_que_el_oraculo():
+    """Un episodio que es invasor Y vacuo a la vez tiene que reportarse como
+    frontera: si el orden se invirtiera, el motivo diria vacuo y esconderia
+    la violacion, ademas de gastar el oraculo en una propuesta que el chequeo
+    barato ya debia haber descartado."""
+
+    def destilar_invasor_y_vacuo(_ep):
+        return (
+            "test_g",
+            "anualizacion",
+            "tests/guards/test_g.py::test_g",
+            ["tests/guards/test_g.py", "src/fdekit/x.py"],
+        )
+
+    def correr_vacuo(_commit):
+        return set()
+
+    r = cosechar([_ep()], destilar=destilar_invasor_y_vacuo, correr=correr_vacuo, today="2026-08-02")
+    assert r.guardias == ()
+    assert "frontera" in r.descartados[0][1]
