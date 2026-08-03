@@ -251,13 +251,16 @@ confiesa: hashes que git show muestra y que no estan en la rama."
 
 - [ ] **Step 1: Write the failing test**
 
-Agregar al final de `tests/test_guard.py`:
+Primero, extender el import del encabezado del archivo, que queda:
+
+```python
+from fdekit.guard import CoberturaGuardia, Hallazgo, Procedencia
+```
+
+Despues, agregar al final de `tests/test_guard.py`:
 
 ```python
 # ------------------------------------------------------------- cobertura
-
-
-from fdekit.guard import CoberturaGuardia  # noqa: E402
 
 
 def test_la_cobertura_nunca_dice_estar_completa():
@@ -390,13 +393,16 @@ o sea que el bug que nunca falla no lo atrapa nadie."
 
 - [ ] **Step 1: Write the failing test**
 
-Agregar al final de `tests/test_guard.py`:
+Primero, extender el import del encabezado del archivo, que queda:
+
+```python
+from fdekit.guard import CoberturaGuardia, Guardia, Hallazgo, Procedencia, evaluar
+```
+
+Despues, agregar al final de `tests/test_guard.py`:
 
 ```python
 # --------------------------------------------------------------- guardia
-
-
-from fdekit.guard import Guardia, evaluar  # noqa: E402
 
 
 def _guardia(nombre="sin_anualizar_dos_veces", sano=True):
@@ -806,13 +812,16 @@ que se le sacan eventos es la mentira silenciosa que la regla 3 prohibe."
 
 - [ ] **Step 1: Write the failing test**
 
-Agregar al final de `tests/test_harness_captura.py`:
+Primero, agregar al encabezado del archivo, junto al import que ya esta:
+
+```python
+from tools.harness.captura import registrar_corrida
+```
+
+Despues, agregar al final de `tests/test_harness_captura.py`:
 
 ```python
 # ---------------------------------------------------------------- captura
-
-
-from tools.harness.captura import registrar_corrida  # noqa: E402
 
 
 def test_una_corrida_verde_sola_no_es_episodio(tmp_path):
@@ -1105,13 +1114,16 @@ otro rol dejaria abierto pyproject, docs y tools."
 
 - [ ] **Step 1: Write the failing test**
 
-Agregar al final de `tests/test_harness_oraculo.py`:
+Primero, agregar al encabezado del archivo, junto al import que ya esta:
+
+```python
+from tools.harness.oraculo import veredicto
+```
+
+Despues, agregar al final de `tests/test_harness_oraculo.py`:
 
 ```python
 # ---------------------------------------------------------------- oraculo
-
-
-from tools.harness.oraculo import veredicto  # noqa: E402
 
 
 def _correr(mapa):
@@ -1438,11 +1450,11 @@ def indice(guards_dir: Path) -> str:
     for p in archivos:
         lec = _leccion(p.read_text(encoding="utf-8"))
         if lec is None:
-            filas.append(f"| `{p.stem}` | — | **sin procedencia** — no declara `LECCION` | — | — | — |")
+            filas.append(f"| `{p.stem}` | - | **sin procedencia** - no declara `LECCION` | - | - | - |")
             continue
         filas.append(
-            f"| `{p.stem}` | {lec.get('familia', '—')} | {lec.get('regla', '—')} | "
-            f"`{lec.get('commit', '—')}` | {lec.get('fecha', '—')} | {lec.get('dueno', '—')} |"
+            f"| `{p.stem}` | {lec.get('familia', '-')} | {lec.get('regla', '-')} | "
+            f"`{lec.get('commit', '-')}` | {lec.get('fecha', '-')} | {lec.get('dueno', '-')} |"
         )
     return ENCABEZADO + "\n".join(filas) + "\n"
 ```
@@ -1561,18 +1573,23 @@ sin que nadie mire."
 - Consumes: `Episodio`/`leer`/`marcar` (Tarea 4), `veredicto` (Tarea 7), `viola_frontera` (Tarea 6), `CoberturaGuardia` (Tarea 2).
 - Produces: `Resultado(guardias: tuple[str, ...], descartados: tuple[tuple[str, str], ...], cobertura: CoberturaGuardia)` y `cosechar(episodios, destilar, correr, today) -> Resultado`.
 
-`destilar(ep) -> tuple[str, str, list[str]] | None` devuelve `(nombre_del_guardia, test_id, archivos_tocados)` o `None` si el episodio no da lección. Se inyecta: es el único punto agéntico, y aislarlo detrás de un callable es lo que permite testear la orquestación entera sin gastar un token.
+`destilar(ep) -> tuple[str, str, str, list[str]] | None` devuelve `(nombre_del_guardia, familia, test_id, archivos_tocados)` o `None` si el episodio no da lección.
+
+**El `familia` va separado del `nombre` a proposito.** El nombre identifica un guardia (`test_no_anualiza_dos_veces`); la familia agrupa la clase de error (`anualizacion`). `CoberturaGuardia.familias_vigiladas` publica familias, asi que llenarla con nombres seria un campo que dice una cosa y contiene otra — la clase de bug que este repo tiene documentada 17 veces. Se inyecta: es el único punto agéntico, y aislarlo detrás de un callable es lo que permite testear la orquestación entera sin gastar un token.
 
 - [ ] **Step 1: Write the failing test**
 
-Agregar al final de `tests/test_harness_cosecha.py`:
+Primero, agregar al encabezado del archivo, junto al import que ya esta:
+
+```python
+from tools.harness.cosecha import cosechar
+from tools.harness.episodio import Episodio
+```
+
+Despues, agregar al final de `tests/test_harness_cosecha.py`:
 
 ```python
 # ---------------------------------------------------------------- cosecha
-
-
-from tools.harness.cosecha import cosechar  # noqa: E402
-from tools.harness.episodio import Episodio  # noqa: E402
 
 
 def _ep(commit_antes="antes", commit_despues="despues", estado="abierto"):
@@ -1592,7 +1609,7 @@ def _correr_ok(commit):
 
 
 def _destilar_ok(_ep):
-    return ("test_g", "tests/guards/test_g.py::test_g", ["tests/guards/test_g.py"])
+    return ("test_g", "anualizacion", "tests/guards/test_g.py::test_g", ["tests/guards/test_g.py"])
 
 
 def test_una_cosecha_sin_leccion_devuelve_cero_guardias():
@@ -1619,7 +1636,12 @@ def test_un_testigo_que_toca_src_voltea_el_episodio():
     """La prohibicion se verifica sobre los archivos que efectivamente toco."""
 
     def destilar_invasor(_ep):
-        return ("test_g", "tests/guards/test_g.py::test_g", ["tests/guards/test_g.py", "src/fdekit/x.py"])
+        return (
+            "test_g",
+            "anualizacion",
+            "tests/guards/test_g.py::test_g",
+            ["tests/guards/test_g.py", "src/fdekit/x.py"],
+        )
 
     r = cosechar([_ep()], destilar=destilar_invasor, correr=_correr_ok, today="2026-08-02")
     assert r.guardias == ()
@@ -1636,6 +1658,8 @@ def test_la_cobertura_del_resultado_nunca_dice_estar_completa():
     r = cosechar([_ep()], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02")
     assert r.cobertura.is_complete is False
     assert "no vigila" in r.cobertura.nota().splitlines()[0]
+    # familias, no nombres: el campo tiene que contener lo que su nombre dice.
+    assert r.cobertura.familias_vigiladas == ("anualizacion",)
 
 
 def test_los_descartados_dicen_por_que_uno_por_uno():
@@ -1687,7 +1711,13 @@ from .episodio import Episodio
 from .oraculo import veredicto
 from .roles import viola_frontera
 
-Destilador = Callable[[Episodio], "tuple[str, str, list[str]] | None"]
+Destilador = Callable[[Episodio], "tuple[str, str, str, list[str]] | None"]
+"""Devuelve (nombre_del_guardia, familia, test_id, archivos_tocados) o None.
+
+La familia va separada del nombre porque son cosas distintas: el nombre
+identifica un guardia, la familia agrupa la clase de error. CoberturaGuardia
+publica familias, y un campo que dice una cosa y contiene otra es la clase de
+bug que este repo tiene documentada 17 veces."""
 
 
 @dataclass(frozen=True)
@@ -1725,7 +1755,7 @@ def cosechar(
             descartados.append((_id(ep), "sin leccion: el episodio no generaliza a ninguna regla"))
             continue
 
-        nombre, test_id, tocados = propuesta
+        nombre, familia, test_id, tocados = propuesta
 
         invadidos = viola_frontera("testigo", tocados)
         if invadidos:
@@ -1738,7 +1768,7 @@ def cosechar(
             continue
 
         guardias.append(nombre)
-        familias.append(nombre)
+        familias.append(familia)
 
     return Resultado(
         guardias=tuple(guardias),
