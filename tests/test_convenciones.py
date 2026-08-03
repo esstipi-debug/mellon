@@ -160,3 +160,18 @@ def test_guardia_cubre_todos_los_archivos():
             f"Faltantes: {sorted(faltantes)}"
         )
         raise AssertionError(msg)
+
+
+def test_el_guardia_cubre_el_corpus_de_guardias_del_harness():
+    """tests/guards/ es donde escribe un agente. Si el guardia no lo cubre, una
+    tilde entra ahi y nadie la mira hasta que el archivo se abre en un notebook
+    prestado con otra codificacion.
+
+    El guardia filtra `git ls-files` por prefijo, asi que esto tambien verifica
+    que el corpus este VERSIONADO: un tests/guards/ sin git add no lo cubre
+    nadie.
+    """
+    cubiertos = [str(p).replace("\\", "/") for p in _get_py_files_to_check()]
+    assert any("tests/guards/" in c for c in cubiertos), (
+        "tests/guards/ no esta cubierto por el guardia de convenciones"
+    )
