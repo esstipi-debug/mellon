@@ -19,6 +19,15 @@ de pytest.
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# `tools/` no es un paquete instalado a proposito: no viaja al notebook del CD.
+# Los tests lo importan desde la raiz del repo.
+_RAIZ = Path(__file__).resolve().parents[1]
+if str(_RAIZ) not in sys.path:
+    sys.path.insert(0, str(_RAIZ))
+
 import os
 from pathlib import Path
 
