@@ -31,6 +31,8 @@ from fdekit.decide.eventlog import (
 from fdekit.decide.export import to_graphify, to_mermaid, write_graphify
 from fdekit.decide.schema import PROFILES
 from fdekit.decide.metrics import (
+    capture_state,
+    capture_summary,
     freeze_baseline,
     MIN_DECISIONS,
     QueryLog,
@@ -45,6 +47,7 @@ from fdekit.decide.metrics import (
     volume_gate,
 )
 from fdekit.decide.resolve import AliasStore, confirm
+from fdekit.decide.store import ValidationError
 from fdekit.processmining import rework_summary, variants
 from fdekit.stats import risk_ratio_2x2
 
@@ -717,3 +720,93 @@ def test_la_linea_base_recuerda_con_que_columna_se_congelo(serie_xmr):
 def test_congelar_con_una_columna_invalida_falla_temprano(serie_xmr):
     with pytest.raises(ValueError, match="columna desconocida"):
         freeze_baseline(serie_xmr, date(2026, 8, 2), columna="toques_inventados")
+
+
+# --------------------------------- H6: el silencio deja de verse como salud
+#
+# Cero decisiones registradas podia significar cinco cosas —no hubo nada que
+# decidir, nadie dijo la frase, Whisper fallo, el audio era inutilizable, nadie
+# reviso la cola— y las cinco producian el mismo output: nada.
+
+
+def _sesion(st, mid, graba=False):
+    st.add_meeting(Meeting(id=mid, date=HOY, roster=ROSTER, facilitator="Marcela Perez",
+                           consent=consent(graba=graba)))
+
+
+def test_la_sesion_que_promovio_algo_esta_capturada(tmp_path):
+    st = DecideStore(tmp_path / "d")
+    _sesion(st, "m1")
+    mk_decision(st, mid="m1")
+    r = capture_state(st, "m1")
+    assert r["estado"] == "CAPTURADA" and r["ok"] is True
+
+
+def test_hubo_habla_y_ningun_borrador_es_SIN_RITUAL(tmp_path):
+    from fdekit.decide.transcript import TranscriptStore
+
+    st = DecideStore(tmp_path / "d")
+    _sesion(st, "m1", graba=True)
+    TranscriptStore(st.root, "m1").ingest_text("estuvimos viendo el tema del slotting.")
+    r = capture_state(st, "m1")
+    assert r["estado"] == "SIN_RITUAL"
+    assert "nadie dijo la frase-marcador" in r["motivo"]
+
+
+def test_el_silencio_total_se_declara_INDISTINGUIBLE(tmp_path):
+    """El caso que da nombre al hueco. El sistema NO puede separar "no hubo nada
+    que decidir" de "nadie registro nada", y elegir uno seria exactamente la
+    mentira que este estado existe para impedir."""
+    st = DecideStore(tmp_path / "d")
+    _sesion(st, "m1")
+    r = capture_state(st, "m1")
+    assert r["estado"] == "SIN_REGISTRO"
+    assert "NO puede distinguir" in r["motivo"]
+
+
+def test_la_falla_declarada_gana_porque_el_sistema_no_la_ve(tmp_path):
+    """`ASR_DEGRADADO` no se deriva: **no existe confianza de ASR en ninguna capa
+    del kit**. Derivarla del texto seria fabricar el numero plausible y falso que
+    la regla 3 prohibe. La declara quien corrio el pipeline."""
+    st = DecideStore(tmp_path / "d")
+    _sesion(st, "m1")
+    m = st.get_meeting("m1")
+    m.falla_captura = "ASR_DEGRADADO"
+    st.save(m)
+    assert capture_state(st, "m1")["estado"] == "ASR_DEGRADADO"
+
+    m.falla_captura = "SE_ME_OCURRIO"
+    with pytest.raises(ValidationError, match="falla de captura desconocida"):
+        st.save(m)
+
+
+def test_capturada_y_cola_pendiente_no_son_excluyentes(tmp_path):
+    """Son dos hechos, no dos estados. La precedencia original ponia
+    COLA_NO_REVISADA por encima de CAPTURADA, y como los borradores dejan
+    residuo por construccion, una sesion sana se reportaba como fallida."""
+    from fdekit.decide.draft import DecisionDraft, DraftStore
+
+    st = DecideStore(tmp_path / "d")
+    _sesion(st, "m1")
+    mk_decision(st, mid="m1")
+    DraftStore(st.root, "m1").append([DecisionDraft(
+        kind="commitment", fields={"what": "mover 200 ubicaciones"},
+        utterance="Rodrigo se compromete a mover 200 ubicaciones",
+        confidence=0.4, missing=("evidencia",), meeting_id="m1")])
+
+    r = capture_state(st, "m1")
+    assert r["estado"] == "CAPTURADA"      # lo que paso
+    assert r["cola_pendiente"] == 1        # ...y lo que quedo colgando, al lado
+
+
+def test_la_hoja_dice_de_que_muestra_salen_los_numeros(tmp_path):
+    """Un tablero construido sobre las sesiones que SI capturaron es una muestra
+    sesgada, y es la que se estaba publicando."""
+    st = DecideStore(tmp_path / "d")
+    _sesion(st, "sana")
+    _sesion(st, "muda")
+    mk_decision(st, mid="sana")
+
+    hoja = report(st)
+    assert "1 de 2 sesiones sin captura" in hoja
+    assert "SIN_REGISTRO" in hoja

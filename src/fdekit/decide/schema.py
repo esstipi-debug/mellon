@@ -39,6 +39,24 @@ MEETING_CLASS = ("COMITE", "UNO_A_UNO", "KICKOFF", "TERRENO", "HANDOVER", "INCID
 # consentimiento detras.
 DECISION_ORIGIN = ("REUNION", "SIEMBRA", "ACTA_HISTORICA", "CHAT", "PASILLO")
 
+# Estado de captura de una sesion. **Se DERIVA de los hechos, no se escribe.**
+# Escribirlo fue la primera idea y se cae sola: el flujo canonico sin audio
+# (meeting -> draft -> review) no tiene donde escribir CAPTURADA, porque el
+# unico que lo sabia era `transcribe`, que en ese flujo no corre. Y un default
+# como NO_REGISTRADA reinterpreta como fallida cada sesion ya persistida.
+CAPTURE_STATES = (
+    "CAPTURADA",         # algo se promovio: la sesion dejo registro
+    "COLA_NO_REVISADA",  # hay borradores y nadie los miro
+    "SIN_RITUAL",        # hubo habla y no salio ni un borrador
+    "SIN_REGISTRO",      # ni habla ni promociones: INDISTINGUIBLE, ver abajo
+)
+# Lo unico que SI se persiste: la falla que el sistema no puede ver solo.
+# `ASR_DEGRADADO` esta aca y no en la derivacion porque **no existe confianza de
+# ASR en ninguna capa del kit** — ni `Utterance` la tiene, ni Whisper la entrega
+# por este camino. Derivarla del texto seria fabricar el numero plausible y
+# falso que la regla 3 prohibe. La declara quien corrio el pipeline.
+CAPTURE_FAILURES = ("ASR_DEGRADADO", "AUDIO_INUTILIZABLE", "PIPELINE_FALLO")
+
 
 @dataclass(frozen=True)
 class MeetingProfile:
@@ -641,6 +659,9 @@ class Meeting:
     # significado al cargarse. Cualquier otro default reinterpretaria el pasado.
     clase: str = "COMITE"
     canal: str = "SINCRONICO"
+    # La UNICA parte del estado de captura que se persiste: la falla que el
+    # sistema no puede observar solo. Todo lo demas se deriva.
+    falla_captura: str = ""
 
     @property
     def es_serie_de_decision(self) -> bool:
@@ -680,6 +701,11 @@ class Meeting:
             issues.append(f"clase de reunion desconocida: {self.clase!r}. Validas: {MEETING_CLASS}")
         if self.canal not in MEETING_CHANNEL:
             issues.append(f"canal desconocido: {self.canal!r}. Validos: {MEETING_CHANNEL}")
+        if self.falla_captura and self.falla_captura not in CAPTURE_FAILURES:
+            issues.append(
+                f"falla de captura desconocida: {self.falla_captura!r}. "
+                f"Validas: {CAPTURE_FAILURES}"
+            )
         if self.canal == "ASINCRONICO" and self.clase != "COMITE":
             issues.append(
                 "una ventana asincronica no tiene clase de reunion: es una ventana de "

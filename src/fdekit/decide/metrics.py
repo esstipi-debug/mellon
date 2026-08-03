@@ -30,7 +30,7 @@ import numpy as np
 from ..stats import risk_ratio_2x2
 from .eventlog import TOUCH_COLUMNS, build_event_log, touches_excluidas, touches_to_decide
 from .resolve import AliasStore
-from .schema import es_zombi
+from .schema import CAPTURE_FAILURES, es_zombi
 from .store import DecideStore
 
 MIN_DECISIONS = 50
@@ -82,6 +82,125 @@ def volume_gate(store: DecideStore) -> dict:
                 "por dueno y fecha es estrictamente mejor que cualquier metrica de aca."
             )
         ),
+    }
+
+
+# --------------------------------------------------------- captura (hueco H6)
+
+
+def capture_state(store: DecideStore, meeting_id: str) -> dict:
+    """Estado de captura de una sesion, **derivado de los hechos**.
+
+    El hueco que cierra: una reunion sin capturas se veia igual que una sana.
+    Cero decisiones registradas puede significar cinco cosas —no hubo nada que
+    decidir, nadie dijo la frase, Whisper fallo, el audio era inutilizable,
+    nadie reviso la cola— y las cinco producian el mismo output: nada. La falla
+    silenciosa es la peor propiedad posible en un sistema del que despues se
+    leen conclusiones.
+
+    Se DERIVA y no se escribe, por dos razones que aparecieron al intentar
+    escribirlo: el flujo canonico sin audio (meeting -> draft -> review) no
+    tiene donde poner CAPTURADA, porque el unico que lo sabia era `transcribe`,
+    que ahi no corre; y cualquier default reinterpreta como fallida cada sesion
+    ya persistida.
+
+    `CAPTURADA` y `COLA_NO_REVISADA` **no son excluyentes**: "hubo decisiones
+    registradas" y "quedo residuo sin revisar" son dos hechos, no dos estados —
+    y los borradores dejan residuo por construccion, asi que la precedencia
+    inversa reportaba como fallida a toda sesion sana. Por eso `cola_pendiente`
+    va aparte y siempre.
+    """
+    from .draft import DraftStore, review_queue
+    from .transcript import TranscriptStore
+
+    m = store.get_meeting(meeting_id)
+    ts = TranscriptStore(store.root, meeting_id)
+    hubo_habla = ts.exists() or ts.lapida.exists()
+
+    drafts = DraftStore(store.root, meeting_id).load()
+    pendientes = review_queue(drafts)
+    promovidas = sum(
+        1
+        for grupo in (store.decisions(), store.commitments(),
+                      store.assumptions(), store.questions())
+        for e in grupo
+        if getattr(e, "meeting_id", "") == meeting_id
+    )
+
+    base = {
+        "meeting": meeting_id,
+        "clase": m.clase,
+        "promovidas": promovidas,
+        "borradores": len(drafts),
+        "cola_pendiente": len(pendientes),
+        "hubo_habla": hubo_habla,
+    }
+
+    # La falla declarada gana: es informacion que el sistema NO puede observar.
+    if m.falla_captura:
+        return {**base, "estado": m.falla_captura, "ok": False,
+                "motivo": f"declarada por quien corrio el pipeline: {m.falla_captura}"}
+
+    if promovidas:
+        return {**base, "estado": "CAPTURADA", "ok": True,
+                "motivo": f"{promovidas} entidad(es) promovida(s) desde esta sesion"}
+
+    if pendientes:
+        return {**base, "estado": "COLA_NO_REVISADA", "ok": False,
+                "motivo": f"{len(pendientes)} borrador(es) esperando revision. "
+                          "El sistema capturo; nadie confirmo."}
+
+    if hubo_habla:
+        return {**base, "estado": "SIN_RITUAL", "ok": False,
+                "motivo": "hubo canal HABLADA y no salio ni un borrador: nadie dijo la "
+                          "frase-marcador, o el lexico no la reconocio."}
+
+    # El caso que da nombre al hueco. El sistema NO puede distinguir "no hubo
+    # nada que decidir" de "nadie registro nada", y elegir uno de los dos seria
+    # exactamente la mentira que este estado existe para impedir.
+    return {
+        **base,
+        "estado": "SIN_REGISTRO",
+        "ok": False,
+        "motivo": (
+            "sin habla y sin promociones. El sistema NO puede distinguir 'no hubo nada "
+            "que decidir' de 'nadie registro nada' — son indistinguibles desde afuera y "
+            "solo las separa alguien que estuvo. Se cierra declarando la falla "
+            f"({', '.join(CAPTURE_FAILURES)}) o registrando lo que se decidio."
+        ),
+    }
+
+
+def capture_summary(store: DecideStore) -> dict:
+    """La linea que no existia en ninguna hoja: **cuantas sesiones no capturaron
+    y por que**.
+
+    Un tablero construido sobre las que si capturaron es una muestra sesgada, y
+    es exactamente la que se estaba publicando.
+    """
+    estados = [capture_state(store, m.id) for m in store.meetings()]
+    if not estados:
+        return {"sesiones": 0, "linea": "sin sesiones registradas"}
+
+    por_estado: dict[str, list[str]] = {}
+    for e in estados:
+        por_estado.setdefault(e["estado"], []).append(e["meeting"])
+    fallidas = [e for e in estados if not e["ok"]]
+    cola = sum(e["cola_pendiente"] for e in estados)
+
+    detalle = ", ".join(
+        f"{len(v)} {k}" for k, v in sorted(por_estado.items()) if k != "CAPTURADA"
+    )
+    return {
+        "sesiones": len(estados),
+        "capturadas": len(estados) - len(fallidas),
+        "por_estado": por_estado,
+        "cola_pendiente_total": cola,
+        "linea": (
+            f"{len(fallidas)} de {len(estados)} sesiones sin captura, motivos: {detalle}"
+            if fallidas
+            else f"las {len(estados)} sesiones dejaron registro"
+        ) + (f". {cola} borrador(es) sin revisar." if cola else ""),
     }
 
 
@@ -492,9 +611,28 @@ def report(store: DecideStore) -> str:
             "",
         ]
 
+    cap = capture_summary(store)
     L += [
         f"**Volumen:** {gate['decisiones']} decisiones, {gate['reuniones']} reuniones.",
+        f"**Corpus:** {gate['nota']}",
         "",
+        "## Captura — de que muestra salen los numeros de abajo",
+        "",
+        # La linea que no existia en ninguna propuesta. Un tablero construido
+        # sobre las sesiones que SI capturaron es una muestra sesgada, y es la
+        # que se estaba publicando.
+        f"**{cap['linea']}**",
+        "",
+    ]
+    fallidas = sorted(
+        (e, ids) for e, ids in cap.get("por_estado", {}).items() if e != "CAPTURADA"
+    )
+    if fallidas:
+        L += ["| estado | sesiones |", "|---|---|"]
+        L += [f"| {e} | {', '.join(ids)} |" for e, ids in fallidas]
+        L.append("")
+
+    L += [
         "## Supervivencia",
         "",
         f"- Compromisos huerfanos: {len(oz['huerfanos'])} (meta 0)",
