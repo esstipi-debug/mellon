@@ -2,7 +2,7 @@
 
 **Repo:** https://github.com/esstipi-debug/mytra-fde (privado)
 **Local:** `C:\fde\fde-field-kit` · **Rama activa:** `harness/plan-1`
-**Estado:** 947 tests verdes, 1 deselected
+**Estado:** 1.011 tests verdes, 1 deselected
 
 ### Montaje desde cero
 
@@ -35,7 +35,7 @@ video de muestra. Correr aparte con `-m vision`.
 1. Este archivo entero (son cinco minutos).
 2. `docs/decide-fundacion-huecos.md` si vas a tocar `decide` — ahí están las 7
    decisiones estructurales y los 11 críticos ya resueltos. Los huecos H4 a H7
-   están cerrados contra ese documento; H9 a H15 todavía no.
+   están cerrados contra ese documento, y también H9, H10, H11 y H15.
 3. `docs/HISTORIA.md` cuando algo del código parezca arbitrario: casi todo lo
    que parece raro está ahí explicado con el bug que lo causó.
 
@@ -173,6 +173,10 @@ críticos que la refutación encontró contra la propia fundación).
 | `7484000` | **el portal de alias** rechaza el símbolo sin slots |
 | `8bb5f6c` | **H4** — la siembra del arranque en frío |
 | `867b683` | **H4** — la ingesta de actas históricas, y H4 queda cerrado |
+| `bed7351` | **H11** — el compromiso renegociado en privado |
+| `b9fd59d` | **H9** — onboarding, rotación y entrega al piso |
+| `b548458` | **H10** — la superficie de lectura para el cliente |
+| `a469dc0` | **H15** — propiedad, salida y uso punitivo |
 
 Más seis bugs vivos encontrados en el camino, todos de clase *"no falla,
 miente"* y todos reproducidos antes de tocarlos.
@@ -235,12 +239,30 @@ De `seed_minutes` (la ingesta histórica), tres cosas que sostienen el diseño:
 sistema hace lo que dice; ninguno que pruebe que a alguien le sirve. Criterio
 declarado: ≥70% de los puntos de agenda terminan con fila escrita.
 
-### 3. Huecos que quedan abiertos
+### 3. Los huecos del tier 2 y 3 — cerrados
 
-- **H9** — onboarding, rotación y compromisos huérfanos
-- **H10** — superficie de lectura para el cliente (no va a leer markdown en git)
-- **H11** — el compromiso renegociado en privado
-- **H15** — propiedad del registro al cierre, y uso punitivo
+| hueco | qué quedó | comando |
+|---|---|---|
+| **H9** | `rotacion.py` — el que llega, el que se va, el que ejecuta | `brief`, `reassign`, `orphans`, `card` |
+| **H10** | `render.py` — una página HTML sin red ni login | `publish` |
+| **H11** | `slip()` — renegociar más barato que el silencio | `slip` |
+| **H15** | `cierre.py` + `docs/politica-de-datos.md` | `handover` |
+
+Tres cosas de ahí que conviene no romper sin leer el porqué:
+
+- **El rastro de `reassign` va en minúsculas.** `HIST_RE` convierte cualquier
+  token en mayúsculas del historial en una actividad del event log: escribir
+  `REASIGNADA:` corre la línea base congelada del XmR (regla 6) sin que ningún
+  número se vea mal.
+- **La cuarta corrida de `slip` no se rechaza.** Rechazarla manda al dueño al
+  silencio, que es el modo de falla que H11 describe. Se aplica y abre una
+  pregunta, resuelta por el dueño de la *decisión*.
+- **`handover` escribe, verifica y recién ahí destruye.** El orden es la
+  garantía; al revés no se vuelve.
+
+**Lo que queda abierto:** H12 (code-switching es/en en el léxico, colisión de
+IDs multi-FDE offline) y H16 (accesibilidad, que hoy sólo está declarada en la
+política de datos).
 
 ### 4. Con fecha de vencimiento
 
@@ -292,3 +314,4 @@ mecanismo, nunca por la cifra.**
 | `docs/mercado-y-monetizacion.md` | Palantir/Anaplan/Kinaxis y el modelo de precio |
 | `docs/calibracion-chile-2026.md` | costo laboral, jornada, FX, tarifas 3PL, con fuente |
 | `docs/labor-flex-share-4-paises.md` | estudio de 4 países con refutación adversarial |
+| `docs/politica-de-datos.md` | la página del kickoff: base de licitud, retención, uso no punitivo, cierre |
