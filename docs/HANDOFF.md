@@ -2,7 +2,7 @@
 
 **Repo:** https://github.com/esstipi-debug/mytra-fde (privado)
 **Local:** `C:\fde\fde-field-kit` · **Rama activa:** `harness/plan-1`
-**Estado:** 1.011 tests verdes, 1 deselected
+**Estado:** 1.058 tests verdes, 1 deselected
 
 ### Montaje desde cero
 
@@ -177,6 +177,9 @@ críticos que la refutación encontró contra la propia fundación).
 | `b9fd59d` | **H9** — onboarding, rotación y entrega al piso |
 | `b548458` | **H10** — la superficie de lectura para el cliente |
 | `a469dc0` | **H15** — propiedad, salida y uso punitivo |
+| `b8b2ee1` | **H12a** — léxico bilingüe, y el número del ASR se avisa |
+| `d603a9a` | **H12c** — el id lleva al autor |
+| `547585e` | **H16** — accesibilidad ejercible, y **H12e** |
 
 Más seis bugs vivos encontrados en el camino, todos de clase *"no falla,
 miente"* y todos reproducidos antes de tocarlos.
@@ -260,9 +263,32 @@ Tres cosas de ahí que conviene no romper sin leer el porqué:
 - **`handover` escribe, verifica y recién ahí destruye.** El orden es la
   garantía; al revés no se vuelve.
 
-**Lo que queda abierto:** H12 (code-switching es/en en el léxico, colisión de
-IDs multi-FDE offline) y H16 (accesibilidad, que hoy sólo está declarada en la
-política de datos).
+### 4. H12 y H16 — cerrados
+
+| hueco | qué quedó |
+|---|---|
+| **H12a** | léxico y slots **bilingües por término**: "reslotear" y "slotting" dan el mismo canónico. Slot `hito` (cutover, go live, hypercare) |
+| **H12b** | `Decision.advisories()` avisa si el criterio trae un número que no está en la cita |
+| **H12c** | `DecideStore(root, autor="JM")` → `D-JM-041`, serie propia por autor |
+| **H12d** | ya cerrado por H6 (el estado de captura se deriva) |
+| **H12e** | el límite del hash post-TTL, declarado en `verify()` y en la política |
+| **H16** | `decide transcript` + la página deja de señalar sólo con color |
+
+Tres que conviene no romper:
+
+- **Ampliar el léxico es la operación que puede romper precisión alta / recall
+  bajo**, y romperla es peor que el hueco: un falso positivo entra al registro
+  con cara de decisión. Hay un test que verifica que ninguna forma nueva dispara
+  sobre habla común (`"i agree with that"`, `"quedamos de vernos"`).
+- **El número del criterio avisa, no bloquea.** La cita viene del canal HABLADA,
+  que es de peor calidad *por construcción*; bloquear le daría autoridad al
+  canal equivocado. Las fechas se recortan antes de buscar magnitudes: si no,
+  serían dos falsos por cada decisión con plazo.
+- **Sin `--autor` nada cambia.** El caso de un solo FDE es el normal y un prefijo
+  ahí sería ruido permanente.
+
+**Lo que queda abierto:** ninguno de los 16 huecos del crítico. Lo que sigue es
+lo de siempre — correr la fase 0 con gente real.
 
 ### 4. Con fecha de vencimiento
 
