@@ -469,6 +469,20 @@ def cmd_brief(a):
     return 0
 
 
+def cmd_handover(a):
+    """El cierre del proyecto: entrega, destruccion y constancia."""
+    from .cierre import entregar
+
+    r = entregar(_store(a), Path(a.out), today=_date.today(), por=a.por, apply=a.apply)
+    print(f"\nsesiones con canal HABLADA: {', '.join(r['sesiones_con_habla']) or '(ninguna)'}")
+    if r["cola_pendiente"]:
+        print(f"cola sin revisar: {r['cola_pendiente']}")
+    print(f"\n{r['nota']}")
+    if r["applied"]:
+        print(f"\nEl FDE conserva: {r['conserva_el_fde']['nota']}")
+    return 0 if r["applied"] else 2
+
+
 def cmd_publish(a):
     """La pagina que el cliente si va a abrir."""
     from .render import write_html
@@ -900,6 +914,13 @@ def register(subparsers):
     br.add_argument("--scope", default="", help="acota por CD o area; vacio trae todo")
     br.add_argument("--json", action="store_true")
     br.set_defaults(func=_guarded(cmd_brief))
+
+    ho = sub.add_parser("handover", help="cierre: entrega el DECIDIDA y destruye el HABLADA")
+    ho.add_argument("--out", required=True, help="carpeta de entrega al cliente")
+    ho.add_argument("--por", required=True, help="quien firma la constancia")
+    ho.add_argument("--apply", action="store_true",
+                    help="sin esto no destruye nada: la destruccion no vuelve")
+    ho.set_defaults(func=_guarded(cmd_handover))
 
     pb = sub.add_parser("publish", help="pagina HTML para el cliente: sin red, sin login")
     pb.add_argument("--scope", default="")
