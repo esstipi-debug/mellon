@@ -33,6 +33,14 @@ class CoberturaGuardia:
     ausencia de dato no es un resultado. Lo puebla quien haya hecho la medicion,
     no la cosecha."""
 
+    guardias_sin_diff_del_testigo: int = 0
+    """Cuantos de los guardias aceptados pasaron la frontera del testigo
+    verificada contra la AUTODECLARACION del agente en vez de contra un diff
+    real. No es lo mismo y no puede leerse igual: una verificacion contra lo que
+    el propio agente dice haber tocado no contiene a un agente que omite. Se
+    publica en `nota()` porque este objeto existe justamente para decir lo que el
+    harness NO garantiza."""
+
     @property
     def is_complete(self) -> bool:
         return False  # nunca, y por eso se muestra
@@ -46,9 +54,16 @@ class CoberturaGuardia:
             )
         else:
             puntaje = f"Contra los bugs historicos atrapa {self.bugs_atrapados} de {self.bugs_historicos}."
-        return (
+        nota = (
             "Este harness no vigila el bug que nunca fallo: sin un test en rojo no hay "
             "episodio que capturar, y ese es el patron dominante del repo.\n"
             f"Vigila {cuales}.\n"
             f"{puntaje}"
         )
+        if self.guardias_sin_diff_del_testigo:
+            nota += (
+                f"\nFRONTERA SIN DIFF: {self.guardias_sin_diff_del_testigo} guardia(s) entraron "
+                "con la frontera del testigo verificada contra la AUTODECLARACION del agente, no "
+                "contra un diff real -- el runner de dos arboles todavia no existe."
+            )
+        return nota
