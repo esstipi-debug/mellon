@@ -41,14 +41,25 @@ nombrada.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import date
+import re
+from dataclasses import dataclass, field, replace
+from datetime import date, datetime
+from pathlib import Path
 
 from ..gemba import normalize as _norm
+from .draft import EXPIRA_HISTORICA_EN_HORAS, DraftStore, draft_decisions
 from .parse import extract_slots
 from .resolve import AliasStore
-from .schema import Alias, Decision
+from .schema import Alias, Decision, parse_date
 from .store import DecideStore, ValidationError
+
+# La fecha del acta sale del NOMBRE del archivo. `2026-02-10-comite.txt`,
+# `acta-2026-02-10.md`, `2026-02-10.txt` — todas sirven; un nombre sin fecha se
+# rechaza. Procesar un acta de febrero contra hoy resuelve "el 30 de septiembre"
+# al ano equivocado y hace nacer compromisos con plazo inventado, que es la
+# forma mas comun de que un compromiso no se cumpla y nadie pueda decir que
+# estaba atrasado.
+_RE_FECHA_ARCHIVO = re.compile(r"(\d{4}-\d{2}-\d{2})")
 
 
 @dataclass(frozen=True)
@@ -243,4 +254,126 @@ def seed_aliases(
     return rep
 
 
-__all__ = ["FilaSiembra", "ReporteSiembra", "seed_aliases", "seed_decisions"]
+@dataclass
+class ReporteActas:
+    """La ingesta historica. Nombra las tres cosas que se pueden perder: el acta
+    que no se pudo leer, la que se leyo y no produjo nada, y el hecho de que
+    NADA de esto entro al registro."""
+
+    actas_leidas: list[str] = field(default_factory=list)
+    actas_rechazadas: list[tuple[str, str]] = field(default_factory=list)
+    actas_sin_captura: list[str] = field(default_factory=list)
+    borradores: int = 0
+
+    @property
+    def nota(self) -> str:
+        partes = [
+            f"{self.borradores} borrador(es) de {len(self.actas_leidas)} acta(s) a la "
+            f"cola. NINGUNO entro al registro y ninguno sale listo: todos llevan "
+            "'sigue_vigente' en lo que falta, que es la unica pregunta del ejercicio. "
+            f"Expiran en {EXPIRA_HISTORICA_EN_HORAS // 24} dias, no en 24 horas."
+        ]
+        if self.actas_sin_captura:
+            partes.append(
+                f"{len(self.actas_sin_captura)} acta(s) no produjeron ni un borrador. "
+                "No es un error del parser (el detector solo reconoce las formas "
+                "verbales del lexico), pero decir 'lei N actas' sin decir esto hace "
+                "concluir que el historial esta en el registro."
+            )
+        if self.actas_rechazadas:
+            # "no se pudieron leer" era mentira para la mitad de los casos: un
+            # acta sin fecha en el nombre se lee perfecto, y se rechaza igual.
+            # El motivo de cada una va en `actas_rechazadas`, no aca.
+            partes.append(
+                f"{len(self.actas_rechazadas)} acta(s) NO se procesaron, cada una con "
+                "su motivo."
+            )
+        return " ".join(partes)
+
+
+def seed_minutes(
+    store: DecideStore,
+    meeting_id: str,
+    paths,
+    now: datetime,
+) -> ReporteActas:
+    """Seis meses de actas anteriores al sistema, a la cola de revision.
+
+    **No promueve nada, ni siquiera lo que parsea limpio.** El doc lo dice
+    entero: "todo va a cola, se revisa una vez, se descarta el 80%". Automatizar
+    la promocion del 20% ahorraria una hora de FDE y llenaria la agenda de la
+    primera reunion real con seis meses de compromisos vencidos.
+
+    Tres cosas que no son negociables y estan cada una en su linea:
+
+      - la fecha base sale del **nombre del archivo**, y un acta sin fecha se
+        rechaza en vez de procesarse contra hoy;
+      - todo borrador lleva `sigue_vigente` en `missing`, asi que **ninguno sale
+        `ready`** y ninguno se puede auto-promover;
+      - el lote lleva su propia expiracion, para no evaporarse con la ventana de
+        24 horas del flujo corriente ni obligar a subirla para todos.
+
+    `now` es argumento (regla 4): es el sello de ingesta del que cuelga la
+    expiracion, y no puede depender del reloj de la maquina que corre esto.
+    """
+    meeting = store.get_meeting(meeting_id)
+    ds = DraftStore(store.root, meeting_id)
+    rep = ReporteActas()
+
+    for p in paths:
+        p = Path(p)
+        m = _RE_FECHA_ARCHIVO.search(p.name)
+        if not m:
+            rep.actas_rechazadas.append((
+                p.name,
+                "sin fecha en el nombre del archivo. Procesarla contra hoy resolveria "
+                "el habla relativa del acta al ano equivocado y haria nacer "
+                "compromisos con plazo inventado. Renombrar a 'YYYY-MM-DD-...'.",
+            ))
+            continue
+        try:
+            fecha = parse_date(m.group(1))
+            texto = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            # Un archivo roto no puede llevarse puestas las otras veinte actas
+            # del lote, y tampoco puede desaparecer callado.
+            rep.actas_rechazadas.append((p.name, f"no se pudo leer: {exc}"))
+            continue
+
+        crudos = draft_decisions(texto, meeting.roster, fecha, meeting_id=meeting_id, now=now)
+        rep.actas_leidas.append(p.name)
+        if not crudos:
+            rep.actas_sin_captura.append(p.name)
+            continue
+
+        ds.append([
+            replace(
+                d,
+                origen="ACTA_HISTORICA",
+                expira_en_horas=EXPIRA_HISTORICA_EN_HORAS,
+                # La unica pregunta que importa del ejercicio, y la que ningun
+                # parser puede contestar: esto que se decidio hace seis meses,
+                # ¿sigue rigiendo? Va en `missing`, asi que el borrador nunca
+                # sale `ready` y nunca se auto-promueve.
+                missing=tuple(d.missing) + ("sigue_vigente",),
+                notes=tuple(d.notes) + (
+                    f"acta historica de {fecha} ({p.name}): la pregunta no es que se "
+                    "decidio, es si sigue vigente. Al promover, "
+                    "`decide add decision --origen ACTA_HISTORICA`.",
+                ),
+            )
+            for d in crudos
+        ])
+        rep.borradores += len(crudos)
+
+    return rep
+
+
+__all__ = [
+    "FilaSiembra",
+    "ReporteActas",
+    "ReporteSiembra",
+    "seed_aliases",
+    "seed_decisions",
+    "seed_minutes",
+]

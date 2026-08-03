@@ -28,6 +28,16 @@ from .parse import (
 from .schema import Assumption, Commitment, Decision, OpenQuestion
 
 EXPIRA_EN_HORAS = 24
+# El lote historico. Seis meses de actas no se revisan en una tarde, y a las 24
+# horas se evaporaban dejando como unico rastro una linea impresa en consola.
+#
+# La excepcion es del LOTE, no del sistema: subir `EXPIRA_EN_HORAS` romperia la
+# propiedad que sostiene la confianza del flujo corriente —"lo no revisado en 24
+# horas no existe"— que es justo lo que impide que la cola se vuelva un cajon.
+# Por eso la politica viaja en el objeto y no en el llamador: un `expire(drafts,
+# now, horas=...)` deja la decision en manos de quien llama, y el dia que
+# `cmd_review` la llame sin el argumento el lote se evapora igual.
+EXPIRA_HISTORICA_EN_HORAS = 24 * 14
 MIN_CONFIDENCE = 0.5
 
 
@@ -48,6 +58,15 @@ class DecisionDraft:
     start_s: float | None = None
     created_at: str = ""
     meeting_id: str = ""
+    # De donde salio el habla que produjo este borrador. Viaja hasta `to_entity`
+    # para que el rescate de un acta anterior al sistema no aterrice como
+    # REUNION: seria auditable, con fecha de hace seis meses, y `touches_xmr`
+    # toma los primeros doce por fecha ascendente como linea base congelada.
+    origen: str = "REUNION"
+    # Cuantas horas vive este borrador. None = la ventana corriente. La politica
+    # viaja aca y no en el llamador de `expire` a proposito: ver el comentario de
+    # `EXPIRA_HISTORICA_EN_HORAS`.
+    expira_en_horas: int | None = None
 
     @property
     def ready(self) -> bool:
@@ -56,7 +75,8 @@ class DecisionDraft:
     def expired(self, now: datetime) -> bool:
         if not self.created_at:
             return False
-        return now - datetime.fromisoformat(self.created_at) > timedelta(hours=EXPIRA_EN_HORAS)
+        horas = self.expira_en_horas or EXPIRA_EN_HORAS
+        return now - datetime.fromisoformat(self.created_at) > timedelta(hours=horas)
 
     def to_dict(self) -> dict:
         d = {**self.__dict__}
@@ -295,6 +315,7 @@ def to_entity(draft: DecisionDraft, meeting_id: str = ""):
             id="", statement=f["statement"], owner=f["owner"],
             date_decided=parse_date(f["date_decided"]), criteria=f["criteria"],
             rationale=f["rationale"], meeting_id=mid, slots=f.get("slots", {}),
+            origen=draft.origen,
         )
     if draft.kind == "commitment":
         return Commitment(

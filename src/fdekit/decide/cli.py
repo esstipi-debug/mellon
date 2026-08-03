@@ -190,7 +190,7 @@ def cmd_review(a):
 
     Si toma mas de 3 minutos, el detector esta mal calibrado, no el usuario.
     """
-    from .draft import DraftStore, expire, review_queue, to_entity
+    from .draft import EXPIRA_EN_HORAS, DraftStore, expire, review_queue, to_entity
 
     st = _store(a)
     ds = DraftStore(a.root, a.meeting)
@@ -201,7 +201,14 @@ def cmd_review(a):
 
     vivos, muertos = expire(drafts, _dt.now().astimezone())
     if muertos:
-        print(f"{len(muertos)} borrador(es) expirado(s) a las 24 h: no existen.\n")
+        # Sin el desglose, un lote historico expirado se reportaba como "a las
+        # 24 h" y mandaba a buscar el bug donde no estaba.
+        detalle = ", ".join(
+            f"{d.kind} ({(d.expira_en_horas or EXPIRA_EN_HORAS) // 24 or 1} "
+            f"{'dia(s)' if (d.expira_en_horas or EXPIRA_EN_HORAS) >= 24 else 'h'})"
+            for d in muertos[:5]
+        )
+        print(f"{len(muertos)} borrador(es) expirado(s): no existen. {detalle}\n")
 
     from .anchor import cite, find_utterance, freeze
     from .transcript import TranscriptStore
@@ -241,9 +248,21 @@ def cmd_review(a):
             print(f"      falta: {', '.join(d.missing)}")
             for n in d.notes:
                 print(f"      nota: {n}")
+        # El plazo se lee de la cola, no se afirma. Con un lote historico adentro
+        # esta linea decia "24 h" sobre borradores que viven dos semanas: el
+        # mismo patron de siempre, un texto plausible y falso que nadie verifica.
+        horas = {d.expira_en_horas or EXPIRA_EN_HORAS for d in cola}
+        plazo = (
+            f"{min(horas) // 24} dia(s)" if min(horas) >= 24 * 2 else f"{min(horas)} h"
+        )
         print(
             "\nCompletar con `fdekit decide add ...` usando el enunciado de arriba.\n"
-            "Lo que no se revise en 24 h expira: la decision no existe."
+            f"Lo que no se revise en {plazo} expira: la decision no existe."
+            + (
+                "\nHay borradores con plazos distintos en la cola; el que manda es el "
+                "mas corto.\nLos de acta historica lo dicen en su nota."
+                if len(horas) > 1 else ""
+            )
         )
 
     ds.rewrite([d for d in cola])
@@ -409,6 +428,34 @@ def cmd_seed(a):
     # Codigo 2 si algo quedo afuera: la siembra corrio, pero hay trabajo humano
     # pendiente y un `&&` en un script no puede seguir como si nada.
     return 2 if (rep.rechazadas or rep.alias_rechazados) else 0
+
+
+def cmd_seed_minutes(a):
+    """Las actas anteriores al sistema, a la cola. No promueve nada."""
+    from .seed import seed_minutes
+
+    st = _store(a)
+    raiz = Path(a.dir)
+    actas = sorted(p for p in raiz.iterdir() if p.is_file()) if raiz.is_dir() else [raiz]
+    rep = seed_minutes(st, a.meeting, actas, now=_dt.now().astimezone())
+
+    print(f"\nactas leidas: {len(rep.actas_leidas)} -> {rep.borradores} borrador(es) a la cola")
+    if rep.actas_sin_captura:
+        print("\nleidas pero SIN capturar nada:")
+        for n in rep.actas_sin_captura:
+            print(f"  - {n}")
+    if rep.actas_rechazadas:
+        print("\nNO se procesaron:")
+        for nombre, motivo in rep.actas_rechazadas:
+            print(f"  - {nombre}: {motivo}")
+    print(f"\n{rep.nota}")
+    print(
+        "\nRevisar con `fdekit decide review --meeting <id>`. Lo que siga vigente se "
+        "registra con\n`fdekit decide add decision --origen ACTA_HISTORICA`: sin ese "
+        "flag el rescate\naterriza como REUNION, auditable y con fecha vieja, y se "
+        "vuelve la linea base del XmR."
+    )
+    return 2 if rep.actas_rechazadas else 0
 
 
 _ADD = {
@@ -730,6 +777,16 @@ def register(subparsers):
     sd.add_argument("--file", required=True, help="planilla CSV con separador ';'")
     sd.add_argument("--by", required=True, help="quien declara las filas")
     sd.set_defaults(func=_guarded(cmd_seed))
+
+    sm = sub.add_parser(
+        "minutes",
+        help="encola actas anteriores al sistema; no promueve nada (origen ACTA_HISTORICA)",
+    )
+    sm.add_argument("--meeting", required=True, help="la reunion del lote, YA registrada")
+    sm.add_argument("--dir", required=True,
+                    help="carpeta de actas, o un archivo. El nombre trae la fecha: "
+                         "'YYYY-MM-DD-...'; sin fecha, el acta se rechaza")
+    sm.set_defaults(func=_guarded(cmd_seed_minutes))
 
     al = sub.add_parser("aliases", help="lista la tabla de alias")
     al.set_defaults(func=_guarded(cmd_aliases))
