@@ -2,7 +2,7 @@
 
 **Repo:** https://github.com/esstipi-debug/mytra-fde (privado)
 **Local:** `C:\fde\fde-field-kit` · **Rama activa:** `harness/plan-1`
-**Estado:** 932 tests verdes, 1 deselected
+**Estado:** 947 tests verdes, 1 deselected
 
 ### Montaje desde cero
 
@@ -33,8 +33,9 @@ video de muestra. Correr aparte con `-m vision`.
 ## Por dónde empezar
 
 1. Este archivo entero (son cinco minutos).
-2. `docs/decide-fundacion-huecos.md` si vas a hacer **H4** — ahí están las 7
-   decisiones estructurales y los 11 críticos ya resueltos.
+2. `docs/decide-fundacion-huecos.md` si vas a tocar `decide` — ahí están las 7
+   decisiones estructurales y los 11 críticos ya resueltos. Los huecos H4 a H7
+   están cerrados contra ese documento; H9 a H15 todavía no.
 3. `docs/HISTORIA.md` cuando algo del código parezca arbitrario: casi todo lo
    que parece raro está ahí explicado con el bug que lo causó.
 
@@ -171,6 +172,7 @@ críticos que la refutación encontró contra la propia fundación).
 | `b3fbbe5` | **el carril declarado es paralelo al techo de la sala** |
 | `7484000` | **el portal de alias** rechaza el símbolo sin slots |
 | `8bb5f6c` | **H4** — la siembra del arranque en frío |
+| `867b683` | **H4** — la ingesta de actas históricas, y H4 queda cerrado |
 
 Más seis bugs vivos encontrados en el camino, todos de clase *"no falla,
 miente"* y todos reproducidos antes de tocarlos.
@@ -179,14 +181,16 @@ miente"* y todos reproducidos antes de tocarlos.
 
 ## Lo que sigue
 
-### 1. H4 — la siembra: hecho, salvo la ingesta de actas
+### 1. H4 — cerrado
 
-`src/fdekit/decide/seed.py` + `fdekit decide seed`. Las 15-30 decisiones
-vigentes declaradas en el kickoff y los alias iniciales ya entran.
+`src/fdekit/decide/seed.py`. Las tres entradas del arranque en frío: las 15-30
+decisiones vigentes declaradas en el kickoff, los alias iniciales, y la ingesta
+de actas anteriores al sistema.
 
 ```bash
 fdekit decide meeting --id kickoff --clase KICKOFF --scope pudahuel ...
-fdekit decide seed --meeting kickoff --file planilla.csv --by "Marcela Perez"
+fdekit decide seed    --meeting kickoff --file planilla.csv --by "Marcela Perez"
+fdekit decide minutes --meeting kickoff --dir actas/
 ```
 
 La planilla es CSV con separador `;` — no `,`, porque las filas de criterio
@@ -212,13 +216,18 @@ Lo que sostiene el diseño, por si alguien lo toca:
   aterrizaba como REUNION con fecha de hace seis meses: sería la línea base
   entera del XmR.
 
-**Lo que falta de H4:** `seed_minutes()`, la ingesta de 6 meses de actas por
-`draft_decisions()`. Tres condiciones ya escritas en el diseño: ningún borrador
-sale `ready` (todos llevan `sigue_vigente` en `missing`), la fecha base sale del
-**nombre del archivo** y un acta sin fecha se rechaza en vez de procesarse
-contra hoy, y el lote lleva expiración propia (`DecisionDraft.expira_en_horas`)
-en vez de subir la constante global de 24 h — hoy una ingesta histórica revisada
-al día siguiente se evapora, y el único rastro es una línea impresa en consola.
+De `seed_minutes` (la ingesta histórica), tres cosas que sostienen el diseño:
+
+- **La fecha base sale del nombre del archivo** (`2026-02-10-comite.txt`), y un
+  acta sin fecha se rechaza. Procesarla contra hoy resuelve el habla relativa
+  del acta al año equivocado y hace nacer compromisos con plazo inventado.
+- **Ningún borrador sale `ready`**: todos llevan `sigue_vigente` en `missing`.
+  Es la única pregunta del ejercicio y la que ningún parser puede contestar.
+  Nada se auto-promueve, ni siquiera lo que parsea limpio.
+- **La expiración viaja en el objeto** (`DecisionDraft.expira_en_horas`), no en
+  el llamador ni en la constante global. El lote vive dos semanas; el flujo
+  corriente sigue en 24 h. Subir la global rompería la propiedad que sostiene la
+  confianza de la cola — *"lo no revisado en 24 h no existe"*.
 
 ### 2. Correr la fase 0 con gente real
 
