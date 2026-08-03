@@ -10,6 +10,7 @@ import json
 
 import pytest
 
+from tools.harness.captura import registrar_corrida
 from tools.harness.episodio import Episodio, agregar, leer, marcar
 
 
@@ -82,3 +83,64 @@ def test_lo_escrito_es_json_por_linea(tmp_path):
     agregar(p, _ep())
     fila = json.loads(p.read_text(encoding="utf-8").splitlines()[0])
     assert fila["commit_antes"] == "aaa"
+
+
+# ---------------------------------------------------------------- captura
+
+
+def test_una_corrida_verde_sola_no_es_episodio(tmp_path):
+    """Sin una corrida roja previa no hay par de arboles que comparar."""
+    est = tmp_path / "ultima.json"
+    assert registrar_corrida(est, head="aaa", fallidos=[], archivos_tocados=[], mensaje="", today="2026-08-02") is None
+
+
+def test_rojo_y_despues_verde_cierra_el_episodio(tmp_path):
+    est = tmp_path / "ultima.json"
+    registrar_corrida(est, head="aaa", fallidos=["t::uno"], archivos_tocados=[], mensaje="", today="2026-08-02")
+    ep = registrar_corrida(
+        est, head="bbb", fallidos=[], archivos_tocados=["src/x.py"], mensaje="fix: x", today="2026-08-02"
+    )
+
+    assert ep is not None
+    assert ep.commit_antes == "aaa"
+    assert ep.commit_despues == "bbb"
+    assert ep.tests_que_fallaban == ("t::uno",)
+
+
+def test_dos_rojas_seguidas_no_cierran_nada(tmp_path):
+    est = tmp_path / "ultima.json"
+    registrar_corrida(est, head="aaa", fallidos=["t::uno"], archivos_tocados=[], mensaje="", today="2026-08-02")
+    ep = registrar_corrida(est, head="bbb", fallidos=["t::uno"], archivos_tocados=[], mensaje="", today="2026-08-02")
+    assert ep is None
+
+
+def test_un_test_que_sigue_rojo_no_cuenta_como_curado(tmp_path):
+    """Solo cuentan los que pasaron de rojo a verde. Si quedan rojos otros, el
+    episodio se cierra igual sobre los que si se curaron."""
+    est = tmp_path / "ultima.json"
+    registrar_corrida(est, head="aaa", fallidos=["t::uno", "t::dos"], archivos_tocados=[], mensaje="", today="2026-08-02")
+    ep = registrar_corrida(est, head="bbb", fallidos=["t::dos"], archivos_tocados=[], mensaje="", today="2026-08-02")
+
+    assert ep is not None
+    assert ep.tests_que_fallaban == ("t::uno",)
+
+
+def test_un_arbol_sucio_marca_el_episodio_irreproducible(tmp_path):
+    """Sin HEAD que reproduzca el arbol rojo no hay dos arboles que comparar.
+    No se intenta reconstruir desde un stash."""
+    est = tmp_path / "ultima.json"
+    registrar_corrida(
+        est, head="aaa", fallidos=["t::uno"], archivos_tocados=[], mensaje="", today="2026-08-02", arbol_limpio=False
+    )
+    ep = registrar_corrida(est, head="bbb", fallidos=[], archivos_tocados=[], mensaje="", today="2026-08-02")
+
+    assert ep is not None
+    assert ep.estado == "irreproducible"
+
+
+def test_un_estado_ilegible_no_revienta_la_captura(tmp_path):
+    """La captura corre en un hook: si revienta, molesta en cada corrida. Falla
+    hacia el lado seguro, que es no registrar nada."""
+    est = tmp_path / "ultima.json"
+    est.write_text("{roto", encoding="utf-8")
+    assert registrar_corrida(est, head="bbb", fallidos=[], archivos_tocados=[], mensaje="", today="2026-08-02") is None
