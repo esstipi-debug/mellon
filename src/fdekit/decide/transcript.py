@@ -207,18 +207,23 @@ class TranscriptStore:
         retencion es cuando ocurrio la conversacion, no cuando alguien toco el
         archivo.
 
-        La lapida se escribe **aunque no haya archivo que borrar**: "se purgo y
-        no habia nada" y "nunca se purgo" son estados distintos, y confundirlos
-        es lo que hace impossible auditar la politica despues.
+        La lapida atestigua la **destruccion de algo que existia**. Si no habia
+        transcripto no hay nada que atestiguar, y devolver True ahi tenia dos
+        consecuencias malas: `tick` marcaba como purgada cada sesion vencida que
+        nunca tuvo audio —cientos de lapidas vacias que esconden las de verdad—
+        y reportaba cambios donde no los hubo.
+
+        La pregunta "esto se purgo o nunca se grabo" la contesta la EXISTENCIA
+        de la lapida, que es justamente lo que se pierde si se escribe siempre.
         """
-        vencido = today - desde > timedelta(days=retention_days)
-        if not vencido:
+        if not self.path.exists():
+            return False
+        if today - desde <= timedelta(days=retention_days):
             return False
 
         sha = self.sha256()
-        n = len(self.load()) if self.path.exists() else 0
-        if self.path.exists():
-            self.path.unlink()
+        n = len(self.load())
+        self.path.unlink()
         self.lapida.parent.mkdir(parents=True, exist_ok=True)
         self.lapida.write_text(
             json.dumps(

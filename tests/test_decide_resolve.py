@@ -484,10 +484,15 @@ def test_purge_no_toca_lo_que_esta_dentro_de_la_ventana(env):
     assert not ts.lapida.exists()
 
 
-def test_purge_sobre_un_transcripto_que_no_existe_deja_constancia_igual(tmp_path):
-    """"Se purgo y no habia nada" y "nunca se purgo" son estados distintos, y
-    confundirlos hace imposible auditar la politica despues."""
+def test_purge_sin_transcripto_no_inventa_una_lapida(tmp_path):
+    """La lapida atestigua la destruccion de algo que EXISTIA.
+
+    Escribirla siempre tenia dos consecuencias malas: `tick` marcaba como
+    purgada cada sesion vencida que nunca tuvo audio —cientos de lapidas vacias
+    que esconden las de verdad— y reportaba cambios donde no los hubo. La
+    pregunta "esto se purgo o nunca se grabo" la contesta la EXISTENCIA de la
+    lapida, que es lo que se pierde si se escribe siempre.
+    """
     ts = TranscriptStore(tmp_path, "no-existe")
-    assert ts.purge(date(2026, 8, 1), 90, desde=date(2026, 1, 1)) is True
-    assert ts.lapida.exists()
-    assert ts.purge(date(2026, 8, 1), 90, desde=date(2026, 7, 20)) is False
+    assert ts.purge(date(2026, 8, 1), 90, desde=date(2026, 1, 1)) is False
+    assert not ts.lapida.exists()

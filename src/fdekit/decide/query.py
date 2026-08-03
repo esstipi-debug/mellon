@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from .schema import (
+    LIVE_COMMITMENT_STATUS,
     Assumption,
     Commitment,
     Decision,
@@ -235,7 +236,7 @@ def agenda(store: DecideStore, meeting_id: str, today: date | None = None) -> Ag
         [
             (c, c.days_late(today))
             for c in commitments
-            if c.status in ("ABIERTO", "VENCIDO", "ZOMBI") and c.due < today
+            if c.status in LIVE_COMMITMENT_STATUS and c.due < today
         ],
         key=lambda t: -t[1],
     )
@@ -372,7 +373,10 @@ def referencing(store: DecideStore, decision_id: str, depth: int = 1) -> dict:
 
     depends = [d for d in decisions if decision_id in d.depends_on]
     supersedes = [d for d in decisions if decision_id in d.supersedes]
-    commits = [c for c in implementations(store, decision_id) if c.status in ("ABIERTO", "VENCIDO", "ZOMBI")]
+    commits = [
+        c for c in implementations(store, decision_id)
+        if c.status in LIVE_COMMITMENT_STATUS
+    ]
     sup = [a for a in store.assumptions() if a.decision_id == decision_id and a.status != "VERIFICADO"]
     blocked = [q for q in questions if decision_id in q.blocks and q.status == "ABIERTA"]
     reopen = [q for q in questions if q.reopen_of == decision_id and q.status == "ABIERTA"]
@@ -637,7 +641,7 @@ def safe_close(
     blockers: list[str] = []
 
     for c in implementations(store, decision_id):
-        if c.status in ("ABIERTO", "VENCIDO", "ZOMBI"):
+        if c.status in LIVE_COMMITMENT_STATUS:
             blockers.append(f"{c.id} compromiso {c.status.lower()} de {c.owner} ({c.what})")
     for a in store.assumptions():
         if a.decision_id == decision_id and a.status in ("VIGENTE", "VENCIDO"):
@@ -803,14 +807,18 @@ def tick(store: DecideStore, today: date, apply: bool = True) -> dict:
                 changes["alias_en_disputa"].extend(marcados)
 
     changes["fecha"] = today.isoformat()
+    # La lista se deriva de las claves que son listas de cambios, en vez de
+    # enumerarse a mano: enumerarla a mano es como el barrido de retencion
+    # quedo afuera y `tick` reportaba `sin_cambios: True` despues de DESTRUIR un
+    # transcripto y escribir su lapida. Un operador que corre `tick`, lee "sin
+    # cambios" y no se entera de que se destruyo habla textual es el peor caso
+    # de una politica con peso legal (Ley 21.719).
+    #
+    # `hablada_sin_politica` NO cuenta: es un aviso sobre algo que NO se toco.
+    # `hablada_no_barrida` tampoco: es un string, no una lista de cambios.
+    _AVISOS = ("hablada_sin_politica", "hablada_no_barrida", "fecha")
     changes["sin_cambios"] = not any(
-        changes[k]
-        for k in (
-            "commitments_vencidos",
-            "supuestos_vencidos",
-            "decisiones_en_riesgo",
-            "zombis",
-            "alias_en_disputa",
-        )
+        v for k, v in changes.items()
+        if k not in _AVISOS and isinstance(v, list)
     )
     return changes
