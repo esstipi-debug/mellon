@@ -222,10 +222,30 @@ def _body(obj) -> str:
 class DecideStore:
     """Registro en disco. Todas las lecturas escanean; nada depende del indice."""
 
+    # El canal HABLADA **no se versiona**. `git_commit` hace `git add .`, asi que
+    # sin esto el habla textual —que nombra a terceros que no consintieron: el
+    # agujero H14— quedaba commiteada, y entonces `purge()` no destruia nada:
+    # `git show HEAD:hablada/m1.jsonl` la devolvia entera. Reproducido.
+    #
+    # La lapida SI se versiona: es la constancia de destruccion que pide la
+    # politica de datos, y no contiene habla.
+    _GITIGNORE = (
+        "# Canal HABLADA: no se versiona. Un transcripto en git no se puede\n"
+        "# destruir — sobrevive en la historia de cada clon, y con el los\n"
+        "# terceros mencionados que nunca consintieron.\n"
+        "hablada/*.jsonl\n"
+        "\n"
+        "# La constancia de destruccion si se versiona.\n"
+        "!hablada/*.purgado.json\n"
+    )
+
     def __init__(self, root: str | Path):
         self.root = Path(root)
         for sub in ("decisions", "commitments", "assumptions", "questions", "meetings"):
             (self.root / sub).mkdir(parents=True, exist_ok=True)
+        gi = self.root / ".gitignore"
+        if not gi.exists():
+            gi.write_text(self._GITIGNORE, encoding="utf-8")
 
     # ------------------------------------------------------------ lecturas
 

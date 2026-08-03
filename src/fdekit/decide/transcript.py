@@ -126,21 +126,61 @@ class TranscriptStore:
 
     # ------------------------------------------------------------ retencion
 
-    def purge(self, today: date, retention_days: int) -> bool:
-        """Borra el canal HABLADA vencido. El DECIDIDA no se toca: sobrevive
-        porque la cita fue copiada, no enlazada.
+    @property
+    def lapida(self) -> Path:
+        """La constancia de destruccion. Versionada, a diferencia del habla."""
+        return self.root / "hablada" / f"{self.meeting_id}.purgado.json"
+
+    def purge(self, today: date, retention_days: int, desde: date) -> bool:
+        """Borra el canal HABLADA vencido y deja constancia. El DECIDIDA no se
+        toca: sobrevive porque la cita fue copiada, no enlazada.
 
         En Chile la Ley 21.719 rige desde el 1-dic-2026 y exige politica de
-        retencion declarada. Esto son veinte lineas justamente porque la parte
-        dificil —que el registro sobreviva al borrado— se resolvio en el diseno
-        del ancla, no aca.
+        retencion declarada.
+
+        `desde` es **obligatorio** y es la fecha de la reunion. Antes se usaba el
+        `mtime` del archivo, y eso hacia que la politica no venciera nunca: un
+        `git clone` o un `checkout` reescriben los mtimes con la fecha del
+        checkout. Reproducido — una reunion de enero de 2025 con retencion de 90
+        dias, consultada en agosto de 2026, devolvia `False`. El reloj de la
+        retencion es cuando ocurrio la conversacion, no cuando alguien toco el
+        archivo.
+
+        La lapida se escribe **aunque no haya archivo que borrar**: "se purgo y
+        no habia nada" y "nunca se purgo" son estados distintos, y confundirlos
+        es lo que hace impossible auditar la politica despues.
         """
-        if not self.path.exists():
+        vencido = today - desde > timedelta(days=retention_days)
+        if not vencido:
             return False
-        mtime = date.fromtimestamp(self.path.stat().st_mtime)
-        if today - mtime <= timedelta(days=retention_days):
-            return False
-        self.path.unlink()
+
+        sha = self.sha256()
+        n = len(self.load()) if self.path.exists() else 0
+        if self.path.exists():
+            self.path.unlink()
+        self.lapida.parent.mkdir(parents=True, exist_ok=True)
+        self.lapida.write_text(
+            json.dumps(
+                {
+                    "meeting_id": self.meeting_id,
+                    "purgado_el": today.isoformat(),
+                    "reunion_del": desde.isoformat(),
+                    "retencion_dias": retention_days,
+                    "enunciados_destruidos": n,
+                    # Prueba de QUE se destruyo sin conservarlo: coincide con el
+                    # `transcript_sha256` de las anclas que lo citaban.
+                    "sha256_al_purgar": sha,
+                    "nota": (
+                        "canal HABLADA destruido por politica de retencion. Las citas "
+                        "congeladas en las anclas sobreviven porque se copiaron, no se "
+                        "enlazaron; sus `estado_fuente` pasan a CADUCADA."
+                    ),
+                },
+                indent=2,
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
         return True
 
 

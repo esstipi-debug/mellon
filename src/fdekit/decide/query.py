@@ -657,6 +657,8 @@ def tick(store: DecideStore, today: date, apply: bool = True) -> dict:
         "decisiones_en_riesgo": [],
         "zombis": [],
         "alias_en_disputa": [],
+        "hablada_purgada": [],
+        "hablada_sin_politica": [],
     }
 
     decisions = {d.id: d for d in store.decisions()}
@@ -701,6 +703,51 @@ def tick(store: DecideStore, today: date, apply: bool = True) -> dict:
             changes["decisiones_en_riesgo"].append(d.id)
             if apply:
                 store.save(d)
+
+    # Retencion del canal HABLADA. Va aca porque `tick` es la unica funcion que
+    # ya corre sola y ya recibe `today` — una politica de retencion sin ejecutor
+    # es una declaracion, no una politica, y `TranscriptStore.purge()` tenia
+    # CERO llamadores en todo el paquete. En Chile la Ley 21.719 rige desde el
+    # 1-dic-2026.
+    from .store import ValidationError
+    from .transcript import TranscriptStore
+
+    try:
+        reuniones = store.meetings()
+    except (ValidationError, KeyError) as exc:
+        # No se puede barrer lo que no se puede enumerar. Se REPORTA en vez de
+        # saltearse: una politica de retencion que no corrio y no avisa es peor
+        # que ninguna, porque queda documentada como si hubiera corrido. El
+        # resto de `tick` sigue — vencer un compromiso no depende de esto.
+        reuniones = []
+        # Los issues, no la primera linea: la primera linea es "Meeting
+        # invalido:" y el nombre del archivo esta abajo, que es lo unico que
+        # sirve para arreglarlo.
+        changes["hablada_no_barrida"] = "; ".join(getattr(exc, "issues", [str(exc)]))
+
+    for m in reuniones:
+        dias = m.consent.retention_days
+        if dias is None:
+            # Sin politica declarada no se borra nada: borrar por un default
+            # seria destruir evidencia que nadie autorizo destruir. Se reporta.
+            if (store.root / "hablada" / f"{m.id}.jsonl").exists():
+                changes["hablada_sin_politica"].append(m.id)
+            continue
+        ts = TranscriptStore(store.root, m.id)
+        if not apply:
+            # Espejo exacto del run real: se pregunta sin escribir.
+            if ts.path.exists() and (today - m.date).days > dias:
+                changes["hablada_purgada"].append(m.id)
+            continue
+        if ts.purge(today, dias, desde=m.date):
+            changes["hablada_purgada"].append(m.id)
+            # El ancla deja de prometer una fuente viva. `CADUCADA` estaba
+            # declarado en el schema y no lo escribia nadie: `why()` mostraba
+            # `estado_fuente: VIVA` sobre un transcripto que ya no existe.
+            for d in decisions.values():
+                if d.anchor and d.anchor.meeting_id == m.id and d.anchor.estado_fuente != "CADUCADA":
+                    d.anchor.estado_fuente = "CADUCADA"
+                    store.save(d)
 
     # Colision de alias, detectada POR CREACION y no por uso. Solo se disputan
     # los alias de simbolos ANTERIORES: si se disputaran en ambas direcciones,

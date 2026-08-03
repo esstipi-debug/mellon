@@ -425,23 +425,16 @@ def test_la_mencion_guarda_procedencia_completa(env):
     assert m["confirmado_por"] == "Marcela Perez"
 
 
-def test_purge_borra_el_canal_hablada_vencido_y_la_cita_sobrevive(env, monkeypatch):
-    """Es la unica pieza de retencion del repo, atada a la Ley 21.719 (vigente
-    el 1-dic-2026), y no se ejecutaba en ningun test. Lo que tiene que probar no
-    es que borre: es que el canal DECIDIDA sobreviva al borrado, que es la razon
-    entera por la que la cita se copia en vez de enlazarse."""
-    import os
-    import time
-
+def test_purge_borra_el_canal_hablada_vencido_y_la_cita_sobrevive(env):
+    """Lo que tiene que probar no es que borre: es que el canal DECIDIDA
+    sobreviva al borrado, que es la razon entera por la que la cita se copia en
+    vez de enlazarse."""
     st, ts = env
     a = freeze(ts, 1)
     assert "reslotear la clase A" in a.cita_congelada
 
-    # Envejecer el archivo 100 dias.
-    viejo = time.time() - 100 * 86400
-    os.utime(ts.path, (viejo, viejo))
-
-    assert ts.purge(date(2026, 8, 1), retention_days=90) is True
+    # El reloj es la fecha de la REUNION, no el mtime del archivo.
+    assert ts.purge(date(2026, 8, 1), retention_days=90, desde=date(2026, 1, 1)) is True
     assert not ts.path.exists()
     # La cita, que se copio, sigue entera.
     assert "reslotear la clase A" in a.cita_congelada
@@ -449,11 +442,50 @@ def test_purge_borra_el_canal_hablada_vencido_y_la_cita_sobrevive(env, monkeypat
     assert not ok and "retencion" in motivo
 
 
+def test_el_reloj_de_retencion_es_la_reunion_y_no_el_mtime(env):
+    """El bug: `purge` medía contra `mtime`, y un `git clone` o un `checkout`
+    reescriben los mtimes con la fecha del checkout. Reproducido — una reunion
+    de enero de 2025 con retencion de 90 dias, consultada en agosto de 2026,
+    devolvia False y el habla textual seguia ahi para siempre.
+
+    El archivo se acaba de escribir (mtime = hoy) y aun asi vence, porque la
+    conversacion ocurrio hace un ano y medio."""
+    st, ts = env
+    import os
+    from datetime import datetime
+    assert date.fromtimestamp(os.stat(ts.path).st_mtime) >= date(2026, 1, 1)
+    assert ts.purge(date(2026, 8, 1), retention_days=90, desde=date(2025, 1, 10)) is True
+
+
+def test_purge_deja_constancia_de_la_destruccion(env):
+    """"Se destruye con constancia": la lapida se versiona, el habla no. Prueba
+    QUE se destruyo —por su sha256, que coincide con el de las anclas que lo
+    citaban— sin conservar una linea de habla."""
+    st, ts = env
+    sha_antes = ts.sha256()
+    n = len(ts.load())
+
+    ts.purge(date(2026, 8, 1), retention_days=90, desde=date(2026, 1, 1))
+
+    import json
+    lap = json.loads(ts.lapida.read_text(encoding="utf-8"))
+    assert lap["sha256_al_purgar"] == sha_antes
+    assert lap["enunciados_destruidos"] == n
+    assert lap["reunion_del"] == "2026-01-01"
+    assert "text" not in ts.lapida.read_text(encoding="utf-8")
+
+
 def test_purge_no_toca_lo_que_esta_dentro_de_la_ventana(env):
     st, ts = env
-    assert ts.purge(date(2026, 8, 1), retention_days=90) is False
+    assert ts.purge(date(2026, 8, 1), retention_days=90, desde=date(2026, 7, 15)) is False
     assert ts.path.exists()
+    assert not ts.lapida.exists()
 
 
-def test_purge_sobre_un_transcripto_que_no_existe_no_revienta(tmp_path):
-    assert TranscriptStore(tmp_path, "no-existe").purge(date(2026, 8, 1), 90) is False
+def test_purge_sobre_un_transcripto_que_no_existe_deja_constancia_igual(tmp_path):
+    """"Se purgo y no habia nada" y "nunca se purgo" son estados distintos, y
+    confundirlos hace imposible auditar la politica despues."""
+    ts = TranscriptStore(tmp_path, "no-existe")
+    assert ts.purge(date(2026, 8, 1), 90, desde=date(2026, 1, 1)) is True
+    assert ts.lapida.exists()
+    assert ts.purge(date(2026, 8, 1), 90, desde=date(2026, 7, 20)) is False

@@ -748,3 +748,92 @@ def test_supersede_ya_no_puede_escribir_una_decision_invalida(store):
         store.save(a_disco)
     # y la operacion legitima sigue funcionando
     assert supersede(store, a.id, b.id, reason="racks nuevos", apply=True, today=HOY)["applied"]
+
+
+# ------------------------------- retencion del canal HABLADA (Ley 21.719)
+#
+# `TranscriptStore.purge()` tenia CERO llamadores en todo el paquete: una
+# politica de retencion sin ejecutor es una declaracion, no una politica. Y
+# aunque se hubiera llamado, no destruia nada: `hablada/` entraba a git por el
+# `git add .` de `git_commit`, asi que el habla textual sobrevivia en la
+# historia de cada clon.
+
+
+def _con_hablada(tmp_path, retention_days, meeting_date=date(2025, 1, 10)):
+    from fdekit.decide.transcript import TranscriptStore
+
+    st = DecideStore(tmp_path / "decide")
+    st.add_meeting(Meeting(
+        id="m1", date=meeting_date, roster=ROSTER, facilitator="Marcela",
+        # Sin `retention_days` no se puede declarar `recording_allowed`: el
+        # propio `Consent.validate` lo rechaza, y con razon. El caso "hay habla
+        # guardada y nadie declaro por cuanto tiempo" se llega igual, porque el
+        # transcripto puede haber entrado por `--text` sin audio.
+        consent=Consent(granted=True, granted_by="Marcela", basis="interes_legitimo",
+                        recording_allowed=retention_days is not None,
+                        retention_days=retention_days),
+    ))
+    ts = TranscriptStore(st.root, "m1")
+    ts.ingest_segments([{"start": 0.0, "end": 8.0,
+                         "text": "el problema es que Fabian no da abasto en el turno noche"}])
+    return st, ts
+
+
+def test_tick_ejecuta_la_politica_de_retencion(tmp_path):
+    st, ts = _con_hablada(tmp_path, retention_days=90)
+    r = tick(st, today=date(2026, 8, 2), apply=True)
+    assert r["hablada_purgada"] == ["m1"]
+    assert not ts.path.exists()
+    assert ts.lapida.exists()
+
+
+def test_el_canal_hablada_no_se_versiona(tmp_path):
+    """Si entra a git, `purge()` es teatro: `git show HEAD:hablada/m1.jsonl` lo
+    devuelve entero, y con el los terceros mencionados que nunca consintieron.
+    Reproducido antes del arreglo."""
+    st, ts = _con_hablada(tmp_path, retention_days=90)
+    patrones = (st.root / ".gitignore").read_text(encoding="utf-8")
+    assert "hablada/*.jsonl" in patrones
+    assert "!hablada/*.purgado.json" in patrones   # la constancia SI se versiona
+
+
+def test_sin_politica_declarada_no_se_borra_pero_se_reporta(tmp_path):
+    """Borrar por un default seria destruir evidencia que nadie autorizo
+    destruir. Callarlo seria peor: la reunion queda con habla textual guardada
+    para siempre y nadie se entera."""
+    st, ts = _con_hablada(tmp_path, retention_days=None)
+    r = tick(st, today=date(2026, 8, 2), apply=True)
+    assert r["hablada_sin_politica"] == ["m1"]
+    assert r["hablada_purgada"] == []
+    assert ts.path.exists()
+
+
+def test_purgar_marca_las_anclas_como_CADUCADA(tmp_path):
+    """`CADUCADA` estaba declarado en el schema y no lo escribia NADIE: `why()`
+    mostraba `estado_fuente: VIVA` sobre un transcripto que ya no existe."""
+    from fdekit.decide.schema import Anchor
+
+    st, ts = _con_hablada(tmp_path, retention_days=90)
+    d = st.add_decision(mk_decision(
+        meeting_id="m1",
+        anchor=Anchor(meeting_id="m1", t_start=0.0, t_end=8.0,
+                      cita_congelada="lo consolidamos en una ola",
+                      transcript_sha256=ts.sha256())))
+    assert st.get(d.id).anchor.estado_fuente == "VIVA"
+
+    tick(st, today=date(2026, 8, 2), apply=True)
+    assert st.get(d.id).anchor.estado_fuente == "CADUCADA"
+
+
+def test_el_barrido_que_no_pudo_correr_lo_dice(tmp_path):
+    """Una politica de retencion que no corrio y no avisa es peor que ninguna:
+    queda documentada como si hubiera corrido."""
+    st, ts = _con_hablada(tmp_path, retention_days=90)
+    p = st.root / "meetings" / "m1.md"
+    p.write_text(p.read_text(encoding="utf-8").replace(
+        'id: "m1"', 'id: "m1"\ncampo_de_una_version_futura: "x"'), encoding="utf-8")
+
+    r = tick(st, today=date(2026, 8, 2), apply=True)
+    assert "hablada_no_barrida" in r
+    assert "m1.md" in r["hablada_no_barrida"]
+    assert ts.path.exists()   # no se toco nada
