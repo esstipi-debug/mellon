@@ -5,11 +5,13 @@ para siempre sin que nadie sepa si sirven. Es exactamente el hallazgo que
 reordeno este proyecto, asi que aplicarlo al harness no es opcional.
 
 La parte de parseo es hermetica y corre siempre. La parte que toca git de
-verdad esta marcada `historia` y sale del corrido por defecto, igual que
-`vision`: necesita la historia completa del repo. Cuando esa historia no
-esta disponible (clone shallow, tarball sin .git) el test saltea con motivo
-en vez de reventar la suite entera: este kit tiene que correr en el notebook
-prestado de un centro de distribucion, sin permisos y a veces sin historia.
+verdad esta marcada `historia`, pero eso NO la saca del corrido por defecto:
+`addopts` solo deselecciona `vision`, asi que este test se colecta y corre.
+Lo que lo vuelve inofensivo es el skip condicional -- necesita la historia
+completa del repo, y cuando no esta disponible (clone shallow, tarball sin
+.git) saltea con motivo en vez de reventar la suite entera: este kit tiene que
+correr en el notebook prestado de un centro de distribucion, sin permisos y a
+veces sin historia.
 """
 
 import subprocess
@@ -86,27 +88,42 @@ def test_un_archivo_llamado_c_algo_no_se_confunde_con_encabezado():
     assert "C notas.md" in eps[0].archivos_tocados
 
 
-def _motivo_si_no_hay_historia_usable() -> str | None:
+def _motivo_si_no_hay_historia_usable(raiz: Path | None = None) -> str | None:
     """Devuelve por que no se puede correr el test de historia real, o None
-    si la historia esta disponible y tiene profundidad suficiente."""
+    si la historia esta disponible y tiene profundidad suficiente.
+
+    `raiz` es argumento con default en vez de leer `_RAIZ` directamente: es lo
+    que permite ejercitar los modos de falla contra un repo armado a proposito,
+    sin parchear un global del modulo -- que segun como pytest haya importado
+    este archivo puede terminar parcheando otra copia del modulo.
+    """
+    raiz = _RAIZ if raiz is None else raiz
     try:
         subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
-            cwd=_RAIZ,
+            cwd=raiz,
             capture_output=True,
             text=True,
             check=True,
         )
     except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
-        return f"no hay repo git usable en {_RAIZ}: {exc}"
+        return f"no hay repo git usable en {raiz}: {exc}"
 
-    resultado = subprocess.run(
-        ["git", "rev-list", "--count", "HEAD"],
-        cwd=_RAIZ,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    try:
+        resultado = subprocess.run(
+            ["git", "rev-list", "--count", "HEAD"],
+            cwd=raiz,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+        # Un repo git VALIDO con HEAD sin nacer -- `git init` y nada mas --
+        # pasa el rev-parse de arriba y despues hace fallar rev-list con codigo
+        # 128. Es un arbol sin historia, que es justo el caso que este helper
+        # existe para saltear, no para reventar la suite entera.
+        return f"no se pudo contar la historia en {raiz}: {exc}"
+
     conteo_texto = resultado.stdout.strip()
     if not conteo_texto.isdigit() or int(conteo_texto) < _MINIMO_COMMITS_PARA_HISTORIA:
         return (
@@ -114,6 +131,23 @@ def _motivo_si_no_hay_historia_usable() -> str | None:
             f">= {_MINIMO_COMMITS_PARA_HISTORIA}): probablemente un clone shallow"
         )
     return None
+
+
+def test_un_repo_con_head_sin_nacer_no_revienta_la_suite(tmp_path):
+    """Hallazgo 9: `git init` y nada mas deja un repo VALIDO -- el rev-parse
+    pasa -- con HEAD sin nacer. Ahi `git rev-list --count HEAD` sale con codigo
+    128, y sin envolver el segundo subprocess.run ese CalledProcessError se
+    propaga y mata la suite entera.
+
+    Mata la mutacion de sacar el try del segundo subprocess.run.
+    """
+    if subprocess.run(["git", "init", "-q", str(tmp_path)], capture_output=True).returncode != 0:
+        pytest.skip("no hay git usable para armar el repo sin HEAD")
+
+    motivo = _motivo_si_no_hay_historia_usable(raiz=tmp_path)
+
+    assert motivo is not None, "un repo sin HEAD no puede reportarse como historia usable"
+    assert "contar la historia" in motivo
 
 
 @pytest.mark.historia
