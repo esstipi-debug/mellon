@@ -1,6 +1,7 @@
 # Harness de self-healing — diseño
 
-**Fecha:** 2026-08-02 · **Estado:** diseño aprobado, sin implementar · **Repo:** `C:\fde\fde-field-kit`
+**Fecha:** 2026-08-02 · última revisión 2026-08-03 · **Repo:** `C:\fde\fde-field-kit`
+**Estado:** capa 1 implementada y medida. **Capa 2 FRENADA** — ver §9.
 
 Un harness que convierte cada fracaso observado en un guardia permanente, y que
 publica al lado cuánto **no** vigila.
@@ -360,8 +361,8 @@ asumió que ése era el conjunto de validación y que ya existía.
 > **Esa suposición se midió el 2026-08-03 y resultó falsa.** Ver §7.4. El
 > conjunto alcanzable es de 3, no de 17, y sobre esos 3 el oráculo detecta 0
 > por un límite estructural que este diseño no había previsto. El criterio de
-> éxito de §8 quedó inalcanzable como estaba escrito; §8 lleva ahora un
-> reemplazo **propuesto, sin aprobar**.
+> éxito de §8 quedó inalcanzable como estaba escrito, y **se reemplazó — el
+> reemplazo está aprobado desde el 2026-08-03**.
 
 El procedimiento que este diseño describía sigue siendo el correcto: se toma un
 bug con su par de commits, se le da al harness el árbol **anterior** al arreglo,
@@ -447,11 +448,11 @@ El harness sirve si, y sólo si:
 
 > **El criterio 1 quedó inalcanzable.** No por el harness: porque el conjunto de
 > validación que este diseño daba por existente se perdió en una reescritura de
-> historia (§7.4). Abajo va el reemplazo **propuesto y sin aprobar**; los
-> criterios 2, 3 y 4 siguen vigentes y ya se cumplen.
+> historia (§7.4). Se reemplazó por el de abajo, **aprobado el 2026-08-03**.
+> Los criterios 2, 3 y 4 no cambiaron y ya se cumplen.
 
 1. ~~Reproduce guardias para al menos uno de los 17 bugs históricos.~~
-   **Propuesto en reemplazo:** el denominador pasa a ser los **34 episodios
+   **Reemplazo aprobado (2026-08-03):** el denominador pasa a ser los **34 episodios
    `fix:`** de la historia real, que sí tienen par de commits, y el criterio
    pasa a ser de comportamiento del oráculo, no de cobertura de bugs:
    - acepta los **23** episodios que la medición clasificó DETECTA;
@@ -491,13 +492,42 @@ implementación, no uno.**
 falsificación de §7.1. **Ese cierre ya se corrió** (§7.4) y su resultado
 reemplaza el criterio 1 de §8 por el propuesto ahí.
 
-Es el que va primero porque el criterio de éxito entero vive acá: si el harness
-no atrapa ninguno de los 17, la capa 2 no vale la pena.
+Fue el que iba primero porque el criterio de éxito entero vive acá. **Está
+completo y medido.**
 
-**Plan 2 — la capa 2.** `instrumento.py` y `calibracion.py`, que consumen el
-contrato ya estable y no dependen de una sola línea de `tools/`. Arranca cuando
-el plan 1 cerró, y sólo si cerró con al menos un bug histórico atrapado.
+---
 
-La dependencia va en una sola dirección: la capa 2 importa `fdekit.guard` y
-nada más. Si el plan 1 se abandona, `instrumento.py` y `calibracion.py` siguen
-siendo construibles a mano — sólo se pierde el que los escribe solo.
+### Plan 2 — FRENADO por decisión del dueño del proyecto, 2026-08-03
+
+`instrumento.py` y `calibracion.py` **no se construyen por ahora.** La decisión
+es del dueño del proyecto y se toma con la medición de §7.4 sobre la mesa.
+
+Lo que esa medición dejó en evidencia, y que conviene tener escrito acá para
+que la decisión se pueda revisar con criterio y no de memoria:
+
+- La compuerta original de este spec era *"la capa 2 arranca sólo si el Plan 1
+  cerró atrapando al menos un bug histórico"*. Con el conjunto de 17 perdido en
+  una reescritura de historia, esa compuerta **no se puede evaluar**: no es que
+  dio negativa, es que se quedó sin dato.
+- El criterio de reemplazo aprobado en §8 mide otra cosa —si el oráculo
+  distingue un test que prueba algo de uno que no— y eso el harness lo hace.
+  Pero **no** contesta la pregunta que la compuerta quería contestar.
+- Y la capa 1 todavía no tiene su pieza central: el `correr` de dos árboles y
+  el aislamiento por worktree siguen sin construir. El único que existe hoy es
+  el desechable con el que se corrió §7.4.
+
+Construir la capa 2 sobre eso sería apilar encima de un cimiento que nadie
+midió. La dependencia técnica sigue siendo de una sola dirección —la capa 2
+importa `fdekit.guard` y nada más— así que **frenarla no cuesta nada y
+descongelarla tampoco**: `instrumento.py` y `calibracion.py` siguen siendo
+construibles a mano el día que se quiera, con o sin harness.
+
+**Qué habría que tener antes de descongelar**, en orden:
+
+1. El `correr` real de dos árboles y el worktree, que es lo que convierte al
+   harness en algo que corre solo en vez de un experimento.
+2. Un `destilar` real, para que la frontera del testigo se verifique contra un
+   diff y no contra una autodeclaración (§4.2 y `CoberturaGuardia`).
+3. Evidencia prospectiva: dejar el harness corriendo sobre los bugs que
+   aparezcan de acá en adelante, y medir sobre ésos — la única vía honesta que
+   quedó después de §7.4.
