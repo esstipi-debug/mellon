@@ -358,6 +358,11 @@ def why(store: DecideStore, decision_id: str) -> dict:
         "origen": d.origen,
         "auditable": d.auditable,
         "nota_origen": _nota_origen(d),
+        # Lo que hay que decir sin impedir. Hoy: el numero del criterio que no
+        # aparece en la cita. Un aviso que no se muestra en ningun lado es un
+        # campo muerto, y `why()` es la superficie que mira el que va a citar
+        # esta decision en una reunion.
+        "advertencias": d.advisories(),
         "nota_cita": (
             "sin cita: la decision se registro sin canal HABLADA (a mano o desde texto "
             "sin timestamps)"

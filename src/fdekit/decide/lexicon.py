@@ -20,6 +20,14 @@ from __future__ import annotations
 
 # Marcadores por tipo. Se comparan contra texto normalizado (sin acentos, en
 # minusculas). El orden importa: se prueba de mas especifico a menos.
+#
+# **Bilingues por tipo** (H12). El equipo global tiene la reunion en ingles y el
+# CD la tiene en espanol; un lexico monolingue captura la mitad del proyecto.
+# Las formas en ingles son igual de restringidas que las castellanas y por la
+# misma razon: "we agreed that" cierra un punto, "i agree with that" es una
+# opinion. Ampliar el lexico es justo la operacion que puede romper la precision
+# alta / recall bajo, y romperla es peor que el hueco — un falso positivo entra
+# al registro con cara de decision.
 MARKERS: dict[str, tuple[str, ...]] = {
     "decision": (
         "queda decidido",
@@ -28,6 +36,11 @@ MARKERS: dict[str, tuple[str, ...]] = {
         "se decide que",
         "decidimos que",
         "quedamos en que",
+        "it is decided",
+        "it's decided",
+        "we agreed that",
+        "we have decided",
+        "decision is",
     ),
     "question": (
         "queda pendiente",
@@ -35,6 +48,10 @@ MARKERS: dict[str, tuple[str, ...]] = {
         "queda por definir",
         "queda por resolver",
         "lo dejamos pendiente",
+        "remains open",
+        "still open",
+        "to be defined",
+        "tbd",
     ),
     "assumption": (
         "asumimos que",
@@ -42,6 +59,9 @@ MARKERS: dict[str, tuple[str, ...]] = {
         "damos por supuesto",
         "partimos de la base de que",
         "el supuesto es que",
+        "we assume that",
+        "we assume",
+        "the assumption is",
     ),
     # Adicion sobre las tres formas del diseno. Sin ella, el bloque 1 de la
     # agenda —compromisos vencidos, el mas usado— solo se puede alimentar a
@@ -52,6 +72,9 @@ MARKERS: dict[str, tuple[str, ...]] = {
         "se hace cargo de",
         "queda encargado de",
         "toma el compromiso de",
+        "commits to",
+        "will own",
+        "takes ownership of",
     ),
 }
 
@@ -129,19 +152,39 @@ RATIONALE_CUES = ("porque", "dado que", "ya que", "puesto que", "en razon de")
 #
 # En fase 2 se extraen y se guardan aunque todavia no se usen: hacerlo despues,
 # sobre transcriptos viejos, cuesta mucho mas.
+#
+# **Bilingue POR TERMINO, no por lista** (H12). En supply chain el
+# code-switching es la norma: "el slotting del picking de fast movers". Las dos
+# lenguas van bajo el MISMO canonico, y esa es la propiedad que importa: si
+# "reslotear" y "slotting" produjeran canonicos distintos, dos menciones del
+# mismo proceso no se reconocerian como el mismo slot y `_l2` fallaria justo en
+# los casos que existe para resolver.
 SLOT_LEXICON: dict[str, dict[str, tuple[str, ...]]] = {
     "proceso": {
-        "picking": ("picking", "pickear"),
-        "packing": ("packing", "empaque"),
-        "recepcion": ("recepcion",),
-        "despacho": ("despacho", "despachar"),
-        "reposicion": ("reposicion", "reponer"),
+        "picking": ("picking", "pickear", "preparacion de pedidos", "surtido"),
+        "packing": ("packing", "empaque", "embalaje"),
+        "recepcion": ("recepcion", "receiving", "inbound"),
+        "despacho": ("despacho", "despachar", "shipping", "outbound"),
+        "reposicion": ("reposicion", "reponer", "replenishment", "replen"),
         # La lista que se amplia en el kickoff con la jerga del cliente.
-        "slotting": ("slotting", "reslotting", "reslotear", "reslotea"),
-        "inventario": ("inventario", "conteo ciclico"),
+        "slotting": (
+            "slotting", "reslotting", "reslotear", "reslotea",
+            "reubicar", "reubicacion", "acomodo",
+        ),
+        "inventario": ("inventario", "conteo ciclico", "cycle count", "stock take"),
         "cross_docking": ("cross docking", "crossdocking"),
-        "devoluciones": ("devoluciones", "logistica inversa"),
-        "ruteo": ("ruteo", "rutear"),
+        "devoluciones": ("devoluciones", "logistica inversa", "reverse logistics"),
+        "ruteo": ("ruteo", "rutear", "routing"),
+    },
+    # Los hitos de un despliegue. Nadie los traduce y no tenian slot: "el
+    # cutover es el viernes" era una frase sin ningun asidero para el resolutor,
+    # y es de las que mas se repiten en las cuatro semanas que deciden todo.
+    "hito": {
+        "cutover": ("cutover", "go live", "golive", "salida a produccion"),
+        "piloto": ("piloto", "pilot", "prueba de concepto", "poc"),
+        "arranque": ("arranque", "kickoff", "kick off"),
+        "estabilizacion": ("estabilizacion", "hypercare", "hyper care"),
+        "cierre": ("cierre del proyecto", "handover", "traspaso"),
     },
     "sitio": {
         "pudahuel": ("pudahuel",),
@@ -176,10 +219,19 @@ SLOT_LEXICON: dict[str, dict[str, tuple[str, ...]]] = {
 # Vocabulario para el prompt inicial de Whisper en fase 3. Se amplia con la
 # jerga del cliente en el kickoff: cada CD tiene la suya y es lo primero que
 # hay que anotar.
+#
+# Lleva los terminos en INGLES a proposito (H12): Whisper con `language="es"`
+# degrada notoriamente en frases mixtas, y el prompt inicial es la contramedida
+# que el modelo ya soporta. Solo sirve si ahi estan los terminos que va a tener
+# que reconocer — y en un CD chileno el hito, el proceso y el sistema se dicen
+# casi siempre en ingles aunque la frase sea castellana.
 DECISION_VOCAB = [
     "queda decidido", "queda pendiente", "asumimos", "se compromete",
     "dueno", "plazo", "criterio", "supuesto", "compromiso",
     "SKU", "pallet", "picking", "slotting", "ola", "WMS", "SLA",
+    "cutover", "go live", "fast movers", "replenishment", "cycle count",
+    "cross docking", "hypercare", "backlog", "lead time", "fill rate",
+    "it is decided", "we agreed that", "commits to",
 ]
 
 WEEKDAYS = {

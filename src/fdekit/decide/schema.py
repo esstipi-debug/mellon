@@ -182,6 +182,12 @@ def es_zombi(commitment, parent) -> bool:
 # salia corto y perfectamente creible.
 HIST_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+([A-Z_]+):")
 
+# Fechas escritas en el criterio, en las formas que el kit acepta. Se recortan
+# antes de buscar magnitudes: ver `Decision.advisories`.
+_RE_FECHA_EN_TEXTO = re.compile(
+    r"\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[-/]\d{1,2}([-/]\d{2,4})?"
+)
+
 
 def hist_line(stamp: str, estado: str, detalle: str) -> str:
     """La unica forma de escribir una linea de historial visible al event log.
@@ -441,6 +447,46 @@ class Decision:
 
         issues.extend(self.anchor.validate())
         return issues
+
+    def advisories(self) -> list[str]:
+        """Lo que hay que decir sin impedir. Mismo patron que
+        `Assumption.advisories` y `ValueCase.warnings`.
+
+        **Ningun numero entra al criterio desde el ASR** (H12). "El corte es
+        500" transcrito como "5000" es un error silencioso, de alto costo, y cae
+        justo en el unico campo donde el diseno exige que haya un numero. Aca no
+        se puede impedir —el numero lo tipea un humano y puede ser correcto
+        aunque el transcripto diga otra cosa— pero si se puede nombrar.
+
+        Es un AVISO y no un `issue` a proposito: la cita viene del canal
+        HABLADA, que es de peor calidad que el DECIDIDA **por construccion**
+        (sala de 4-8 personas, microfono a distancia, gente que se pisa).
+        Bloquear por una diferencia con el transcripto le daria autoridad al
+        canal equivocado.
+
+        **Lo que NO atrapa, declarado:** las fechas. Un criterio con
+        "2026-09-30" contra una cita que dice "el 30 de septiembre" generaria
+        dos avisos falsos por cada decision con plazo, y un aviso que casi
+        siempre es falso es un aviso que nadie lee. Las fechas tienen su propia
+        ruta de validacion (`parse_date`, `_plazo`); esto persigue magnitudes.
+        """
+        out: list[str] = []
+        if self.anchor.empty or not self.criteria:
+            return out
+
+        # Las fechas salen del texto ANTES de extraer numeros: son el falso
+        # positivo dominante y tienen validacion propia.
+        sin_fechas = _RE_FECHA_EN_TEXTO.sub(" ", self.criteria)
+        en_cita = set(re.findall(r"\d+", self.anchor.cita_congelada))
+        faltan = [n for n in re.findall(r"\d+", sin_fechas) if n not in en_cita]
+        if faltan:
+            out.append(
+                f"el criterio dice {', '.join(sorted(set(faltan)))} y ese numero no "
+                "aparece en la cita congelada. Un digito mal transcrito en el criterio "
+                "es el error mas caro del sistema y el mas invisible: leerlo de vuelta "
+                "en voz alta al ratificar cuesta cinco segundos."
+            )
+        return out
 
 
 @dataclass
