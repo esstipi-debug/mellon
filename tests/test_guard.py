@@ -8,7 +8,7 @@ from datetime import date
 
 import pytest
 
-from fdekit.guard import Hallazgo, Procedencia
+from fdekit.guard import CoberturaGuardia, Hallazgo, Procedencia
 
 
 def _proc(commit="abc1234", dueno="stipi"):
@@ -37,3 +37,35 @@ def test_un_hallazgo_completo_es_inmutable():
     h = Hallazgo(regla="no anualizar dos veces", evidencia="L1 20% baja", procedencia=_proc())
     with pytest.raises(Exception):
         h.regla = "otra"
+
+
+# ------------------------------------------------------------- cobertura
+
+
+def test_la_cobertura_nunca_dice_estar_completa():
+    """Mismo motivo que Coverage en decide/query.py: heredar la interfaz de la
+    promesa 'detecta los bugs' sin heredar la garantia, y callarlo, es el error
+    mas grave que puede cometer este diseno."""
+    c = CoberturaGuardia(familias_vigiladas=("anualizacion", "unidades"), bugs_atrapados=17)
+    assert c.is_complete is False
+
+
+def test_la_nota_nombra_primero_lo_que_NO_vigila():
+    """El limite que hereda el oraculo elegido: sin invariantes externas, el
+    harness solo aprende de fracasos que ya se manifestaron como test rojo. El
+    bug que nunca falla no lo atrapa nadie, y eso va en la primera linea."""
+    nota = CoberturaGuardia(familias_vigiladas=("anualizacion",)).nota()
+    primera = nota.splitlines()[0]
+    assert "no vigila" in primera
+    assert "nunca fallo" in primera
+
+
+def test_la_nota_publica_el_puntaje_crudo_contra_los_bugs_historicos():
+    """El numero honesto no es 17/17: es cuantos de los 17 atrapa."""
+    nota = CoberturaGuardia(familias_vigiladas=("a", "b"), bugs_atrapados=2).nota()
+    assert "2 de 17" in nota
+
+
+def test_sin_familias_la_nota_lo_dice_en_vez_de_quedar_muda():
+    nota = CoberturaGuardia().nota()
+    assert "ninguna familia" in nota
