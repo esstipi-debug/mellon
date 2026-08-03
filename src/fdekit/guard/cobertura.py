@@ -14,7 +14,7 @@ episodio. Por eso `nota()` lo dice en la PRIMERA linea y no en una nota al pie.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 BUGS_HISTORICOS = 17
 """Los bugs de clase 'no falla, miente' documentados en HANDOFF.md. Es el

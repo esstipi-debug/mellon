@@ -29,7 +29,6 @@ if str(_RAIZ) not in sys.path:
     sys.path.insert(0, str(_RAIZ))
 
 import os
-from pathlib import Path
 
 import pytest
 
