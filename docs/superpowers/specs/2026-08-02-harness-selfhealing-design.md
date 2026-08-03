@@ -11,7 +11,8 @@ publica al lado cuánto **no** vigila.
 
 El HANDOFF del repo nombra el patrón de error dominante: **el bug que no falla,
 sólo miente** — un número plausible producido por una unidad importada sin
-pensar, o por un mismo texto alimentando dos campos. Van 17.
+pensar, o por un mismo texto alimentando dos campos. Van 17 — de los cuales
+sólo 3 son reconstruibles desde la historia de git (§7.4).
 
 Dos guardias del repo nacieron cada uno de un bug real: el de convenciones
 (tildes en `.py`) y el de higiene (efectos de lado en el árbol). Los dos fueron
@@ -353,17 +354,68 @@ Un harness que genera tests es **infalsable por defecto**: puede producir
 guardias para siempre sin que nadie sepa si sirven. Es exactamente el hallazgo
 que reordenó este proyecto, así que aplicarlo al harness no es opcional.
 
-El HANDOFF lista **17 bugs que no fallaron, solo mintieron**. Ese es el
-conjunto de validacion, y ya existe.
+El HANDOFF lista **17 bugs que no fallaron, solo mintieron**, y este diseño
+asumió que ése era el conjunto de validación y que ya existía.
 
-Se toma uno con su par de commits — la anualización doble es el candidato
-natural, tiene rama propia (`fix/anualizacion-unica`) — se le da al harness el
-árbol **anterior** al arreglo, y se le pregunta si produce un guardia que atrape
-el bug. La respuesta es un sí o un no ejecutable.
+> **Esa suposición se midió el 2026-08-03 y resultó falsa.** Ver §7.4. El
+> conjunto alcanzable es de 3, no de 17, y sobre esos 3 el oráculo detecta 0
+> por un límite estructural que este diseño no había previsto. El criterio de
+> éxito de §8 quedó inalcanzable como estaba escrito; §8 lleva ahora un
+> reemplazo **propuesto, sin aprobar**.
 
-El número honesto no es 17/17: es **cuántos de los 17 atrapa, publicado**. Si
-atrapa dos, el harness atrapa dos, y `CoberturaGuardia` lo dice con esas
-palabras.
+El procedimiento que este diseño describía sigue siendo el correcto: se toma un
+bug con su par de commits, se le da al harness el árbol **anterior** al arreglo,
+y se le pregunta si produce un guardia que atrape el bug. La respuesta es un sí
+o un no ejecutable. Lo que falló no fue el método: fue el supuesto de que los 17
+tuvieran par de commits.
+
+### 7.4 La medición, corrida el 2026-08-03
+
+Se escribió el `correr` de dos árboles —la pieza que §9 declara pendiente— en
+versión desechable, y se corrió sobre los **67 episodios reconstruibles** de la
+rama. Mecánica: worktree aparte, `PYTHONPATH` al `src` del árbol viejo, se
+llevan los archivos de test del commit de arreglo al árbol viejo y se corren
+sólo las funciones que ese commit agregó.
+
+| clase | | qué significa |
+|---|---:|---|
+| DETECTA | 30 | falla por aserción en el árbol viejo, pasa en el nuevo |
+| INCONCLUSO | 32 | el test ni siquiera carga en el árbol viejo |
+| VACUO | 2 | pasa igual en los dos árboles |
+| SIN_TEST_NUEVO | 2 | toca `tests/` sin agregar ninguna función |
+| SIN_PADRE | 1 | el commit raíz |
+
+Desglosado por tipo, que es donde el número significa algo:
+
+| | DETECTA | INCONCLUSO | VACUO | sin test |
+|---|---:|---:|---:|---:|
+| `fix:` (34) | **23** | 7 | 2 | 2 |
+| `feat:` (33) | 7 | 25 | — | — |
+
+**Hallazgo 1 — el conjunto de 17 no es alcanzable.** Sólo 3 de los 17 bugs
+tienen commit de arreglo identificable: `b2267bd` (anualización doble),
+`5acc584` (`parallel_trends_check` sin exportar) y `e5a84b5` (el ICC). Los
+otros 14 dan un solo commit con `git log -S`: `2d40e91`, *"feat: kit de terreno
+para FDE de supply chain"*, que los introdujo **ya arreglados**. Es el commit
+aplastado por la reescritura de historia que el HANDOFF documenta. Bug y
+arreglo viven en el mismo commit, así que no hay par antes/después.
+
+**Hallazgo 2 — un límite del oráculo que este diseño no había previsto.**
+Ninguno de los 3 mapeables da DETECTA. `5acc584` ni siquiera es episodio;
+`b2267bd` y `e5a84b5` dan INCONCLUSO. El motivo es estructural: **un bug
+arreglado agregando una función nueva no se puede detectar con dos árboles**,
+porque el test importa algo que en el árbol viejo no existe y ni siquiera
+carga. El del ICC es exactamente eso — el arreglo fue agregar `icc_from_log`.
+
+Es un cuarto agujero del harness, además del "bug que nunca falló" de §2/D3, y
+tiene que salir publicado en `CoberturaGuardia.nota()` igual que aquél.
+
+**Hallazgo 3 — dos tests del repo son vacuos.** Verificados a mano:
+`0afca7c` (*fix: `_to_fm` deriva los campos de Anchor y Consent*) y `caf2816`
+(*fix: `dwell_events` separa ausencia del marcador*). Sus tests pasan idénticos
+en el árbol anterior al arreglo. El oráculo los rechazaría, y hace bien: un
+test que pasa antes y después puede ser un guardia legítimo contra regresiones
+futuras, pero **no es evidencia de que el arreglo haya arreglado algo**.
 
 ### 7.2 Por unidad
 
@@ -393,8 +445,25 @@ que en ningún lado porque el corpus se ordena por fecha.
 
 El harness sirve si, y sólo si:
 
-1. Reproduce guardias para al menos uno de los 17 bugs históricos, con el
-   número exacto publicado (§7.1).
+> **El criterio 1 quedó inalcanzable.** No por el harness: porque el conjunto de
+> validación que este diseño daba por existente se perdió en una reescritura de
+> historia (§7.4). Abajo va el reemplazo **propuesto y sin aprobar**; los
+> criterios 2, 3 y 4 siguen vigentes y ya se cumplen.
+
+1. ~~Reproduce guardias para al menos uno de los 17 bugs históricos.~~
+   **Propuesto en reemplazo:** el denominador pasa a ser los **34 episodios
+   `fix:`** de la historia real, que sí tienen par de commits, y el criterio
+   pasa a ser de comportamiento del oráculo, no de cobertura de bugs:
+   - acepta los **23** episodios que la medición clasificó DETECTA;
+   - rechaza los **2** que clasificó VACUO;
+   - declara INCONCLUSO —no detección— los **7** cuyo test no carga en el árbol
+     viejo, y publica ese número al lado en vez de absorberlo.
+
+   Es falsable, es alcanzable hoy, y mide lo que el oráculo efectivamente
+   decide. Lo que **no** mide, y hay que decirlo: si el harness hubiera
+   *encontrado* esos bugs. Sólo mide si sabe distinguir un test que prueba algo
+   de uno que no. Son cosas distintas y el reemplazo no debe hacerlas pasar por
+   la misma.
 2. Rechaza un test vacuo plantado a propósito (§7.2).
 3. Una cosecha sobre evidencia sin lección devuelve cero guardias sin
    inventarse ninguno (§6).
@@ -402,6 +471,13 @@ El harness sirve si, y sólo si:
    línea (§6).
 
 Ninguno de los cuatro es una opinión. Los cuatro son tests.
+
+**Lo que queda sin criterio, y conviene no taparlo:** con el conjunto de 17
+perdido, este diseño ya no tiene forma de responder *"¿el harness habría
+atrapado los bugs que de verdad nos pasaron?"*. La pregunta sigue siendo la
+correcta y no hay dato para contestarla. La única vía honesta que queda es
+prospectiva: dejar que el harness corra sobre los bugs que vengan, y medir
+sobre ésos.
 
 ---
 
@@ -412,7 +488,8 @@ implementación, no uno.**
 
 **Plan 1 — el contrato y la capa 1.** `fdekit.guard` (`hallazgo`, `guardia`,
 `cobertura`), después `tools/harness/` completo, y cierra con el test de
-falsificación de §7.1 sobre los 17 bugs históricos.
+falsificación de §7.1. **Ese cierre ya se corrió** (§7.4) y su resultado
+reemplaza el criterio 1 de §8 por el propuesto ahí.
 
 Es el que va primero porque el criterio de éxito entero vive acá: si el harness
 no atrapa ninguno de los 17, la capa 2 no vale la pena.
