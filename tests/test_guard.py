@@ -71,6 +71,30 @@ def test_sin_familias_la_nota_lo_dice_en_vez_de_quedar_muda():
     assert "ninguna familia" in nota
 
 
+def test_bugs_atrapados_sin_medir_no_se_reporta_como_un_cero_medido():
+    """Hallazgo 4 de la revision final: el default era 0, y `nota()` publicaba
+    'atrapa 0 de 17' sin que nadie hubiera medido nada. Cero es un resultado
+    -- medimos y no atrapamos ninguno -- y ausencia de dato no es un resultado.
+    Nada en el sistema mapea un episodio a uno de los 17 casos de HANDOFF.md,
+    asi que el numerador no existe hasta que alguien lo provea.
+
+    Mata la mutacion de volver el default a 0.
+    """
+    c = CoberturaGuardia(familias_vigiladas=("anualizacion",))
+    assert c.bugs_atrapados is None
+    nota = c.nota()
+    assert "SIN MEDIR" in nota
+    assert "0 de 17" not in nota
+
+
+def test_un_cero_provisto_por_el_llamador_si_es_un_puntaje():
+    """La contracara: si alguien MIDIO y no atrapo ninguno, eso es un dato y se
+    publica como tal. La distincion entre 0 y None es el punto entero."""
+    nota = CoberturaGuardia(familias_vigiladas=("a",), bugs_atrapados=0).nota()
+    assert "0 de 17" in nota
+    assert "SIN MEDIR" not in nota
+
+
 # --------------------------------------------------------------- guardia
 
 

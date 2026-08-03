@@ -25,7 +25,13 @@ denominador del unico puntaje que hace falsable al harness."""
 class CoberturaGuardia:
     familias_vigiladas: tuple[str, ...] = ()
     bugs_historicos: int = BUGS_HISTORICOS
-    bugs_atrapados: int = 0
+    bugs_atrapados: int | None = None
+    """Cuantos de los `bugs_historicos` atrapo un guardia. None significa SIN
+    MEDIR, y es el default a proposito: nada en el sistema mapea un episodio a
+    uno de los 17 casos de HANDOFF.md, asi que un cero por defecto seria un dato
+    inventado. Cero es un resultado -- medimos y no atrapamos ninguno -- y
+    ausencia de dato no es un resultado. Lo puebla quien haya hecho la medicion,
+    no la cosecha."""
 
     @property
     def is_complete(self) -> bool:
@@ -33,9 +39,16 @@ class CoberturaGuardia:
 
     def nota(self) -> str:
         cuales = ", ".join(self.familias_vigiladas) if self.familias_vigiladas else "ninguna familia todavia"
+        if self.bugs_atrapados is None:
+            puntaje = (
+                f"Contra los {self.bugs_historicos} bugs historicos: SIN MEDIR. "
+                "Nadie corrio la falsificacion, asi que no hay numerador -- no es cero."
+            )
+        else:
+            puntaje = f"Contra los bugs historicos atrapa {self.bugs_atrapados} de {self.bugs_historicos}."
         return (
             "Este harness no vigila el bug que nunca fallo: sin un test en rojo no hay "
             "episodio que capturar, y ese es el patron dominante del repo.\n"
             f"Vigila {cuales}.\n"
-            f"Contra los bugs historicos atrapa {self.bugs_atrapados} de {self.bugs_historicos}."
+            f"{puntaje}"
         )
