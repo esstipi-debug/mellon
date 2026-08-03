@@ -137,8 +137,34 @@ def _find_date(text: str, base: date) -> tuple[date | None, int, str, str]:
             value = build(m)
         except (ValueError, KeyError, TypeError):
             return None, m.start(), m.group(0), "fecha mal formada"
-        return value, m.start(), m.group(0), ""
+        return value, m.start(), m.group(0), _nota_de_orden(m)
     return None, -1, "", ""
+
+
+def _nota_de_orden(m) -> str:
+    """Avisa cuando dia y mes son intercambiables.
+
+    El kit lee dd/mm, que es lo correcto en Chile. Pero `3/6` es 3-jun o 6-mar
+    segun de donde salga el texto, y **no hay senal en el string** para decidir.
+    Un export de WhatsApp de un iPhone con region EE.UU. escribe M/D; el del
+    telefono de al lado escribe D/M. Verificado contra exports reales: el mismo
+    grupo produce los dos.
+
+    `13/6` en cambio es inequivoco —13 no puede ser mes— y ahi no hay nada que
+    avisar. La diferencia entre el caso decidible y el indecidible es
+    exactamente lo que faltaba: los dos salian con confianza 0,95 y nota vacia.
+    """
+    try:
+        a, b = int(m[1]), int(m[2])
+    except (ValueError, IndexError, TypeError):
+        return ""
+    if a <= 12 and b <= 12 and a != b:
+        return (
+            f"'{m.group(0)}' es ambigua: se leyo dd/mm (dia {a}, mes {b}), pero si el "
+            f"texto viene de una fuente en formato mm/dd seria dia {b}, mes {a}. "
+            "Confirmar antes de promover."
+        )
+    return ""
 
 
 def _mk_dmy(m, base: date) -> date | None:
@@ -192,7 +218,15 @@ def parse_due_date(text: str, meeting_date: date) -> DateHit:
             f"'{cue} {matched}' es fecha de revision, no plazo: no se usa como vencimiento",
         )
     conf = 0.95 if role == "due" else 0.55
-    return DateHit(value, role, conf, matched, "" if role == "due" else "fecha sin preposicion de plazo")
+    motivos = [] if role == "due" else ["fecha sin preposicion de plazo"]
+    if note:
+        # Ambigua dd/mm contra mm/dd. Baja la confianza por debajo de
+        # MIN_CONFIDENCE (0,5) para que el borrador NO salga `ready`: una fecha
+        # que puede estar nueve meses corrida no se promueve sin que alguien la
+        # mire, aunque venga con "antes del" adelante.
+        conf = min(conf, 0.45)
+        motivos.append(note)
+    return DateHit(value, role, conf, matched, ". ".join(motivos))
 
 
 # ------------------------------------------------------------------ duenos

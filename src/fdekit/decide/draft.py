@@ -76,6 +76,28 @@ class DecisionDraft:
 # ----------------------------------------------------------------- parseo
 
 
+def _plazo(fecha) -> str:
+    """La fecha, **solo si es un plazo**. Vacia si no.
+
+    `parse_due_date` ya distingue el rol: sin preposicion de plazo devuelve
+    `role="unknown"` con confianza 0,55 y el motivo escrito. Los constructores
+    usaban `fecha.value` sin mirar el rol, asi que cualquier fecha suelta del
+    texto llenaba el campo — y un campo lleno NO entra a `missing`, o sea que no
+    entra a la cola de revision. La regla 1 rota por un `if` que faltaba.
+
+    Reproducido: "el 3/6 hablamos y Rodrigo se compromete a mover 200
+    ubicaciones" daba `due=2027-06-03`, cuando "el 3/6" es cuando hablaron. Peor
+    con un export de chat, donde la cabecera `03-06-26, 09:15 -` pone una fecha
+    en CADA mensaje: el compromiso nacia con el timestamp del mensaje como
+    plazo, en el pasado, y `tick` lo marcaba VENCIDO el dia uno.
+
+    Un hueco cuesta cinco segundos de pregunta. Una fecha inventada cuesta un
+    compromiso que nadie puede decir si esta atrasado — que es literalmente lo
+    que el docstring de `parse_due_date` ya prometia evitar.
+    """
+    return fecha.value.isoformat() if (fecha.value and fecha.role == "due") else ""
+
+
 def _mk_decision(rest: str, utt: str, roster, meeting_date: date) -> tuple[dict, list, list]:
     owner = resolve_owner(utt, roster)
     fecha = parse_due_date(utt, meeting_date)
@@ -85,7 +107,7 @@ def _mk_decision(rest: str, utt: str, roster, meeting_date: date) -> tuple[dict,
     campos = {
         "statement": statement,
         "owner": owner.value or "",
-        "criteria": f"a mas tardar {fecha.value.isoformat()}" if fecha.value else "",
+        "criteria": f"a mas tardar {_plazo(fecha)}" if _plazo(fecha) else "",
         "rationale": rationale,
         "date_decided": meeting_date.isoformat(),
         "slots": extract_slots(utt),
@@ -101,7 +123,7 @@ def _mk_commitment(rest: str, utt: str, roster, meeting_date: date) -> tuple[dic
     campos = {
         "what": split_statement(rest),
         "owner": owner.value or "",
-        "due": fecha.value.isoformat() if fecha.value else "",
+        "due": _plazo(fecha),
         "evidence_of_done": "",
         "decision_id": "",
     }
@@ -117,7 +139,7 @@ def _mk_assumption(rest: str, utt: str, roster, meeting_date: date) -> tuple[dic
     fecha = parse_due_date(utt, meeting_date)
     campos = {
         "statement": split_statement(rest),
-        "check_by": fecha.value.isoformat() if fecha.value else "",
+        "check_by": _plazo(fecha),
         "source": "",
         "decision_id": "",
     }
@@ -133,7 +155,7 @@ def _mk_question(rest: str, utt: str, roster, meeting_date: date) -> tuple[dict,
     campos = {
         "question": texto if texto.endswith("?") else f"{texto}?",
         "resolver": owner.value or "",
-        "resolve_by": fecha.value.isoformat() if fecha.value else "",
+        "resolve_by": _plazo(fecha),
     }
     faltan = [k for k in ("resolver", "resolve_by") if not campos[k]]
     notas = [n for n in (owner.note, fecha.note) if n]

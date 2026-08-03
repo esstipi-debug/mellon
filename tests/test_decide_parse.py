@@ -361,3 +361,79 @@ def test_el_borrador_listo_se_convierte_en_entidad_valida(tmp_path):
     obj = st.add_decision(to_entity(d))
     assert obj.id == "D-001"
     assert st.get("D-001").owner == "Marcela Perez"
+
+
+# ------------------------------ una fecha suelta NO es un plazo (H5, previo)
+#
+# Los dos salieron de refutar el diseno de H5, y los dos son anteriores a
+# cualquier parser de chat: la ruta texto -> borrador ya producia numeros
+# plausibles y falsos.
+
+
+def test_una_fecha_sin_preposicion_de_plazo_no_llena_el_campo():
+    """`parse_due_date` YA distinguia el rol —sin preposicion devuelve
+    `role="unknown"`, confianza 0,55 y el motivo escrito— pero los cuatro
+    constructores de `draft.py` usaban `fecha.value` sin mirarlo. Un campo lleno
+    NO entra a `missing`, o sea que no entra a la cola de revision: la regla 1
+    rota por un `if` que faltaba.
+
+    "el 3/6 hablamos" es CUANDO hablaron, no un vencimiento.
+    """
+    from fdekit.decide.draft import draft_decisions
+
+    d = draft_decisions(
+        "el 3/6 hablamos y Rodrigo se compromete a mover 200 ubicaciones",
+        roster=("Rodrigo",), meeting_date=date(2026, 8, 2))[0]
+    assert d.fields["due"] == ""
+    assert "due" in d.missing
+    assert any("sin preposicion de plazo" in n for n in d.notes)
+
+
+def test_con_preposicion_de_plazo_si_llena_el_campo():
+    """El arreglo no puede romper el caso legitimo."""
+    from fdekit.decide.draft import draft_decisions
+
+    d = draft_decisions(
+        "Rodrigo se compromete a mover 200 ubicaciones antes del 30/9",
+        roster=("Rodrigo",), meeting_date=date(2026, 8, 2))[0]
+    assert d.fields["due"] == "2026-09-30"
+    assert "due" not in d.missing
+
+
+def test_la_cabecera_de_chat_ya_no_se_vuelve_el_plazo():
+    """El caso que motivo el arreglo. Un export de chat pone una fecha en CADA
+    mensaje; el compromiso nacia con el timestamp del mensaje como plazo, en el
+    pasado, y `tick` lo marcaba VENCIDO el dia uno."""
+    from fdekit.decide.draft import draft_decisions
+
+    d = draft_decisions(
+        "03-06-26, 09:15 - Marcela: Rodrigo se compromete a mover 200 ubicaciones",
+        roster=("Marcela", "Rodrigo"), meeting_date=date(2026, 8, 2))[0]
+    assert d.fields["due"] == ""
+
+
+def test_la_fecha_ambigua_lo_dice_y_no_sale_ready():
+    """`3/6` es 3-jun o 6-mar segun de donde salga el texto, y no hay senal en
+    el string para decidir: verificado contra exports reales de WhatsApp, el
+    mismo grupo produce los dos ordenes segun la region de cada telefono.
+
+    `13/6` en cambio es inequivoco. Los dos salian con confianza 0,95 y nota
+    vacia — esa era la mentira.
+    """
+    inequivoca = parse_due_date("antes del 13/6", date(2026, 8, 2))
+    assert inequivoca.confidence == 0.95 and inequivoca.note == ""
+
+    ambigua = parse_due_date("antes del 3/6", date(2026, 8, 2))
+    assert ambigua.confidence < 0.5      # debajo de MIN_CONFIDENCE: no sale ready
+    assert "ambigua" in ambigua.note
+    assert "mm/dd" in ambigua.note
+
+
+def test_la_fecha_ambigua_manda_el_borrador_a_la_cola():
+    from fdekit.decide.draft import draft_decisions
+
+    d = draft_decisions(
+        "Rodrigo se compromete a mover 200 ubicaciones antes del 3/6",
+        roster=("Rodrigo",), meeting_date=date(2026, 8, 2))[0]
+    assert d.ready is False
+    assert any("ambigua" in n for n in d.notes)
