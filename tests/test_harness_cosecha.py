@@ -29,7 +29,7 @@ def _guards(tmp_path: Path, **archivos) -> Path:
     d = tmp_path / "guards"
     d.mkdir()
     for nombre, texto in archivos.items():
-        (d / nombre).write_text(texto, encoding="utf-8")
+        (d / (nombre + ".py")).write_text(texto, encoding="utf-8")
     return d
 
 
@@ -65,4 +65,41 @@ def test_un_guardia_roto_no_impide_generar_el_indice(tmp_path):
 
 def test_sin_guardias_el_indice_lo_dice_en_vez_de_quedar_vacio(tmp_path):
     md = indice(_guards(tmp_path))
-    assert "todavia no hay guardias" in md
+    assert "todavia no hay guardias" in md.lower()
+
+
+_GUARDIA_COLUMNAS = '''"""Guardia para probar columnas."""
+
+LECCION = {
+    "regla": "regla_valor_unico",
+    "familia": "familia_valor_unico",
+    "commit": "abc1234",
+    "fecha": "2026-08-03",
+    "dueno": "dueno_user",
+}
+
+
+def test_x():
+    assert True
+'''
+
+
+def test_cada_columna_de_leccion_se_lista_correctamente(tmp_path):
+    """Verifica que familia, regla, commit, fecha y dueno se distingan.
+    Una mutacion podria intercambiar columnas: esto lo mata."""
+    md = indice(_guards(tmp_path, test_col=_GUARDIA_COLUMNAS))
+    assert "| familia_valor_unico | regla_valor_unico |" in md
+    assert "`abc1234`" in md
+    assert "2026-08-03" in md
+    assert "dueno_user" in md
+
+
+def test_archivos_sin_extension_py_no_aparecen_en_el_indice(tmp_path):
+    """Un archivo README.md no es guardia: el filtro .py no debe ejercitarse."""
+    d = tmp_path / "guards"
+    d.mkdir()
+    (d / "README.md").write_text("# Guardias\n", encoding="utf-8")
+    (d / "test_ok.py").write_text(_GUARDIA, encoding="utf-8")
+    md = indice(d)
+    assert "test_ok" in md
+    assert "README" not in md

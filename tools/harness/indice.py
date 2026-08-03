@@ -40,9 +40,9 @@ def _leccion(texto: str) -> dict | None:
 
 def indice(guards_dir: Path) -> str:
     d = Path(guards_dir)
-    archivos = sorted(p for p in d.glob("*") if p.is_file() and p.name != "__init__.py")
+    archivos = sorted(p for p in d.glob("*.py") if p.name != "__init__.py")
     if not archivos:
-        return ENCABEZADO + "todavia no hay guardias en el corpus.\n"
+        return ENCABEZADO + "Todavia no hay guardias en el corpus.\n"
 
     filas = ["| guardia | familia | regla | commit | fecha | dueno |", "|---|---|---|---|---|---|"]
     for p in archivos:
