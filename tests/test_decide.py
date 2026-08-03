@@ -774,8 +774,12 @@ def _con_hablada(tmp_path, retention_days, meeting_date=date(2025, 1, 10)):
                         retention_days=retention_days),
     ))
     ts = TranscriptStore(st.root, "m1")
+    # `force` cuando no hay politica: simula el archivo legado, escrito antes de
+    # que el guardia de consentimiento existiera. Es el unico modo de llegar hoy
+    # a "hay habla guardada y nadie declaro por cuanto tiempo".
     ts.ingest_segments([{"start": 0.0, "end": 8.0,
-                         "text": "el problema es que Fabian no da abasto en el turno noche"}])
+                         "text": "el problema es que Fabian no da abasto en el turno noche"}],
+                       force=retention_days is None)
     return st, ts
 
 
@@ -837,3 +841,91 @@ def test_el_barrido_que_no_pudo_correr_lo_dice(tmp_path):
     assert "hablada_no_barrida" in r
     assert "m1.md" in r["hablada_no_barrida"]
     assert ts.path.exists()   # no se toco nada
+
+
+# ------------------------------------------- H7: el perfil gobierna de verdad
+#
+# Los campos `clase` y `canal` ya existian (paso 2, el Corpus). Lo que faltaba
+# es que gobernaran algo mas que el techo de promociones.
+
+
+def _meeting(st, mid, clase="COMITE", graba=False, retencion=None):
+    st.add_meeting(Meeting(
+        id=mid, date=HOY, roster=ROSTER, facilitator="Marcela", clase=clase,
+        consent=Consent(granted=True, granted_by="Marcela", basis="interes_legitimo",
+                        recording_allowed=graba, retention_days=retencion),
+    ))
+
+
+def test_el_1a1_no_puede_persistir_habla_ni_por_la_rama_de_texto(tmp_path):
+    """El agujero medido: el chequeo de `recording_allowed` vivia en
+    `cli.py:248`, DENTRO del `else` de `if a.text`. La rama `--text` y todo
+    `cmd_draft` escribian habla textual sin preguntar nada. Reproducido con un
+    1:1 de desempeno sobre un tercero, que es el peor caso posible: el perfil
+    decia que no, el consentimiento decia que no, y se escribio igual."""
+    from fdekit.decide.transcript import RecordingNotAllowed, TranscriptStore
+
+    st = DecideStore(tmp_path / "decide")
+    _meeting(st, "1a1-fabian", clase="UNO_A_UNO")
+    ts = TranscriptStore(st.root, "1a1-fabian")
+
+    with pytest.raises(RecordingNotAllowed, match="UNO_A_UNO"):
+        ts.ingest_text("Fabian no esta rindiendo en el turno noche.")
+    with pytest.raises(RecordingNotAllowed, match="UNO_A_UNO"):
+        ts.ingest_segments([{"start": 0, "end": 3, "text": "Fabian no esta rindiendo"}])
+    assert not ts.path.exists()
+
+
+def test_sin_consentimiento_tampoco_escribe(tmp_path):
+    from fdekit.decide.transcript import RecordingNotAllowed, TranscriptStore
+
+    st = DecideStore(tmp_path / "decide")
+    _meeting(st, "comite", clase="COMITE", graba=False)
+    with pytest.raises(RecordingNotAllowed, match="no tiene consentimiento"):
+        TranscriptStore(st.root, "comite").ingest_text("lo consolidamos en una ola.")
+
+
+def test_sin_reunion_registrada_no_hay_contra_que_consentir(tmp_path):
+    """El guardia lee la reunion del disco en vez de recibirla por parametro: un
+    guardia que depende de que el llamador pase el dato se esquiva sin querer, y
+    asi nacio el bug."""
+    from fdekit.decide.transcript import RecordingNotAllowed, TranscriptStore
+
+    st = DecideStore(tmp_path / "decide")
+    with pytest.raises(RecordingNotAllowed, match="no hay reunion registrada"):
+        TranscriptStore(st.root, "inventada").ingest_text("cualquier cosa.")
+
+
+def test_el_comite_con_consentimiento_si_escribe(tmp_path):
+    """El guardia no puede romper el caso legitimo."""
+    from fdekit.decide.transcript import TranscriptStore
+
+    st = DecideStore(tmp_path / "decide")
+    _meeting(st, "comite", graba=True, retencion=90)
+    utts = TranscriptStore(st.root, "comite").ingest_text("lo consolidamos en una ola.")
+    assert len(utts) == 1
+
+
+def test_el_perfil_apaga_el_gate_pero_lo_deja_anotado(tmp_path):
+    """Apagar el gate sin dejar rastro seria la regla 3 rota: la agenda de un
+    INCIDENTE quedaria identica a una donde el gate no rechazo nada. El perfil
+    relaja el proceso, no la contabilidad."""
+    # Dos stores y no dos reuniones: `agenda()` mira TODAS las preguntas
+    # abiertas del registro, no solo las de esa reunion — es su diseno, porque
+    # lo pendiente no deja de estarlo por haberse planteado en otra sesion.
+    def _con_pregunta(sub, clase):
+        st = DecideStore(tmp_path / sub)
+        _meeting(st, "m", clase=clase)
+        st.add_question(OpenQuestion(
+            id="", question="cortamos la ola de las 14:00?", resolver="Ajeno",
+            resolve_by=HOY + timedelta(days=3), meeting_id="m"), force=True)
+        return st
+
+    a_comite = agenda(_con_pregunta("comite", "COMITE"), "m", today=HOY)
+    assert len(a_comite.gate_rejections) == 1 and not a_comite.gate_bypassed
+
+    a_inc = agenda(_con_pregunta("incidente", "INCIDENTE"), "m", today=HOY)
+    assert not a_inc.gate_rejections
+    assert len(a_inc.gate_bypassed) == 1
+    assert any("gate de agenda DESACTIVADO" in x for x in a_inc.advisories)
+    assert "Entraron con el gate APAGADO" in a_inc.to_markdown()

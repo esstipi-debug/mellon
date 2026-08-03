@@ -12,7 +12,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 
-from .schema import Assumption, Commitment, Decision, OpenQuestion, es_zombi, hist_line
+from .schema import (
+    Assumption,
+    Commitment,
+    Decision,
+    OpenQuestion,
+    es_zombi,
+    hist_line,
+    profile_of,
+)
 from .store import DecideStore
 
 # --------------------------------------------------------------- cobertura
@@ -75,6 +83,10 @@ class Agenda:
     # tenia algo que resolver — y el bucle seguiria corriendo invisible.
     expired_questions: list = field(default_factory=list)
     gate_rejections: list = field(default_factory=list)
+    # Puntos que entraron con el gate apagado por el perfil de la reunion. El
+    # perfil relaja el proceso, no la contabilidad: sin este bloque, la agenda
+    # de un INCIDENTE seria indistinguible de una donde el gate no rechazo nada.
+    gate_bypassed: list = field(default_factory=list)
     advisories: list = field(default_factory=list)
 
     @property
@@ -157,6 +169,21 @@ class Agenda:
                 L.append(f"| {r['id']} | {r['reason']} | {r['action']} |")
             L.append("")
 
+        if self.gate_bypassed:
+            L += [
+                "## Entraron con el gate APAGADO",
+                "",
+                "El perfil de esta reunion desactiva el gate. Estos puntos no cumplen las",
+                "tres condiciones y entran igual — se listan porque relajar el proceso no",
+                "es lo mismo que dejar de contar.",
+                "",
+                "| id | que le falta |",
+                "|---|---|",
+            ]
+            for r in self.gate_bypassed:
+                L.append(f"| {r['id']} | {r['reason']} |")
+            L.append("")
+
         if self.advisories:
             L += ["## Avisos", ""] + [f"- {a}" for a in self.advisories] + [""]
         return "\n".join(L)
@@ -201,6 +228,7 @@ def agenda(store: DecideStore, meeting_id: str, today: date | None = None) -> Ag
     assumptions = store.assumptions()
     questions = store.questions()
 
+    perfil = profile_of(meeting.clase)
     ag = Agenda(meeting_id=meeting_id, meeting_date=meeting.date, roster=roster)
 
     ag.overdue_commitments = sorted(
@@ -229,13 +257,25 @@ def agenda(store: DecideStore, meeting_id: str, today: date | None = None) -> Ag
             ag.reopen_requests.append(q)
             continue
         passes, reason, action = _gate(q, roster, questions)
-        if passes:
+        if passes or not perfil.gate_agenda:
             ag.open_questions.append(q)
+            if not passes:
+                # Entro con el gate apagado. Se anota: una agenda de INCIDENTE
+                # identica a una donde el gate no rechazo nada es la regla 3
+                # rota — el perfil relaja el proceso, no la contabilidad.
+                ag.gate_bypassed.append({"id": q.id, "reason": reason, "action": action})
         else:
             ag.gate_rejections.append({"id": q.id, "reason": reason, "action": action})
 
     for a in assumptions:
         ag.advisories.extend(a.advisories())
+    if not perfil.gate_agenda:
+        ag.advisories.append(
+            f"gate de agenda DESACTIVADO por la clase {meeting.clase}: {perfil.nota}. "
+            f"{len(ag.gate_bypassed)} punto(s) entraron sin cumplir las tres condiciones."
+            if ag.gate_bypassed else
+            f"gate de agenda desactivado por la clase {meeting.clase}; no hizo falta."
+        )
     zombies = [c for c in commitments if c.status == "ZOMBI"]
     if zombies:
         ag.advisories.append(

@@ -25,6 +25,8 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 
+from .schema import profile_of
+
 
 @dataclass
 class Utterance:
@@ -47,6 +49,12 @@ def mmss(seconds: float | None) -> str:
     return f"{s // 60:02d}:{s % 60:02d}"
 
 
+class RecordingNotAllowed(PermissionError):
+    """El canal HABLADA se niega a escribir. No es un warning: escribir habla
+    textual sin base para hacerlo no se puede deshacer, y en un registro
+    versionado sobrevive al proyecto."""
+
+
 class TranscriptStore:
     """JSONL append-only por reunion, mas el hash del contenido.
 
@@ -63,26 +71,79 @@ class TranscriptStore:
 
     # ------------------------------------------------------------- escritura
 
-    def write(self, utterances: list[Utterance]) -> str:
+    def meeting(self):
+        """La reunion de la que este transcripto es el canal HABLADA.
+
+        Se lee del disco en vez de recibirse por parametro **a proposito**. Un
+        guardia que depende de que el llamador pase el dato se esquiva sin
+        querer: el chequeo de `recording_allowed` vivia en `cli.py:248`, dentro
+        del `else` de `if a.text`, asi que la rama `--text` y todo `cmd_draft`
+        escribian habla textual sin preguntar nada. Reproducido con un 1:1 de
+        desempeno sobre un tercero.
+        """
+        from .store import DecideStore
+
+        try:
+            return DecideStore(self.root).get_meeting(self.meeting_id)
+        except Exception:
+            return None
+
+    def _guard(self) -> None:
+        """El unico porton de escritura del canal HABLADA.
+
+        `ingest_text` e `ingest_segments` pasan los dos por `write`, asi que
+        alcanza con cerrar aca. Una ruta nueva que escriba habla tiene que pasar
+        por el mismo lugar o no escribe.
+        """
+        m = self.meeting()
+        if m is None:
+            raise RecordingNotAllowed(
+                f"no hay reunion registrada con id '{self.meeting_id}': no existe "
+                "consentimiento contra el cual escribir habla textual. Registrar la "
+                "reunion primero (`decide meeting`)."
+            )
+        perfil = profile_of(m.clase)
+        if not perfil.recording_allowed:
+            raise RecordingNotAllowed(
+                f"la clase {m.clase} no admite canal HABLADA: {perfil.nota}. "
+                "El registro DECIDIDA de esta sesion se escribe a mano con "
+                "`decide add`, despues de la reunion."
+            )
+        if not m.consent.recording_allowed:
+            raise RecordingNotAllowed(
+                f"la reunion '{self.meeting_id}' no tiene consentimiento para grabar "
+                f"(base declarada: {m.consent.basis or 'ninguna'}). Es la unica pieza "
+                "de cumplimiento que no se puede retrofitear."
+            )
+
+    def write(self, utterances: list[Utterance], force: bool = False) -> str:
+        if not force:
+            self._guard()
         self.path.write_text(
             "\n".join(json.dumps(u.to_dict(), ensure_ascii=False) for u in utterances) + "\n",
             encoding="utf-8",
         )
         return self.sha256()
 
-    def ingest_text(self, text: str) -> list[Utterance]:
+    def ingest_text(self, text: str, force: bool = False) -> list[Utterance]:
         """Texto plano (transcript nativo de Teams/Meet). Sin timestamps: el
-        ancla va a quedar sin `mm:ss` y eso se dice, no se finge."""
+        ancla va a quedar sin `mm:ss` y eso se dice, no se finge.
+
+        `force` saltea el guardia de consentimiento. Existe para dos casos
+        legitimos —un test del parseo, y un archivo escrito antes de que el
+        guardia existiera— y es explicito a proposito: el bug era justamente que
+        esta ruta escribia habla textual sin que nadie tuviera que pedirlo.
+        """
         import re
 
         partes = [p.strip() for p in re.split(r"(?<=[.!?])\s+|\n+", text) if p.strip()]
         utts = [Utterance(idx=i, text=p) for i, p in enumerate(partes)]
-        self.write(utts)
+        self.write(utts, force=force)
         return utts
 
-    def ingest_segments(self, segments: list[dict]) -> list[Utterance]:
+    def ingest_segments(self, segments: list[dict], force: bool = False) -> list[Utterance]:
         """Segmentos de Whisper: traen `start`/`end`, asi que el ancla si queda
-        con minuto."""
+        con minuto. Ver `ingest_text` sobre `force`."""
         utts = [
             Utterance(
                 idx=i,
@@ -93,7 +154,7 @@ class TranscriptStore:
             for i, s in enumerate(segments)
             if (s.get("text") or "").strip()
         ]
-        self.write(utts)
+        self.write(utts, force=force)
         return utts
 
     # -------------------------------------------------------------- lectura

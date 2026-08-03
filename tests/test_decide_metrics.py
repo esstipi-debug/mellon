@@ -52,8 +52,13 @@ HOY = date(2026, 8, 1)
 ROSTER = ("Marcela Perez", "Fabian Soto", "Rodrigo Munoz")
 
 
-def consent():
-    return Consent(True, "Marcela Perez", "interes_legitimo")
+def consent(graba: bool = True):
+    """Con permiso de grabar por default: estos tests ejercen el canal HABLADA,
+    y `TranscriptStore.write` ahora se niega sin consentimiento. Declararlo en
+    el test es mas honesto que el estado anterior, donde el habla textual se
+    escribia sin que nadie hubiera dicho que si."""
+    return Consent(True, "Marcela Perez", "interes_legitimo",
+                   recording_allowed=graba, retention_days=90 if graba else None)
 
 
 @pytest.fixture

@@ -77,8 +77,10 @@ def test_el_transcripto_guarda_tiempos_y_hash(env):
 
 
 def test_texto_plano_no_inventa_timestamps(tmp_path):
+    # `force`: es un test del parseo, no del flujo de consentimiento — no hay
+    # reunion registrada contra la cual chequear, y no es lo que se afirma aca.
     ts = TranscriptStore(tmp_path, "m2")
-    utts = ts.ingest_text("Primera frase. Segunda frase.")
+    utts = ts.ingest_text("Primera frase. Segunda frase.", force=True)
     assert [u.t_start for u in utts] == [None, None]
     assert mmss(None) == "--:--"
 
@@ -109,7 +111,7 @@ def test_congela_la_cita_con_minuto_y_hash(env):
 
 def test_la_cita_se_recorta_a_500_chars(tmp_path):
     ts = TranscriptStore(tmp_path, "largo")
-    ts.ingest_segments([{"start": 0, "end": 1, "text": "palabra " * 200}])
+    ts.ingest_segments([{"start": 0, "end": 1, "text": "palabra " * 200}], force=True)
     a = freeze(ts, 0)
     assert len(a.cita_congelada) <= MAX_CITA
     assert a.validate() == []
