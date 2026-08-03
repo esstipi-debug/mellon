@@ -27,7 +27,7 @@ COMANDOS = [
     ["decide", "supersede"], ["decide", "head"],
     ["decide", "transcribe"], ["decide", "resolve"], ["decide", "confirm"],
     ["decide", "unalias"], ["decide", "aliases"], ["decide", "metrics"],
-    ["decide", "mine"], ["decide", "export"], ["decide", "seed"], ["decide", "minutes"],
+    ["decide", "mine"], ["decide", "export"], ["decide", "seed"], ["decide", "minutes"], ["decide", "slip"],
     ["decide", "pilot", "init"], ["decide", "pilot", "baseline"],
     ["decide", "pilot", "score"], ["decide", "pilot", "survey"],
     ["decide", "pilot", "verdict"],

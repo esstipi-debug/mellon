@@ -26,6 +26,11 @@ DECISION_STATUS = ("VIGENTE", "SUPERADA", "REVERTIDA", "EN_RIESGO", "EN_CONFLICT
 # decisiones sobre sitios o turnos distintos que se leyeron como una.
 CONFLICT_RESOLUTIONS = ("GANA_SALA", "GANA_EXTERNA", "COEXISTEN")
 COMMITMENT_STATUS = ("ABIERTO", "CUMPLIDO", "VENCIDO", "CANCELADO", "ZOMBI")
+# Cuantas veces se le puede correr la fecha a un compromiso antes de que deje de
+# ser un atraso. **No es un tope que rechaza**: la cuarta corrida se aplica
+# igual, porque rechazarla manda al dueno al silencio y el silencio es el modo
+# de falla que H11 describe. Lo que hace el limite es abrir la pregunta.
+MAX_SLIPS = 3
 # VERIFICADO no esta en el diseno original. Se agrega porque sin el, un supuesto
 # vencido no tiene forma de dejar de poner en riesgo a su decision, y la agenda
 # arrastraria el mismo item para siempre.
@@ -449,6 +454,37 @@ class Commitment:
     status: str = "ABIERTO"
     owner_presente_al_decidir: bool | None = None
     meeting_id: str = ""
+    # H11 — el compromiso renegociado en privado, que es la muerte mas comun de
+    # estos sistemas. Dueno y solicitante acuerdan por chat una fecha nueva, el
+    # registro sigue mostrando VENCIDO, y a la tercera vez el dueno concluye que
+    # el registro esta mal y deja de mirarlo.
+    #
+    # `due` SI se mueve —si no, el tablero sigue mintiendo— pero la fecha
+    # anterior queda al lado. Sin esto, el registro no puede distinguir "se
+    # cumplio" de "se corrio hasta que se cumplio", que es justo lo que hay que
+    # poder ver. Cada entrada: {de, a, motivo, por, cuando}, todo en ISO.
+    slips: list[dict] = field(default_factory=list)
+
+    @property
+    def slips_hacia_adelante(self) -> int:
+        """Las que corrieron la fecha, no las que la acercaron.
+
+        Adelantar un compromiso tambien es renegociar y se registra igual, pero
+        no es el modo de falla que persigue el limite: contarlo aca haria que
+        un equipo que se adelanta dos veces quede marcado igual que uno que no
+        decide.
+        """
+        return sum(1 for s in self.slips if s.get("a", "") > s.get("de", ""))
+
+    @property
+    def es_no_decision(self) -> bool:
+        """Tres corridas no son un atraso: son una decision que no se tomo.
+
+        Mismo predicado que `OpenQuestion.es_no_decision` y por la misma razon:
+        a partir de cierta repeticion, el silencio deja de ser demora y pasa a
+        ser un objeto que hay que poner sobre la mesa.
+        """
+        return self.slips_hacia_adelante >= MAX_SLIPS
 
     def validate(self, roster: tuple[str, ...] | None = None) -> list[str]:
         issues: list[str] = []

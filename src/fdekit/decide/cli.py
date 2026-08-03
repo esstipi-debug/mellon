@@ -62,6 +62,14 @@ def _guarded(fn):
         except KeyError as exc:
             print(f"\nNo existe: {exc}\n")
             return 2
+        except ValueError as exc:
+            # `slip` y `supersede` levantan ValueError con el motivo escrito
+            # adentro, y sin esta rama salia un traceback en vez del mensaje.
+            # No es cosmetico: el mensaje ES el producto de esas operaciones,
+            # y un traceback ensena que la herramienta esta rota cuando lo que
+            # paso es que la operacion se nego por una razon buena.
+            print(f"\nRECHAZADO — {exc}\n")
+            return 2
 
     return wrapper
 
@@ -430,6 +438,25 @@ def cmd_seed(a):
     return 2 if (rep.rechazadas or rep.alias_rechazados) else 0
 
 
+def cmd_slip(a):
+    """Correr la fecha de un compromiso. Una linea, desde el telefono.
+
+    Es deliberadamente el comando mas corto del CLI: si renegociar cuesta mas
+    que incumplir en silencio, la gente elige el silencio, y ahi el tablero de
+    vencidos pasa a ser ruido que todos ignoran sin ninguna senal tecnica.
+    """
+    from .query import slip
+
+    st = _store(a)
+    r = slip(st, a.id, parse_date(a.nueva_fecha), motivo=a.motivo, por=a.por,
+             today=_date.today())
+    print(f"{r['id']}: {r['de']} -> {r['a']} ({r['corridas_hacia_adelante']} corrida/s)")
+    if r["escalado"]:
+        print(f"\n{r['nota']}\nPregunta abierta: {r['escalado']}")
+        return 2
+    return 0
+
+
 def cmd_seed_minutes(a):
     """Las actas anteriores al sistema, a la cola. No promueve nada."""
     from .seed import seed_minutes
@@ -787,6 +814,13 @@ def register(subparsers):
                     help="carpeta de actas, o un archivo. El nombre trae la fecha: "
                          "'YYYY-MM-DD-...'; sin fecha, el acta se rechaza")
     sm.set_defaults(func=_guarded(cmd_seed_minutes))
+
+    sl = sub.add_parser("slip", help="corre la fecha de un compromiso, conservando la anterior")
+    sl.add_argument("id")
+    sl.add_argument("--nueva-fecha", required=True, dest="nueva_fecha")
+    sl.add_argument("--motivo", required=True)
+    sl.add_argument("--por", required=True, help="quien acordo la fecha nueva")
+    sl.set_defaults(func=_guarded(cmd_slip))
 
     al = sub.add_parser("aliases", help="lista la tabla de alias")
     al.set_defaults(func=_guarded(cmd_aliases))

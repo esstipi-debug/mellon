@@ -15,6 +15,7 @@ from datetime import date
 from .schema import (
     CONFLICT_RESOLUTIONS,
     LIVE_COMMITMENT_STATUS,
+    MAX_SLIPS,
     Assumption,
     Commitment,
     Decision,
@@ -23,7 +24,8 @@ from .schema import (
     hist_line,
     profile_of,
 )
-from .store import DecideStore
+from ..gemba import normalize as _norm_txt
+from .store import DecideStore, ValidationError
 
 # --------------------------------------------------------------- cobertura
 
@@ -921,6 +923,126 @@ def safe_close(
 
 
 # ------------------------------------------------------------------- tick
+
+
+def slip(
+    store: DecideStore,
+    commitment_id: str,
+    nueva_fecha: date,
+    motivo: str,
+    por: str,
+    today: date,
+) -> dict:
+    """Correr la fecha de un compromiso, en el registro y no por chat.
+
+    El hueco que cierra es el mas letal de todos y no es tecnico: dueno y
+    solicitante acuerdan una fecha nueva por fuera, el tablero sigue mostrando
+    VENCIDO, y a la tercera vez el dueno concluye que el registro esta mal y
+    deja de mirarlo. Desde ahi el tablero de vencidos es ruido que todos
+    ignoran, **sin ninguna senal tecnica de que eso paso**.
+
+    Por eso esta operacion es deliberadamente barata —una linea, sin aprobacion
+    previa, desde el telefono— y por eso NO se puede rechazar la cuarta corrida:
+    renegociar tiene que seguir siendo mas barato que incumplir en silencio, o
+    la gente elige el silencio. Lo que hace el limite es **abrir la pregunta**,
+    que es distinto de cerrar la puerta.
+
+    `today` es argumento (regla 4): decide si la fecha nueva ya paso.
+    """
+    c = store.get(commitment_id)
+
+    if len(_norm_txt(motivo)) < 8:
+        raise ValueError(
+            "correr una fecha exige un motivo. Sin el, en seis semanas la unica "
+            "lectura posible del historial es 'no se hizo', que es la lectura que "
+            "hace que el dueno deje de declarar."
+        )
+    if c.status not in LIVE_COMMITMENT_STATUS:
+        raise ValueError(
+            f"{commitment_id} esta {c.status}: no se le corre la fecha a un compromiso "
+            "que ya no le pide nada a nadie. Revivirlo por la fecha seria decidir por "
+            "la puerta de atras que vuelve a estar abierto."
+        )
+    if nueva_fecha < today:
+        raise ValueError(
+            f"la fecha nueva ({nueva_fecha}) esta en el pasado. Eso no es renegociar: "
+            "deja el compromiso vencido de nacimiento y con un motivo escrito al lado "
+            "que lo hace ver atendido."
+        )
+
+    c.slips = list(c.slips) + [{
+        "de": c.due.isoformat(),
+        "a": nueva_fecha.isoformat(),
+        "motivo": motivo,
+        "por": por,
+        "cuando": today.isoformat(),
+    }]
+    c.due = nueva_fecha
+    # Vuelve a ABIERTO: si renegociar dejara el compromiso en VENCIDO, el
+    # tablero seguiria mintiendo y no habriamos cerrado nada. ZOMBI no se toca —
+    # ahi el problema no es la fecha, es que la decision de arriba se revirtio.
+    if c.status == "VENCIDO":
+        c.status = "ABIERTO"
+    store.save(c)
+
+    out = {
+        "id": commitment_id,
+        "applied": True,
+        "de": c.slips[-1]["de"],
+        "a": c.slips[-1]["a"],
+        "corridas_hacia_adelante": c.slips_hacia_adelante,
+        "escalado": None,
+    }
+    if c.es_no_decision:
+        out["escalado"] = _escalar_no_decision(store, c, today)
+        out["nota"] = (
+            f"{commitment_id} lleva {c.slips_hacia_adelante} corridas hacia adelante. "
+            "Eso ya no es un atraso: es una decision que no se tomo. La fecha se "
+            "corrio igual —el silencio es peor— y quedo abierta la pregunta."
+        )
+    return out
+
+
+def _escalar_no_decision(store: DecideStore, c, today: date) -> str:
+    """Abre UNA pregunta por compromiso, no una por corrida.
+
+    Idempotente como `tick`: una pregunta nueva en cada slip a partir del
+    tercero llenaria la agenda con la misma pregunta y la volveria invisible
+    por repeticion, que es el efecto contrario al buscado.
+    """
+    marca = f"[{c.id}]"
+    previa = next((q for q in store.questions() if marca in q.question), None)
+    if previa is not None:
+        return previa.id
+
+    # El resolver es el dueno de la DECISION, no el del compromiso: el que
+    # corrio la fecha tres veces ya dijo lo que podia decir, y pedirle a el que
+    # resuelva es pedirle que se autoescale.
+    try:
+        resolver = store.get(c.decision_id).owner
+    except (KeyError, ValidationError):
+        resolver = c.owner
+
+    q = OpenQuestion(
+        id="",
+        question=(
+            f"{marca} se corrio la fecha {c.slips_hacia_adelante} veces: "
+            f"¿va a pasar, cambia de dueno, o se cancela?"
+        ),
+        resolver=resolver,
+        resolve_by=c.due,
+        blocks=[c.decision_id] if c.decision_id else [],
+        meeting_id=c.meeting_id,
+        costo_de_no_decidir=(
+            f"el compromiso lleva {c.slips_hacia_adelante} corridas y su decision "
+            f"({c.decision_id or 'sin decision'}) sigue contando con el"
+        ),
+    )
+    # `force`: la pregunta se abre igual aunque el dueno de la decision haya
+    # salido del roster de esa reunion. Es la clase de dato que no puede quedar
+    # sin escribir porque un roster quedo viejo — justo el caso de H9.
+    store.add_question(q, force=True)
+    return q.id
 
 
 def tick(store: DecideStore, today: date, apply: bool = True) -> dict:
