@@ -1,8 +1,10 @@
 """La mitad del harness que corre sola, y por eso solo observa.
 
 La frontera del diseno: capturar nunca miente, actuar si puede. Este modulo no
-escribe codigo, no interpreta y no clasifica. Escribe un renglon cuando una
-corrida deja en verde tests que la anterior tenia en rojo.
+escribe codigo, no interpreta y no clasifica. Guarda el estado de la ultima
+corrida en disco y DEVUELVE un Episodio cuando la corrida dejo en verde tests
+que la anterior tenia en rojo. No escribe el renglon en el log: cablear el
+Episodio a `episodio.agregar` es trabajo del hook, que todavia esta pendiente.
 
 Es una funcion pura sobre el estado en disco: recibe el resultado de la corrida
 como argumento en vez de correr pytest adentro. Eso la vuelve testeable sin

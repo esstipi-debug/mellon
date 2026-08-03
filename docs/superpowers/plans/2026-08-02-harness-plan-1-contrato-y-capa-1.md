@@ -2092,3 +2092,28 @@ cd /c/fde && git status --short 2>/dev/null || echo "HANDOFF.md no esta en un re
 - **`.harness/cosecha/`, el reporte por corrida (spec §4.4).** `cosechar()` devuelve el `Resultado` completo —guardias, descartados con motivo, cobertura— pero el Plan 1 no lo persiste. El motivo es que el formato del reporte se decide mirando una cosecha real, y sin `destilar` no hay ninguna: un formato inventado antes del primer uso es la abstracción prematura que el repo ya evitó dos veces. Se agrega en la misma tanda que el `destilar` real. **Mientras tanto el `Resultado` no se pierde: lo devuelve la función y lo imprime quien la llame.**
 - **El merge manual (spec §6).** No es código y no puede serlo: es la línea que la autoridad del harness no cruza. Queda como regla escrita en el HANDOFF (Tarea 12, Step 4), no como guardia.
 - Todo `src/fdekit/guard/instrumento.py` y `calibracion.py`: son el Plan 2.
+- **El `correr` real que monta los dos árboles.** `oraculo.veredicto` recibe
+  `correr` como argumento y todo el Plan 1 lo ejercita con dobles: no existe
+  ninguna implementación que efectivamente materialice `commit_antes` y
+  `commit_despues` y corra pytest en cada uno. **El oráculo está testeado; su
+  ejecutor no existe.** Sin él, el veredicto es una decisión sobre datos que
+  hoy nadie produce. Falta: la función que dado un commit deja un árbol
+  utilizable, corre la suite ahí y devuelve el conjunto de tests fallidos —
+  con el manejo de árbol sucio, de commit inalcanzable y de pytest que no
+  termina, que son los tres modos de falla que la vuelven no trivial.
+- **El aislamiento por worktree.** El diseño lo pide y el docstring de
+  `cosecha.py` llegó a afirmar que ya pasaba; era falso, y el texto quedó
+  corregido. **No hay una sola línea de worktree en `tools/`.** Hoy la cosecha
+  corre donde la llamen, así que dos sesiones concurrentes sobre el mismo árbol
+  pueden pisarse — que es exactamente lo que ya ocurrió dos veces en este repo.
+  Falta: el `git worktree add` con su limpieza garantizada aun si la cosecha
+  revienta, y la decisión de qué pasa cuando quedan worktrees huérfanos de una
+  corrida anterior. Va junto con el `correr` real, porque es el mismo problema.
+- **La verificación de la frontera del reparador.** `roles.FRONTERAS` declara
+  `"reparador": ("src/",)` y nadie la consulta: `cosechar` sólo verifica al
+  testigo. **No es un olvido: no hay reparador**, así que no hay archivos que
+  verificar. El dato existe por simetría con el testigo y para que la frontera
+  esté escrita antes que el rol, no después. Falta: el reparador mismo (Plan 2)
+  y, cuando exista, el mismo chequeo de dos fuentes que ya tiene el testigo —
+  declaración del agente unida al diff del episodio, nunca la declaración sola.
+
