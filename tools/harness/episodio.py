@@ -32,6 +32,15 @@ class Episodio:
     commit_despues: str
     tests_que_fallaban: tuple[str, ...]
     archivos_tocados: tuple[str, ...]
+    """El diff del COMMIT DE ARREGLO HISTORICO, tal como lo entrega
+    `git log --name-only`. Toca `src/` POR CONSTRUCCION: la definicion de
+    episodio en `historia.py` es un commit que toca `src/` Y `tests/` a la vez.
+
+    Por eso NUNCA se pasa por la frontera del testigo. Son dos diffs distintos:
+    este es el arreglo que un humano ya hizo en el pasado, y la frontera del
+    testigo describe lo que el agente testigo escribe durante una cosecha.
+    Confundirlos hace que ningun episodio real produzca guardia jamas -- ya paso
+    una vez, y el fixture de los tests tuvo que volverse irreal para taparlo."""
     mensaje: str
     estado: str = "abierto"
 

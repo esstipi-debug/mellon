@@ -10,9 +10,17 @@ dos veces en una tarde.
 `destilar` se inyecta porque es el UNICO punto agentico de todo el modulo.
 Aislarlo detras de un callable es lo que permite testear la orquestacion entera
 sin gastar un token, y es tambien lo que deja la decision en codigo: el agente
-propone un guardia, el oraculo y las fronteras deciden si entra. Por lo mismo
-su declaracion de archivos tocados no se le cree sola: la frontera se evalua
-sobre la union de lo que declara y lo que el episodio trae del diff de git.
+propone un guardia, el oraculo y las fronteras deciden si entra.
+
+DOS DIFFS, NO UNO. `Episodio.archivos_tocados` es el diff del commit de arreglo
+historico y toca `src/` por construccion; nunca se pasa por la frontera del
+testigo. Lo que la frontera vigila es lo que el testigo escribio en ESTA
+cosecha, y eso llega por `diff_del_testigo` cuando hay un diff real, o por la
+declaracion de `destilar` cuando todavia no lo hay. Hoy no lo hay: el runner de
+dos arboles con worktree esta pendiente. Por eso el `Resultado` dice sobre cual
+de las dos fuentes se verifico -- una verificacion contra autodeclaracion
+presentada como verificacion contra diff es exactamente el bug que este
+proyecto persigue.
 
 La cosecha puede devolver CERO guardias y eso es un resultado bueno. Una
 cosecha que siempre produce algo esta produciendo ruido para justificarse.
@@ -37,6 +45,16 @@ identifica un guardia, la familia agrupa la clase de error. CoberturaGuardia
 publica familias, y un campo que dice una cosa y contiene otra es la clase de
 bug que este repo tiene documentada 17 veces."""
 
+DiffDelTestigo = Callable[[Episodio], "list[str] | None"]
+"""Los archivos que el testigo ESCRIBIO de verdad durante esta cosecha.
+
+Devuelve None cuando para ese episodio no hay diff real, y entonces la frontera
+cae a la autodeclaracion de `destilar` -- diciendolo. No confundir con
+`Episodio.archivos_tocados`, que es el diff del commit de arreglo historico.
+
+Nadie lo provee todavia: materializar el arbol del testigo y diffearlo es parte
+del runner de dos arboles con worktree, declarado pendiente en el plan."""
+
 
 @dataclass(frozen=True)
 class Resultado:
@@ -46,35 +64,44 @@ class Resultado:
     marcas: tuple[tuple[int, str], ...] = ()
     """(indice del episodio en la iteracion, estado nuevo) para que el llamador
     llame a `episodio.marcar`. Ver la nota sobre el marcado en `cosechar`."""
+    guardias_sin_diff: tuple[str, ...] = ()
+    """Los guardias aceptados cuya frontera se verifico contra la AUTODECLARACION
+    del agente porque no habia diff real del testigo. Es un subconjunto de
+    `guardias`, no una lista aparte de descartes: entraron igual, pero con una
+    contencion mas debil, y quien lee el resultado tiene que poder distinguirlos
+    sin leer el codigo. `cobertura.nota()` publica el conteo."""
 
 
 def _id(ep: Episodio) -> str:
     return f"{ep.commit_antes[:7]}..{ep.commit_despues[:7]}"
 
 
-def _motivo_frontera(declarados: list[str], del_diff: list[str], tocados: Iterable[str]) -> str:
-    """Arma el motivo del descarte distinguiendo de que fuente salio.
+def _motivo_frontera(invadidos: list[str], hay_diff: bool, declarados: Iterable[str]) -> str:
+    """Arma el motivo del descarte diciendo sobre que fuente se verifico.
 
-    La distincion importa: que el agente omita de su declaracion un archivo que
-    el diff SI muestra no es la misma falla que declararlo. La primera es una
-    declaracion incompleta -- el agente no sabe o no dice lo que toco -- y hace
-    inservible todo lo demas que declare. Quien lee el descarte tiene que poder
-    ver cual de las dos paso.
+    Con diff real la distincion que importa es otra: que el diff muestre un
+    archivo que el agente NO declaro no es la misma falla que declararlo. La
+    primera es una declaracion incompleta -- el agente no sabe o no dice lo que
+    toco -- y hace inservible todo lo demas que declare.
+
+    Sin diff real el motivo tiene que decir que se verifico contra la
+    autodeclaracion, para que nadie lo lea como una contencion que no fue.
     """
-    partes: list[str] = []
-    if del_diff:
-        declarados_set = set(tocados)
-        omitidos = [a for a in del_diff if a not in declarados_set]
-        detalle = f"el diff del episodio muestra {', '.join(del_diff)}"
-        if omitidos:
-            detalle += (
-                f", y destilar omitio de su declaracion {', '.join(omitidos)}: "
-                "una declaracion incompleta es mas grave que una violacion declarada"
-            )
-        partes.append(detalle)
-    if declarados:
-        partes.append(f"destilar declara {', '.join(declarados)}")
-    return "frontera violada por el testigo: " + "; ".join(partes)
+    if not hay_diff:
+        return (
+            "frontera violada por el testigo: destilar declara "
+            f"{', '.join(invadidos)} (verificado contra la autodeclaracion del "
+            "agente: no hay diff real del testigo)"
+        )
+    declarados_set = set(declarados)
+    omitidos = [a for a in invadidos if a not in declarados_set]
+    detalle = f"el diff del testigo muestra {', '.join(invadidos)}"
+    if omitidos:
+        detalle += (
+            f", y destilar omitio de su declaracion {', '.join(omitidos)}: "
+            "una declaracion incompleta es mas grave que una violacion declarada"
+        )
+    return "frontera violada por el testigo: " + detalle
 
 
 def cosechar(
@@ -83,6 +110,7 @@ def cosechar(
     correr: Callable[[str], set[str]],
     today: str,
     bugs_atrapados: int | None = None,
+    diff_del_testigo: DiffDelTestigo | None = None,
 ) -> Resultado:
     """Procesa los episodios y devuelve los guardias que sobrevivieron.
 
@@ -102,11 +130,20 @@ def cosechar(
     una funcion con efecto de lado sobre un path que no controla. En cambio
     devuelve `Resultado.marcas`: el llamador que leyo el log con `episodio.leer`
     itera esos pares y llama a `episodio.marcar(log, indice, estado)`.
+
+    `diff_del_testigo` es opcional y por defecto None porque el diff real del
+    testigo no existe todavia (ver `DiffDelTestigo`). Sin el, la frontera se
+    verifica sobre la declaracion de `destilar` y los guardias que entraron asi
+    quedan listados en `Resultado.guardias_sin_diff` y contados en la nota de
+    cobertura. Con el, la frontera se verifica sobre el diff y la declaracion
+    deja de decidir: un agente que declara solo `tests/` pero escribio `src/` se
+    descarta igual.
     """
     guardias: list[str] = []
     descartados: list[tuple[str, str]] = []
     familias: list[str] = []
     marcas: list[tuple[int, str]] = []
+    sin_diff: list[str] = []
 
     for indice, ep in enumerate(episodios):
         if ep.estado != "abierto":
@@ -132,13 +169,14 @@ def cosechar(
             marcas.append((indice, "descartado"))
             continue
 
-        # Las dos fuentes, no una: `tocados` es lo que el agente declara y
-        # `ep.archivos_tocados` es lo que git muestra. Alcanza con que UNA salga
-        # de tests/ para descartar.
-        invadidos_declarados = viola_frontera("testigo", tocados)
-        invadidos_del_diff = viola_frontera("testigo", ep.archivos_tocados)
-        if invadidos_declarados or invadidos_del_diff:
-            descartados.append((_id(ep), _motivo_frontera(invadidos_declarados, invadidos_del_diff, tocados)))
+        # La frontera vigila lo que el TESTIGO escribio en esta cosecha. El diff
+        # real manda cuando existe; si no, la declaracion -- y se registra que
+        # fue asi. `ep.archivos_tocados` no entra aca: es el otro diff.
+        real = diff_del_testigo(ep) if diff_del_testigo is not None else None
+        hay_diff = real is not None
+        invadidos = viola_frontera("testigo", real if hay_diff else tocados)
+        if invadidos:
+            descartados.append((_id(ep), _motivo_frontera(invadidos, hay_diff, tocados)))
             marcas.append((indice, "descartado"))
             continue
 
@@ -158,6 +196,8 @@ def cosechar(
             continue
 
         guardias.append(nombre)
+        if not hay_diff:
+            sin_diff.append(nombre)
         marcas.append((indice, "destilado"))
         if familia not in familias:
             familias.append(familia)
@@ -168,6 +208,8 @@ def cosechar(
         cobertura=CoberturaGuardia(
             familias_vigiladas=tuple(familias),
             bugs_atrapados=bugs_atrapados,
+            guardias_sin_diff_del_testigo=len(sin_diff),
         ),
         marcas=tuple(marcas),
+        guardias_sin_diff=tuple(sin_diff),
     )

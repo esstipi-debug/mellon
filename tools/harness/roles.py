@@ -1,10 +1,15 @@
 """Las fronteras de los dos roles de la cosecha.
 
 Un rol que puede violar su prohibicion no tiene prohibicion, tiene una
-sugerencia. Por eso la frontera del testigo NO se decide con lo que el agente
-declara: `cosecha.cosechar` la evalua sobre la union de esa declaracion y los
-archivos que el episodio trae del diff de git, y alcanza con que una sola de
-las dos fuentes muestre un archivo de mas para descartar el episodio.
+sugerencia. La frontera del testigo se verifica sobre lo que el testigo ESCRIBIO
+en la cosecha: el diff real de su arbol cuando exista, y mientras no exista, su
+autodeclaracion -- y en ese caso `cosecha.cosechar` lo REGISTRA en el resultado
+en vez de hacerlo pasar por lo que no es. El diff real depende del runner de dos
+arboles con worktree, declarado pendiente en el plan.
+
+Lo que NO entra nunca por aca es `Episodio.archivos_tocados`: ese es el diff del
+commit de arreglo historico, que toca `src/` por construccion. Verificarlo
+contra la frontera del testigo descarta todos los episodios reales.
 
 La frontera del reparador no la verifica nadie todavia, porque no hay
 reparador: `FRONTERAS["reparador"]` existe como dato y esta sin usar.

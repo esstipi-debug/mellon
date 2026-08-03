@@ -112,19 +112,25 @@ def test_archivos_sin_extension_py_no_aparecen_en_el_indice(tmp_path):
 
 
 def _ep(commit_antes="antes", commit_despues="despues", estado="abierto", archivos_tocados=None):
-    """El default de `archivos_tocados` vive dentro de la frontera del testigo.
+    """El default de `archivos_tocados` es un episodio REAL: toca `src/` y `tests/`.
 
-    Es el diff de git, y la cosecha ahora lo verifica contra la misma frontera
-    que la declaracion del agente: un default con `src/` haria que todos los
-    casos de este archivo se descartaran por frontera y taparia lo que cada
-    test quiere medir. El caso de `src/` en el diff tiene su propio test.
+    Es la definicion de episodio en `historia.py` -- un commit de arreglo que
+    toca las dos carpetas -- asi que cualquier otro default mediria un caso que
+    en produccion no puede ocurrir. Ya paso: cuando la cosecha verificaba este
+    campo contra la frontera del testigo, el fixture tuvo que volverse irreal
+    para que el archivo siguiera midiendo algo, y los tests pasaron sobre una
+    ficcion. `archivos_tocados` NO es el diff del testigo y no se verifica.
     """
     return Episodio(
         fecha="2026-08-02",
         commit_antes=commit_antes,
         commit_despues=commit_despues,
         tests_que_fallaban=("t::uno",),
-        archivos_tocados=("tests/guards/test_g.py",) if archivos_tocados is None else archivos_tocados,
+        archivos_tocados=(
+            ("src/fdekit/value/levers.py", "tests/test_value.py")
+            if archivos_tocados is None
+            else archivos_tocados
+        ),
         mensaje="fix: x",
         estado=estado,
     )
@@ -159,7 +165,10 @@ def test_un_test_vacuo_voltea_el_episodio():
 
 
 def test_un_testigo_que_toca_src_voltea_el_episodio():
-    """La prohibicion se verifica sobre lo que el agente declara Y sobre el diff."""
+    """La prohibicion se verifica sobre lo que el testigo escribio en la cosecha.
+
+    Sin diff real esa fuente es la declaracion del agente, y sigue conteniendo
+    lo que el agente admite haber tocado."""
 
     def destilar_invasor(_ep):
         return (
@@ -260,55 +269,120 @@ def test_la_frontera_se_chequea_antes_que_el_oraculo():
     assert "frontera" in r.descartados[0][1]
 
 
-# ------------------------------------------- la frontera y sus dos fuentes
+# --------------------------- la frontera del testigo y sus DOS diffs distintos
 
 
-def test_el_diff_del_episodio_voltea_aunque_destilar_declare_solo_tests():
-    """Hallazgo 1: la frontera no puede verificarse contra la autodeclaracion.
+def _destilar_que_omite(_e):
+    """Declara solo `tests/`. Lo que escribio de verdad lo dice el diff."""
+    return ("test_g", "anualizacion", "tests/guards/test_g.py::test_g", ["tests/guards/test_g.py"])
 
-    `destilar` es el punto agentico y el propio modulo declara que no es
-    confiable. Si el guardia mira solo lo que el agente dice haber tocado, un
-    agente que omite `src/fdekit/value/levers.py` de su lista pasa el control.
-    `ep.archivos_tocados` viene del diff de git (`git log --name-only`) y es la
-    fuente que no se puede fabricar: tiene que mirarse siempre.
 
-    Mata la mutacion de volver a `viola_frontera("testigo", tocados)` a secas.
+def test_un_episodio_real_con_un_testigo_limpio_produce_guardia():
+    """El caso que la regresion rompia, y el unico que ocurre en produccion.
+
+    Todo episodio de la historia toca `src/` -- esa es su definicion. Si la
+    frontera del testigo se verifica contra `ep.archivos_tocados`, que es el
+    diff del COMMIT DE ARREGLO HISTORICO, entonces NINGUN episodio real produce
+    guardia jamas y la cosecha entera es decorativa.
+
+    Mata la mutacion de agregar `viola_frontera("testigo", ep.archivos_tocados)`
+    al chequeo de la frontera.
     """
-    ep = _ep(archivos_tocados=("src/fdekit/value/levers.py",))
+    ep = _ep(archivos_tocados=("src/fdekit/value/levers.py", "tests/test_value.py"))
 
-    def destilar_que_omite(_e):
-        return ("test_g", "anualizacion", "tests/guards/test_g.py::test_g", ["tests/guards/test_g.py"])
+    r = cosechar([ep], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02")
 
-    r = cosechar([ep], destilar=destilar_que_omite, correr=_correr_ok, today="2026-08-02")
+    assert r.guardias == ("test_g",), "un episodio real no puede descartarse por su propio diff historico"
+    assert r.descartados == ()
+
+
+def test_el_diff_real_del_testigo_voltea_aunque_la_declaracion_este_limpia():
+    """Este es el caso que hace valiosa la separacion.
+
+    `destilar` es el punto agentico y el modulo declara que no es confiable: un
+    agente que escribio `src/fdekit/value/levers.py` y lo omite de su lista pasa
+    cualquier control hecho sobre la declaracion. El diff real del testigo es la
+    fuente que no se puede fabricar, y cuando existe MANDA.
+
+    Mata la mutacion de ignorar `diff_del_testigo` y verificar siempre `tocados`.
+    """
+    r = cosechar(
+        [_ep()],
+        destilar=_destilar_que_omite,
+        correr=_correr_ok,
+        today="2026-08-02",
+        diff_del_testigo=lambda _e: ["tests/guards/test_g.py", "src/fdekit/value/levers.py"],
+    )
 
     assert r.guardias == ()
     motivo = r.descartados[0][1]
     assert "frontera" in motivo
-    assert "diff" in motivo, "el motivo tiene que nombrar al diff como la fuente de la violacion"
+    assert "diff del testigo" in motivo, "el motivo tiene que nombrar al diff como la fuente"
     assert "src/fdekit/value/levers.py" in motivo
 
 
 def test_una_omision_del_agente_se_reporta_como_mas_grave_que_una_declarada():
-    """Que el diff muestre algo que el agente no declaro no es lo mismo que una
-    violacion declarada: la primera dice que la declaracion entera es
-    inservible. Quien lee el descarte tiene que poder distinguirlas."""
-    ep = _ep(archivos_tocados=("src/fdekit/value/levers.py",))
-
-    def destilar_que_omite(_e):
-        return ("test_g", "anualizacion", "tests/guards/test_g.py::test_g", ["tests/guards/test_g.py"])
-
-    r = cosechar([ep], destilar=destilar_que_omite, correr=_correr_ok, today="2026-08-02")
+    """Que el diff del testigo muestre algo que el agente no declaro no es lo
+    mismo que una violacion declarada: la primera dice que la declaracion entera
+    es inservible. Quien lee el descarte tiene que poder distinguirlas."""
+    r = cosechar(
+        [_ep()],
+        destilar=_destilar_que_omite,
+        correr=_correr_ok,
+        today="2026-08-02",
+        diff_del_testigo=lambda _e: ["src/fdekit/value/levers.py"],
+    )
     assert "omitio" in r.descartados[0][1]
 
 
-def test_con_las_dos_fuentes_limpias_el_guardia_entra():
-    """La contracara del test anterior: el chequeo doble no puede volverse un
-    guardia que descarta todo. Si declaracion y diff estan los dos dentro de
-    `tests/`, el episodio llega al oraculo y produce guardia."""
-    ep = _ep(archivos_tocados=("tests/guards/test_g.py", "tests/test_value.py"))
-    r = cosechar([ep], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02")
+def test_con_el_diff_real_limpio_el_guardia_entra_y_no_se_marca_sin_diff():
+    """La contracara: el chequeo sobre el diff no puede volverse un guardia que
+    descarta todo, y un guardia verificado contra diff NO se cuenta como
+    verificado contra autodeclaracion."""
+    r = cosechar(
+        [_ep()],
+        destilar=_destilar_ok,
+        correr=_correr_ok,
+        today="2026-08-02",
+        diff_del_testigo=lambda _e: ["tests/guards/test_g.py"],
+    )
     assert r.guardias == ("test_g",)
-    assert r.descartados == ()
+    assert r.guardias_sin_diff == ()
+    assert "FRONTERA SIN DIFF" not in r.cobertura.nota()
+
+
+def test_un_guardia_verificado_solo_contra_la_declaracion_lo_dice_en_la_salida():
+    """Requisito 3: la fuente de la verificacion queda registrada.
+
+    Un episodio aceptado con la frontera verificada solo contra autodeclaracion
+    no es lo mismo que uno verificado contra diff, y quien lee el resultado
+    tiene que poder distinguirlos sin leer el codigo. `CoberturaGuardia.nota()`
+    existe para publicar lo que el harness NO garantiza: es donde sale.
+
+    Mata la mutacion de no poblar `guardias_sin_diff` /
+    `guardias_sin_diff_del_testigo` cuando `diff_del_testigo` es None.
+    """
+    r = cosechar([_ep()], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02")
+
+    assert r.guardias == ("test_g",)
+    assert r.guardias_sin_diff == ("test_g",)
+    assert r.cobertura.guardias_sin_diff_del_testigo == 1
+    nota = r.cobertura.nota()
+    assert "FRONTERA SIN DIFF" in nota
+    assert "AUTODECLARACION" in nota
+
+
+def test_sin_diff_real_el_motivo_del_descarte_dice_que_fue_contra_la_declaracion():
+    """Tampoco un DESCARTE puede leerse como una contencion que no fue: el
+    motivo tiene que decir sobre que fuente se verifico la frontera."""
+    def destilar_invasor(_e):
+        return ("test_g", "anualizacion", "tests/guards/test_g.py::test_g", ["src/fdekit/x.py"])
+
+    r = cosechar([_ep()], destilar=destilar_invasor, correr=_correr_ok, today="2026-08-02")
+
+    motivo = r.descartados[0][1]
+    assert "autodeclaracion" in motivo
+    assert "no hay diff real del testigo" in motivo
 
 
 # ------------------------------------------------------ el oraculo que revienta
