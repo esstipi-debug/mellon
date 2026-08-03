@@ -300,7 +300,7 @@ def cmd_confirm(a):
     astore = AliasStore(st.root)
     previa = resolve(a.surface, st, m, alias_store=astore)
     alias = confirm(
-        astore, a.surface, a.symbol, a.scope or m.scope or simbolo.scope,
+        astore, a.surface, simbolo, a.scope or m.scope or simbolo.scope,
         a.by, m.date, resolution=previa, meeting_id=a.meeting,
     )
     print(

@@ -102,7 +102,7 @@ class AliasStore:
             out.append(Alias(**d))
         return out
 
-    def save_all(self, aliases: list[Alias]) -> None:
+    def _save_all(self, aliases: list[Alias]) -> None:
         def enc(a: Alias) -> str:
             d = {**a.__dict__}
             d["valido_desde"] = a.valido_desde.isoformat()
@@ -111,13 +111,37 @@ class AliasStore:
 
         self.alias_path.write_text("\n".join(enc(a) for a in aliases) + "\n", encoding="utf-8")
 
-    def add(self, alias: Alias) -> Alias:
+    def add(self, alias: Alias, symbol) -> Alias:
+        """El portal. Todo alias que existe entro por aca, y por eso el simbolo
+        es obligatorio: sin el no hay forma de mirar sus slots.
+
+        **Un simbolo con `slots` vacio no se puede aliasear.** `mark_disputed`
+        sale temprano si el simbolo nuevo no tiene slots y `_l2` tampoco lo
+        puede proponer, asi que L1 seria su unica via — y una via indisputable.
+        El alias resolveria EXTRACTED 1,0 para siempre sin que el mecanismo que
+        existe para cuestionarlo pueda alcanzarlo nunca.
+
+        `save_all` quedo privado por esto mismo: un portal con una puerta de
+        servicio al lado no es un portal.
+        """
+        if alias.symbol_id and symbol is not None and symbol.id != alias.symbol_id:
+            raise ValueError(
+                f"el alias apunta a {alias.symbol_id!r} y el simbolo es {symbol.id!r}"
+            )
+        if symbol is None or not getattr(symbol, "slots", None):
+            raise ValueError(
+                f"el simbolo {alias.symbol_id or '?'} no tiene slots: no se puede aliasear. "
+                "Sin slots, `mark_disputed` no lo puede disputar y `_l2` no lo puede "
+                "proponer, asi que L1 seria su unica via y esa via seria indisputable: "
+                "el alias resolveria con confianza 1,0 para siempre y sin apelacion. "
+                "Poblar `slots` con `extract_slots(statement + ' ' + criteria)` primero."
+            )
         issues = alias.validate()
         if issues:
             raise ValueError(f"alias invalido:\n  - " + "\n  - ".join(issues))
         aliases = self.load()
         aliases.append(alias)
-        self.save_all(aliases)
+        self._save_all(aliases)
         return alias
 
     # ------------------------------------------------------------ menciones
@@ -326,7 +350,7 @@ def slot_coherence(quote: str, symbol) -> tuple[bool, str]:
 def confirm(
     astore: AliasStore,
     surface: str,
-    symbol_id: str,
+    symbol,
     scope: str,
     by: str,
     when: date,
@@ -338,7 +362,14 @@ def confirm(
     La mencion guarda la capa que resolvio, la confianza y los candidatos
     descartados, para que el error quede escrito y reauditable en vez de
     desaparecer dentro del indice.
+
+    `symbol` es el objeto, no su id. Antes era el id y eso permitia confirmar
+    contra un simbolo inexistente —o contra uno sin slots, que es peor porque
+    si existe y resuelve— y el portal de `add` no tenia como mirarlo. La
+    mencion **se escribe despues del alias**: si el portal rechaza, la bitacora
+    no queda con el rastro de un alias que no existe.
     """
+    symbol_id = symbol.id
     alias = Alias(
         surface_norm=_norm(surface),
         symbol_id=symbol_id,
@@ -347,7 +378,7 @@ def confirm(
         confirmado_por=by,
         confirmado_en=datetime.now().astimezone().isoformat(),
     )
-    astore.add(alias)
+    astore.add(alias, symbol)
 
     mention_id = f"M-{len(astore.mentions()) + 1:04d}"
     astore.log_mention(
@@ -374,7 +405,7 @@ def confirm(
     for a in aliases:
         if a.surface_norm == alias.surface_norm and a.symbol_id == symbol_id:
             a.mentions_resueltas.append(mention_id)
-    astore.save_all(aliases)
+    astore._save_all(aliases)
     return alias
 
 
@@ -397,7 +428,7 @@ def unalias(astore: AliasStore, surface: str, reason: str, when: date) -> dict:
         a.estado = "RETIRADO"
         a.valido_hasta = when
         revertidas.extend(a.mentions_resueltas)
-    astore.save_all(aliases)
+    astore._save_all(aliases)
 
     # Las menciones que ese alias resolvio vuelven a la cola: no se borran, se
     # marcan. Borrarlas perderia la evidencia de que el sistema se equivoco.
@@ -448,5 +479,5 @@ def mark_disputed(astore: AliasStore, nueva, decisions: list) -> list[str]:
             a.estado = "EN_DISPUTA"
             marcados.append(a.surface_norm)
     if marcados:
-        astore.save_all(aliases)
+        astore._save_all(aliases)
     return marcados

@@ -189,7 +189,7 @@ def test_l1_resuelve_por_alias_confirmado(env):
     st, _ = env
     mk(st, "Reslotear la clase A a la zona dorada", {"proceso": "slotting"})
     astore = AliasStore(st.root)
-    confirm(astore, "lo del slotting", "D-001", "pudahuel/slotting", "Marcela Perez", HOY)
+    confirm(astore, "lo del slotting", st.get("D-001"), "pudahuel/slotting", "Marcela Perez", HOY)
 
     r = resolve("retomando lo del slotting", st, st.get_meeting("m1"))
     assert (r.symbol_id, r.tier, r.layer) == ("D-001", "EXTRACTED", "L1")
@@ -202,7 +202,7 @@ def test_el_alias_no_resuelve_fuera_de_su_scope(env):
     st, _ = env
     mk(st, "Reslotear la clase A a la zona dorada", {"proceso": "slotting"})
     astore = AliasStore(st.root)
-    confirm(astore, "lo del slotting", "D-001", "quilicura/slotting", "Marcela Perez", HOY)
+    confirm(astore, "lo del slotting", st.get("D-001"), "quilicura/slotting", "Marcela Perez", HOY)
 
     r = resolve("lo del slotting", st, st.get_meeting("m1"))
     assert r.layer != "L1"
@@ -217,7 +217,7 @@ def test_el_alias_no_resuelve_fuera_de_su_vigencia(env):
         surface_norm="lo del slotting", symbol_id="D-001", scope="pudahuel/slotting",
         valido_desde=date(2026, 1, 1), valido_hasta=date(2026, 6, 30),
         confirmado_por="Marcela Perez",
-    ))
+    ), st.get("D-001"))
     r = resolve("lo del slotting", st, st.get_meeting("m1"))
     assert r.layer != "L1"
 
@@ -233,7 +233,7 @@ def test_la_cobertura_deja_de_decir_fase_1_cuando_hay_menciones(env):
     d = mk(st, "Reslotear la clase A a la zona dorada", {"proceso": "slotting"})
     assert "fase 1" in referencing(st, d.id)["coverage"]
 
-    confirm(AliasStore(st.root), "lo del slotting", d.id, "pudahuel/slotting",
+    confirm(AliasStore(st.root), "lo del slotting", d, "pudahuel/slotting",
             "Marcela Perez", HOY)
     cov = referencing(st, d.id)["coverage"]
     assert "fase 1" not in cov
@@ -343,7 +343,7 @@ def test_unalias_retira_y_reprocesa_las_menciones(env):
     st, _ = env
     mk(st, "Reslotear la clase A a la zona dorada", {"proceso": "slotting"})
     astore = AliasStore(st.root)
-    confirm(astore, "lo del slotting", "D-001", "pudahuel/slotting", "Marcela Perez", HOY)
+    confirm(astore, "lo del slotting", st.get("D-001"), "pudahuel/slotting", "Marcela Perez", HOY)
     assert resolve("lo del slotting", st, st.get_meeting("m1")).layer == "L1"
 
     r = unalias(astore, "lo del slotting", "se confirmo contra el simbolo equivocado", HOY)
@@ -367,7 +367,7 @@ def test_la_colision_se_detecta_por_creacion_no_por_uso(env):
     st, _ = env
     mk(st, "Reslotear la clase A a la zona dorada", {"proceso": "slotting", "sitio": "pudahuel"})
     astore = AliasStore(st.root)
-    confirm(astore, "lo del slotting", "D-001", "pudahuel/slotting", "Marcela Perez", HOY)
+    confirm(astore, "lo del slotting", st.get("D-001"), "pudahuel/slotting", "Marcela Perez", HOY)
 
     nueva = mk(st, "Cambiar la secuencia de slotting del mismo CD",
                {"proceso": "slotting", "sitio": "pudahuel"})
@@ -378,15 +378,39 @@ def test_la_colision_se_detecta_por_creacion_no_por_uso(env):
     assert r.layer != "L1" or r.tier == "AMBIGUOUS"
 
 
+def test_no_se_puede_aliasear_un_simbolo_sin_slots(env):
+    """El portal. Un simbolo con `slots` vacio no se puede aliasear NUNCA.
+
+    `mark_disputed` sale temprano si el simbolo nuevo no tiene slots, y `_l2`
+    tampoco lo puede proponer: L1 seria su unica via de resolucion, y esa via
+    seria **indisputable**. Un alias asi resuelve EXTRACTED 1,0 para siempre sin
+    poder ser cuestionado por el mecanismo que existe justo para eso.
+
+    Es el caso que la siembra vuelve masivo: 30 alias declarados de memoria en
+    el kickoff, todos indisputables, es el envenenamiento del indice hecho
+    procedimiento de instalacion.
+    """
+    st, _ = env
+    mudo = mk(st, "Reslotear la clase A a la zona dorada", {})
+    astore = AliasStore(st.root)
+
+    with pytest.raises(ValueError, match="no tiene slots"):
+        confirm(astore, "lo del slotting", mudo, "pudahuel/slotting", "Marcela Perez", HOY)
+
+    assert astore.load() == []
+    # Y la bitacora tampoco se ensucia con una mencion de un alias que no existe.
+    assert astore.mentions() == []
+
+
 def test_el_alias_en_disputa_explica_por_que_no_resolvio(env):
     """Un silencio sin explicacion parece un descuido."""
     st, _ = env
     mk(st, "Reslotear la clase A a la zona dorada", {"proceso": "slotting"})
     astore = AliasStore(st.root)
-    confirm(astore, "lo del slotting", "D-001", "pudahuel/slotting", "Marcela Perez", HOY)
+    confirm(astore, "lo del slotting", st.get("D-001"), "pudahuel/slotting", "Marcela Perez", HOY)
     aliases = astore.load()
     aliases[0].estado = "EN_DISPUTA"
-    astore.save_all(aliases)
+    astore._save_all(aliases)
 
     r = resolve("lo del slotting", st, st.get_meeting("m1"))
     assert "en_disputa" in r.evidence
@@ -398,8 +422,8 @@ def test_tick_dispara_la_disputa_solo_hacia_los_simbolos_anteriores(env):
     st, _ = env
     mk(st, "Reslotear la clase A a la zona dorada", {"proceso": "slotting", "sitio": "pudahuel"})
     astore = AliasStore(st.root)
-    confirm(astore, "lo del slotting", "D-001", "pudahuel/slotting", "Marcela Perez", HOY)
-    confirm(astore, "la secuencia nueva", "D-001", "pudahuel/slotting", "Marcela Perez", HOY)
+    confirm(astore, "lo del slotting", st.get("D-001"), "pudahuel/slotting", "Marcela Perez", HOY)
+    confirm(astore, "la secuencia nueva", st.get("D-001"), "pudahuel/slotting", "Marcela Perez", HOY)
 
     mk(st, "Cambiar la secuencia de slotting del mismo CD",
        {"proceso": "slotting", "sitio": "pudahuel"})
@@ -417,7 +441,7 @@ def test_la_mencion_guarda_procedencia_completa(env):
        {"proceso": "slotting", "sitio": "pudahuel"})
     astore = AliasStore(st.root)
     previa = resolve("lo del slotting", st, st.get_meeting("m1"))
-    confirm(astore, "lo del slotting", "D-001", "pudahuel/slotting", "Marcela Perez", HOY,
+    confirm(astore, "lo del slotting", st.get("D-001"), "pudahuel/slotting", "Marcela Perez", HOY,
             resolution=previa, meeting_id="m1")
 
     m = astore.mentions()[0]

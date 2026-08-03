@@ -32,6 +32,7 @@ from fdekit.decide import (
     why,
 )
 from fdekit.decide.eventlog import build_event_log
+from fdekit.decide.parse import extract_slots
 from fdekit.decide.metrics import orphans_and_zombies
 from fdekit.decide.resolve import AliasStore, confirm
 from fdekit.decide.schema import hist_line
@@ -53,10 +54,14 @@ def store(tmp_path):
 
 
 def dec(store, statement):
+    criteria = "distancia media ponderada bajo 35 m antes del 30-09"
     return store.add_decision(Decision(
         id="", statement=statement, owner="Marcela", date_decided=HOY,
-        criteria="distancia media ponderada bajo 35 m antes del 30-09",
+        criteria=criteria,
         rationale="el 69% de las visitas son clase A", meeting_id="m1", scope="pudahuel",
+        # Poblados como los puebla la siembra. Sin slots el simbolo no se puede
+        # aliasear, y este archivo tiene un test que lo aliasea.
+        slots=extract_slots(statement + " " + criteria),
     ))
 
 
@@ -168,7 +173,7 @@ def test_no_escribe_un_alias_con_el_statement_viejo(store):
 def test_lista_los_alias_vigentes_pero_no_los_toca(store):
     a, b = dec(store, VIEJA), dec(store, NUEVA)
     astore = AliasStore(store.root)
-    confirm(astore, "lo del slotting", a.id, "pudahuel", "Marcela", HOY)
+    confirm(astore, "lo del slotting", a, "pudahuel", "Marcela", HOY)
 
     r = supersede(store, a.id, b.id, reason="racks", apply=True, today=HOY)
     assert any(t["tipo"] == "alias" for t in r["triage"])

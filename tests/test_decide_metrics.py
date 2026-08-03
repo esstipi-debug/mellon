@@ -345,7 +345,7 @@ def test_la_presencia_del_dueno_se_mide_con_el_mismo_2x2(store):
 def test_el_indice_reporta_resolucion_automatica_y_correccion(store):
     d = mk_decision(store)
     astore = AliasStore(store.root)
-    confirm(astore, "lo del slotting", d.id, "pudahuel/slotting", "Marcela Perez", HOY)
+    confirm(astore, "lo del slotting", d, "pudahuel/slotting", "Marcela Perez", HOY)
     idx = index_quality(store)
     assert idx["menciones"] == 1
     assert idx["alias_vigentes"] == 1
@@ -357,7 +357,7 @@ def test_muchos_alias_retirados_delatan_un_criterio_laxo(store):
 
     d = mk_decision(store)
     astore = AliasStore(store.root)
-    confirm(astore, "lo del slotting", d.id, "pudahuel/slotting", "Marcela Perez", HOY)
+    confirm(astore, "lo del slotting", d, "pudahuel/slotting", "Marcela Perez", HOY)
     unalias(astore, "lo del slotting", "estaba mal", HOY)
     assert "demasiado laxo" in index_quality(store)["veredicto"]
 
@@ -411,7 +411,7 @@ def test_el_export_declara_que_no_es_exhaustivo(store):
 
 def test_los_alias_confirmados_son_aristas_con_procedencia(store):
     d = mk_decision(store)
-    confirm(AliasStore(store.root), "lo del slotting", d.id, "pudahuel/slotting",
+    confirm(AliasStore(store.root), "lo del slotting", d, "pudahuel/slotting",
             "Marcela Perez", HOY)
     e = next(x for x in to_graphify(store)["edges"] if x["relation"] == "REFIERE_A")
     assert e["confidence"] == "EXTRACTED"
