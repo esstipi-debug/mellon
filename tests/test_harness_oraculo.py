@@ -119,3 +119,45 @@ def test_un_test_que_ya_fallaba_por_otro_motivo_no_cuenta_como_regresion():
     )
     assert v.acepta is True
     assert v.regresiones == ()
+
+
+def test_vacuo_gana_sobre_regresion_cuando_son_las_dos_cosas():
+    """Si el test nuevo es vacuo (pasa en el arbol roto) y tambien hay
+    regresion (otro test empeoro), el diagnostico es vacuo. El orden de
+    los chequeos importa: primero vacuo, porque es la causa raiz."""
+    v = veredicto(
+        test_nuevo="tests/guards/test_x.py::test_x",
+        correr=_correr(
+            {
+                "antes": [],
+                "despues": ["tests/test_value.py::test_que_pasaba_antes"],
+            }
+        ),
+        commit_antes="antes",
+        commit_despues="despues",
+    )
+    assert v.acepta is False
+    assert v.fallo_en_antes is False
+    assert "vacuo" in v.motivo
+    assert "regres" not in v.motivo
+
+
+def test_snapshot_de_conjuntos_evita_aliasing_con_runner_que_reutiliza_objeto():
+    """El runner puede reutilizar el objeto set entre llamadas o mutarlo.
+    Sin el snapshot set(...), fallan_antes y fallan_despues serian aliases
+    del mismo objeto, y regresiones siempre seria vacio aunque el runner
+    muteara el conjunto."""
+    mutable_set = {"tests/guards/test_x.py::test_x"}
+
+    def correr_que_muta(commit):
+        if commit == "despues":
+            mutable_set.add("tests/test_value.py::test_nuevo")
+        return mutable_set
+
+    v = veredicto(
+        test_nuevo="tests/guards/test_x.py::test_x",
+        correr=correr_que_muta,
+        commit_antes="antes",
+        commit_despues="despues",
+    )
+    assert v.regresiones == ("tests/test_value.py::test_nuevo",)
