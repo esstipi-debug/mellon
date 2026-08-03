@@ -8,6 +8,8 @@ memoria del proyecto ya mintio una vez por escribirse a mano.
 from pathlib import Path
 
 from tools.harness.indice import indice
+from tools.harness.cosecha import cosechar
+from tools.harness.episodio import Episodio
 
 _GUARDIA = '''"""Guardia de ejemplo."""
 
@@ -103,3 +105,88 @@ def test_archivos_sin_extension_py_no_aparecen_en_el_indice(tmp_path):
     md = indice(d)
     assert "test_ok" in md
     assert "README" not in md
+
+
+# ---------------------------------------------------------------- cosecha
+
+
+def _ep(commit_antes="antes", commit_despues="despues", estado="abierto"):
+    return Episodio(
+        fecha="2026-08-02",
+        commit_antes=commit_antes,
+        commit_despues=commit_despues,
+        tests_que_fallaban=("t::uno",),
+        archivos_tocados=("src/fdekit/x.py",),
+        mensaje="fix: x",
+        estado=estado,
+    )
+
+
+def _correr_ok(commit):
+    return {"tests/guards/test_g.py::test_g"} if commit == "antes" else set()
+
+
+def _destilar_ok(_ep):
+    return ("test_g", "anualizacion", "tests/guards/test_g.py::test_g", ["tests/guards/test_g.py"])
+
+
+def test_una_cosecha_sin_leccion_devuelve_cero_guardias():
+    """Tiene que poder devolver vacio, y es un resultado BUENO. Es agenda()
+    otra vez: la operacion de mayor retorno es la que puede decir 'proponer
+    cancelar'. Una cosecha que siempre produce algo produce ruido."""
+    r = cosechar([_ep()], destilar=lambda _e: None, correr=_correr_ok, today="2026-08-02")
+    assert r.guardias == ()
+    assert r.descartados[0][1] != ""
+
+
+def test_un_episodio_que_pasa_el_oraculo_produce_un_guardia():
+    r = cosechar([_ep()], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02")
+    assert r.guardias == ("test_g",)
+
+
+def test_un_test_vacuo_voltea_el_episodio():
+    r = cosechar([_ep()], destilar=_destilar_ok, correr=lambda _c: set(), today="2026-08-02")
+    assert r.guardias == ()
+    assert "vacuo" in r.descartados[0][1]
+
+
+def test_un_testigo_que_toca_src_voltea_el_episodio():
+    """La prohibicion se verifica sobre los archivos que efectivamente toco."""
+
+    def destilar_invasor(_ep):
+        return (
+            "test_g",
+            "anualizacion",
+            "tests/guards/test_g.py::test_g",
+            ["tests/guards/test_g.py", "src/fdekit/x.py"],
+        )
+
+    r = cosechar([_ep()], destilar=destilar_invasor, correr=_correr_ok, today="2026-08-02")
+    assert r.guardias == ()
+    assert "frontera" in r.descartados[0][1]
+
+
+def test_un_episodio_irreproducible_no_se_procesa():
+    r = cosechar([_ep(estado="irreproducible")], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02")
+    assert r.guardias == ()
+    assert "irreproducible" in r.descartados[0][1]
+
+
+def test_la_cobertura_del_resultado_nunca_dice_estar_completa():
+    r = cosechar([_ep()], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02")
+    assert r.cobertura.is_complete is False
+    assert "no vigila" in r.cobertura.nota().splitlines()[0]
+    # familias, no nombres: el campo tiene que contener lo que su nombre dice.
+    assert r.cobertura.familias_vigiladas == ("anualizacion",)
+
+
+def test_los_descartados_dicen_por_que_uno_por_uno():
+    """Una exclusion silenciosa es la misma mentira que un hueco."""
+    r = cosechar(
+        [_ep(commit_antes="a"), _ep(commit_antes="b", estado="irreproducible")],
+        destilar=lambda _e: None,
+        correr=_correr_ok,
+        today="2026-08-02",
+    )
+    assert len(r.descartados) == 2
+    assert all(motivo for _id, motivo in r.descartados)
