@@ -438,6 +438,65 @@ def cmd_seed(a):
     return 2 if (rep.rechazadas or rep.alias_rechazados) else 0
 
 
+def cmd_brief(a):
+    """Lo unico que un recien llegado va a leer entero."""
+    from .rotacion import onboarding_brief
+
+    b = onboarding_brief(_store(a), a.scope, today=_date.today())
+    if a.json:
+        _out(b)
+        return 0
+
+    print(f"\n# Que esta decidido en '{b['scope']}'\n")
+    print(f"_{b['nota']}_\n")
+    for d in b["decisiones"]:
+        marca = "" if d["auditable"] else f"  [{d['origen']} — no auditable]"
+        dep = f"  (depende de {', '.join(d['depende_de'])})" if d["depende_de"] else ""
+        print(f"{d['id']} — {d['statement']}{dep}{marca}")
+        print(f"    dueno {d['owner']} · desde {d['decidida']} · listo cuando: {d['criteria']}")
+        print(f"    porque: {d['rationale']}")
+    if b["supuestos"]:
+        print("\n## Lo que sostiene todo esto (y su edad)\n")
+        for s in b["supuestos"]:
+            print(f"{s['id']} [{s['status']}] {s['statement']}")
+            print(f"    hace {s['edad_dias']} dias · fuente: {s['source']} · "
+                  f"se revisa el {s['check_by']}")
+    if b["compromisos"]:
+        print("\n## Lo que sigue abierto\n")
+        for c in b["compromisos"]:
+            corridas = f" ({c['corridas']} corridas)" if c["corridas"] else ""
+            print(f"{c['id']} {c['due']} {c['owner']}: {c['what']}{corridas}")
+    return 0
+
+
+def cmd_reassign(a):
+    from .rotacion import reassign_owner
+
+    r = reassign_owner(_store(a), a.sale, a.entra, today=_date.today(), apply=a.apply)
+    print(f"\n{len(r['reasignados'])} a reasignar: {', '.join(r['reasignados']) or '(nada)'}")
+    if r["intactos"]:
+        print(f"{len(r['intactos'])} intacto(s) por estar cerrados: {', '.join(r['intactos'])}")
+    print(f"\n{r['nota']}")
+    return 0
+
+
+def cmd_huerfanos(a):
+    from .rotacion import duenos_huerfanos
+
+    r = duenos_huerfanos(_store(a), tuple(_csv(a.activos)), today=_date.today())
+    for persona, ids in r["huerfanos"].items():
+        print(f"{persona}: {', '.join(ids)}")
+    print(f"\n{r['nota']}")
+    return 2 if r["total"] else 0
+
+
+def cmd_card(a):
+    from .rotacion import tarjeta_de_piso
+
+    print(tarjeta_de_piso(_store(a), a.id))
+    return 0
+
+
 def cmd_slip(a):
     """Correr la fecha de un compromiso. Una linea, desde el telefono.
 
@@ -821,6 +880,25 @@ def register(subparsers):
     sl.add_argument("--motivo", required=True)
     sl.add_argument("--por", required=True, help="quien acordo la fecha nueva")
     sl.set_defaults(func=_guarded(cmd_slip))
+
+    br = sub.add_parser("brief", help="que esta decidido, en que orden y que lo sostiene")
+    br.add_argument("--scope", default="", help="acota por CD o area; vacio trae todo")
+    br.add_argument("--json", action="store_true")
+    br.set_defaults(func=_guarded(cmd_brief))
+
+    ra = sub.add_parser("reassign", help="rota el dueno de todo lo vivo de una persona")
+    ra.add_argument("--sale", required=True)
+    ra.add_argument("--entra", required=True, help="tiene que estar en algun roster")
+    ra.add_argument("--apply", action="store_true", help="sin esto solo reporta")
+    ra.set_defaults(func=_guarded(cmd_reassign))
+
+    hf = sub.add_parser("orphans", help="lo vivo que apunta a gente que ya no esta")
+    hf.add_argument("--activos", required=True, help="lista separada por comas")
+    hf.set_defaults(func=_guarded(cmd_huerfanos))
+
+    cd = sub.add_parser("card", help="tres lineas de un compromiso, para el que ejecuta")
+    cd.add_argument("id")
+    cd.set_defaults(func=_guarded(cmd_card))
 
     al = sub.add_parser("aliases", help="lista la tabla de alias")
     al.set_defaults(func=_guarded(cmd_aliases))
