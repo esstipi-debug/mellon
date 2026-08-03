@@ -12,7 +12,18 @@ from datetime import datetime as _dt
 from pathlib import Path
 
 from .query import agenda, referencing, safe_close, tick, why
-from .schema import Assumption, Commitment, Consent, Decision, Meeting, OpenQuestion, parse_date
+from .schema import (
+    Assumption,
+    Commitment,
+    Consent,
+    DECISION_ORIGIN,
+    Decision,
+    MEETING_CHANNEL,
+    MEETING_CLASS,
+    Meeting,
+    OpenQuestion,
+    parse_date,
+)
 from .store import DecideStore, PromotionBudgetExceeded, ValidationError
 
 
@@ -73,6 +84,8 @@ def cmd_meeting(a):
         consent=consent,
         facilitator=a.facilitator,
         scope=a.scope,
+        clase=a.clase,
+        canal=a.canal,
     )
     _store(a).add_meeting(m, force=a.force)
     print(f"reunion {m.id} registrada | roster: {', '.join(m.roster)}")
@@ -93,6 +106,11 @@ def cmd_add(a):
                 meeting_id=a.meeting or "",
                 depends_on=_csv(a.depends_on),
                 scope=a.scope or "",
+                # Sin esta linea el rescate de un acta historica aterrizaba como
+                # REUNION —auditable, con fecha de hace seis meses— y era la
+                # linea base entera del XmR. El campo existia y no tenia ruta de
+                # escritura fuera de la siembra.
+                origen=a.origen,
             ),
             force=a.force,
         )
@@ -333,6 +351,66 @@ def cmd_aliases(a):
     return 0
 
 
+def _leer_filas(path: Path):
+    """La planilla de siembra: CSV con encabezado, separador `;`.
+
+    `;` y no `,` porque las filas de criterio llevan comas —"100% de los SKU
+    clase A, antes del 30-09"— y un CSV con comas se parte en la mitad de la
+    unica columna que la regla 1 exige completa.
+    """
+    import csv
+
+    from .seed import FilaSiembra
+
+    with path.open(encoding="utf-8-sig", newline="") as fh:
+        filas = []
+        for n, row in enumerate(csv.DictReader(fh, delimiter=";"), start=2):
+            faltan = [c for c in ("statement", "owner", "criteria", "rationale")
+                      if not (row.get(c) or "").strip()]
+            if faltan:
+                raise ValueError(
+                    f"fila {n} de {path.name}: faltan columnas {faltan}. La siembra no "
+                    "completa huecos: una fila incompleta se arregla en la planilla, "
+                    "donde la esta mirando quien la declaro."
+                )
+            filas.append(FilaSiembra(
+                statement=row["statement"].strip(),
+                owner=row["owner"].strip(),
+                criteria=row["criteria"].strip(),
+                rationale=row["rationale"].strip(),
+                alias=(row.get("alias") or "").strip(),
+                scope=(row.get("scope") or "").strip(),
+                date_decided=parse_date(row["fecha"].strip()) if (row.get("fecha") or "").strip() else None,
+            ))
+    return filas
+
+
+def cmd_seed(a):
+    """La siembra del kickoff. Imprime lo que entro y **lo que no**."""
+    from .seed import seed_decisions
+
+    st = _store(a)
+    rep = seed_decisions(st, a.meeting, _leer_filas(Path(a.file)),
+                         by=a.by, today=_date.today())
+
+    print(f"\nsembradas: {len(rep.escritas)} -> {', '.join(rep.escritas) or '(ninguna)'}")
+    print(f"alias:     {len(rep.alias_escritos)} -> {', '.join(rep.alias_escritos) or '(ninguno)'}")
+    if rep.rechazadas:
+        print("\nNO entraron al registro:")
+        for statement, motivos in rep.rechazadas:
+            print(f"  - {statement[:70]}")
+            for m in motivos:
+                print(f"      {m}")
+    if rep.alias_rechazados:
+        print("\nalias NO escritos:")
+        for superficie, motivo in rep.alias_rechazados:
+            print(f"  - '{superficie}': {motivo}")
+    print(f"\n{rep.nota}")
+    # Codigo 2 si algo quedo afuera: la siembra corrio, pero hay trabajo humano
+    # pendiente y un `&&` en un script no puede seguir como si nada.
+    return 2 if (rep.rechazadas or rep.alias_rechazados) else 0
+
+
 _ADD = {
     "decision": lambda st, o, force: st.add_decision(o, force=force),
     "commitment": lambda st, o, force: st.add_commitment(o, force=force),
@@ -559,6 +637,9 @@ def register(subparsers):
     m.add_argument("--recording", action="store_true")
     m.add_argument("--retention-days", type=int, default=None, dest="retention_days")
     m.add_argument("--scope", default="", help="scope de la serie, p.ej. pudahuel/slotting")
+    m.add_argument("--clase", default="COMITE", choices=list(MEETING_CLASS),
+                   help="el perfil de la clase solo puede BAJAR el techo de 7")
+    m.add_argument("--canal", default="SINCRONICO", choices=list(MEETING_CHANNEL))
     m.set_defaults(func=_guarded(cmd_meeting))
 
     ad = sub.add_parser("add", help="registra decision, compromiso, supuesto o pregunta")
@@ -573,6 +654,8 @@ def register(subparsers):
     d.add_argument("--meeting", default="")
     d.add_argument("--depends-on", default="", dest="depends_on")
     d.add_argument("--scope", default="")
+    d.add_argument("--origen", default="REUNION", choices=list(DECISION_ORIGIN),
+                   help="solo REUNION es auditable y cuenta para la compuerta de volumen")
     d.set_defaults(func=_guarded(cmd_add))
 
     c = ak.add_parser("commitment")
@@ -637,6 +720,16 @@ def register(subparsers):
     ua.add_argument("surface")
     ua.add_argument("--reason", required=True)
     ua.set_defaults(func=_guarded(cmd_unalias))
+
+    sd = sub.add_parser(
+        "seed",
+        help="siembra las decisiones vigentes declaradas en el kickoff (origen SIEMBRA)",
+    )
+    sd.add_argument("--meeting", required=True,
+                    help="la reunion de siembra, YA registrada con `decide meeting`")
+    sd.add_argument("--file", required=True, help="planilla CSV con separador ';'")
+    sd.add_argument("--by", required=True, help="quien declara las filas")
+    sd.set_defaults(func=_guarded(cmd_seed))
 
     al = sub.add_parser("aliases", help="lista la tabla de alias")
     al.set_defaults(func=_guarded(cmd_aliases))

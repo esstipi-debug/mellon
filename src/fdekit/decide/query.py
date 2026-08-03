@@ -348,13 +348,54 @@ def why(store: DecideStore, decision_id: str) -> dict:
         "cita_formateada": _cita(d),
         "minuto": None if d.anchor.empty else _mmss(d.anchor.t_start),
         "fuente": _estado_fuente(store, d),
+        # La procedencia, en la cara del que consulta. Sin esto, una sembrada
+        # devolvia exactamente el mismo objeto que una decidida en una reunion
+        # real, con una nota que afirma que "se registro sin canal HABLADA" — lo
+        # que hace concluir que existio una sesion donde eso se decidio. Para
+        # una decision declarada de memoria en el kickoff, eso es falso.
+        "origen": d.origen,
+        "auditable": d.auditable,
+        "nota_origen": _nota_origen(d),
         "nota_cita": (
             "sin cita: la decision se registro sin canal HABLADA (a mano o desde texto "
             "sin timestamps)"
-            if d.anchor.empty
+            if d.anchor.empty and d.auditable
             else ""
         ),
     }
+
+
+# Que significa cada origen para el que consulta. El texto es la superficie: un
+# campo validado que nadie lee no protege de nada.
+_NOTAS_ORIGEN = {
+    "SIEMBRA": (
+        "declarada de memoria en la sesion de siembra: NO salio de una reunion "
+        "registrada por el sistema y no es auditable. La fecha es aproximada"
+    ),
+    "ACTA_HISTORICA": (
+        "rescatada de un acta anterior al sistema: hay texto de origen, pero no hay "
+        "roster ni consentimiento detras y no es auditable"
+    ),
+    "CHAT": (
+        "salio de una ventana de chat, no de una sesion: sin roster y sin ritual de "
+        "cierre, y por lo tanto no es auditable"
+    ),
+    "PASILLO": (
+        "registrada sin reunion: no hay roster contra el cual validar al dueno, y por "
+        "lo tanto no es auditable"
+    ),
+}
+
+
+def _nota_origen(d) -> str:
+    if d.auditable:
+        return ""
+    return _NOTAS_ORIGEN.get(
+        d.origen, f"origen {d.origen}: no es auditable"
+    ) if d.origen != "REUNION" else (
+        "registrada sin reunion: no hay roster contra el cual validar al dueno, y por "
+        "lo tanto no es auditable"
+    )
 
 
 def _cita(d) -> str:
