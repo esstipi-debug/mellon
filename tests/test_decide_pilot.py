@@ -194,6 +194,57 @@ def test_falta_de_dueno_se_lee_como_problema_politico(tmp_path):
     assert r["con_los_cuatro_campos"] == 0
 
 
+def test_el_diagnostico_solo_mira_los_puntos_QUE_CERRARON(tmp_path):
+    """Encontrado ensayando el protocolo con dos semanas de datos realistas.
+
+    El punto que no cerro no dice nada sobre COMO se dijo la frase: dice que el
+    punto no cerro, y eso ya lo cuenta `tasa_declaracion`. Contarlo tambien en
+    `pct_faltante_por_campo` contamina el unico diagnostico que decide que hacer
+    despues.
+
+    Medido sobre el ensayo: el dueno faltaba en 0% de los puntos que cerraron y
+    el reporte decia 38,5%. Con otro reparto eso dispara la rama "el problema es
+    politico" sobre un equipo que nombra dueno siempre — y manda al FDE a tener
+    una conversacion sobre rendicion de cuentas que nadie necesitaba.
+    """
+    # Cinco puntos que ni se abrieron, tres que cerraron enteros salvo el porque.
+    p = _tally(tmp_path, [fila(f"vacio{i}") for i in range(5)] + [
+        fila(f"p{i}", que="algo", dueno="M", fecha="2026-09-30", porque="")
+        for i in range(3)
+    ])
+    r = score_tally(p)
+
+    assert r["puntos_de_agenda"] == 8
+    assert r["con_algo_escrito"] == 3
+    # Sobre lo declarado: el dueno nunca falto, el porque falto siempre.
+    assert r["pct_faltante_por_campo"]["dueno"] == 0.0
+    assert r["pct_faltante_por_campo"]["porque"] == 100.0
+    assert r["campo_que_mas_falta"] == "porque"
+    assert r["base_del_diagnostico"] == 3
+
+
+def test_sin_ningun_punto_cerrado_el_diagnostico_se_calla(tmp_path):
+    """Cero declarados es un denominador cero. Inventar un `campo_que_mas_falta`
+    ahi seria fabricar el numero plausible y falso que la regla 3 prohibe: lo
+    que falla no es un campo, es el ritual entero."""
+    p = _tally(tmp_path, [fila(f"vacio{i}") for i in range(6)])
+    r = score_tally(p)
+    assert r["campo_que_mas_falta"] is None
+    assert r["base_del_diagnostico"] == 0
+    assert "ningun punto" in r["veredicto"].lower()
+    assert "NO seguir" in r["veredicto"]
+
+
+def test_la_hoja_de_sala_no_pide_llenar_el_supuesto_siempre(tmp_path):
+    """Decia "se llenan las cinco columnas", y una de las cinco es el supuesto.
+    No todo punto de decision tiene un supuesto detras: pedirlo siempre invita a
+    inventar uno, que es exactamente lo contrario de la regla de la hoja — la
+    celda vacia es el dato."""
+    h = tally_instructions()
+    assert "las cinco columnas" not in h
+    assert "supuesto" in h.lower()
+
+
 def test_la_planilla_sin_denominador_falla(tmp_path):
     p = tmp_path / "sin.csv"
     pd.DataFrame({"que": ["algo"]}).to_csv(p, index=False)

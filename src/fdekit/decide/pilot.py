@@ -207,7 +207,7 @@ Al cerrar cada punto de agenda de decision, el facilitador dice en voz alta:
 
 > **"Queda decidido: QUE. Dueno NOMBRE. Para FECHA. Porque RAZON."**
 
-Seis segundos. Alguien anota las cinco columnas en la planilla. Nada mas.
+Seis segundos. Alguien anota lo que se dijo en la planilla. Nada mas.
 
 Los otros dos marcadores, cuando corresponda:
 
@@ -217,8 +217,10 @@ Los otros dos marcadores, cuando corresponda:
 ## Reglas
 
 1. **Una fila por punto de agenda de decision, escrita ANTES de la reunion.**
-   Si el punto se cierra, se llenan las cinco columnas. Si no se cierra, la fila
-   queda vacia — y eso es el dato.
+   Si el punto se cierra, se llenan los cuatro campos de la frase: **que, dueno,
+   fecha y porque**. Si no se cierra, la fila queda vacia — y eso es el dato.
+   El `supuesto` se llena SOLO si alguien declaro uno en voz alta: no todo punto
+   de decision tiene un supuesto detras, y pedirlo siempre invita a inventar uno.
 2. **Fechas absolutas.** "El viernes" no; "2026-08-07" si. Si nadie dijo una
    fecha, la celda queda vacia.
 3. **Nadie inventa un dueno.** Si no lo nombraron, la celda queda vacia.
@@ -267,10 +269,25 @@ def score_tally(path: str | Path) -> dict:
     declarada = presentes["que"]
 
     tasa = float(declarada.mean())
+
+    # **El diagnostico se calcula SOLO sobre los puntos que cerraron.** Un punto
+    # que no cerro no dice nada sobre como se dijo la frase: dice que el punto
+    # no cerro, y eso ya lo cuenta `tasa_declaracion`. Contarlo tambien aca
+    # contamina el unico numero que decide que hacer despues.
+    #
+    # Medido ensayando el protocolo con dos semanas de datos realistas: el dueno
+    # faltaba en 0% de los puntos cerrados y el reporte decia 38,5%. Con otro
+    # reparto eso dispara la rama "el problema es politico" sobre un equipo que
+    # nombra dueno siempre.
+    base = int(declarada.sum())
     faltantes = {
-        k: round((~v).mean() * 100, 1) for k, v in presentes.items() if k != "supuesto"
+        k: round((~v[declarada]).mean() * 100, 1) if base else 0.0
+        for k, v in presentes.items()
+        if k != "supuesto"
     }
-    peor = max(faltantes, key=faltantes.get)
+    # Denominador cero: no hay campo que culpar, falla el ritual entero.
+    # Inventar un `campo_que_mas_falta` aca seria el numero plausible y falso.
+    peor = max(faltantes, key=faltantes.get) if base else None
 
     ok = tasa >= TASA_MINIMA
     return {
@@ -282,6 +299,10 @@ def score_tally(path: str | Path) -> dict:
         "ok": ok,
         "campo_que_mas_falta": peor,
         "pct_faltante_por_campo": faltantes,
+        # Sobre cuantas filas se calculo lo de arriba. Publicarlo es la
+        # diferencia entre "falta el porque el 25% de las veces" y "falta el
+        # porque en 2 de 8": con base chica el diagnostico es una anecdota.
+        "base_del_diagnostico": base,
         "por_reunion": (
             df.assign(declarada=declarada)
             .groupby("reunion")["declarada"]
@@ -290,26 +311,53 @@ def score_tally(path: str | Path) -> dict:
             .reset_index()
             .to_dict("records")
         ),
-        "veredicto": (
-            "seguir a fase 1: la disciplina se sostiene sin herramienta"
-            if ok
-            else (
-                f"NO seguir. Tasa {tasa:.0%} bajo el minimo de {TASA_MINIMA:.0%}. "
-                f"Lo que mas falta es '{peor}'. "
-                + (
-                    "Si falta el 'porque', la frase se esta diciendo a medias y hay que "
-                    "corregir al facilitador, no comprar software. "
-                    if peor == "porque"
-                    else "Si falta el dueno, el problema es politico: un registro con dueno "
-                    "y fecha es un instrumento de rendicion de cuentas, y eso se "
-                    "manifiesta como 'no pongamos dueno todavia'. "
-                    if peor == "dueno"
-                    else ""
-                )
-                + "El software no arregla esto."
-            )
-        ),
+        "veredicto": _veredicto_tally(ok, tasa, peor, faltantes, base),
     }
+
+
+# Que significa que falte cada campo. Es el unico lugar del kit donde el
+# diagnostico deja de ser tecnico: si falta el `porque` hay un problema de
+# facilitacion, y si falta el `dueno` hay uno politico. Confundirlos manda al
+# FDE a la conversacion equivocada.
+_LECTURA_DEL_CAMPO = {
+    "porque": (
+        "Si falta el 'porque', la frase se esta diciendo a medias y hay que "
+        "corregir al facilitador, no comprar software. "
+    ),
+    "dueno": (
+        "Si falta el dueno, el problema es politico: un registro con dueno y fecha "
+        "es un instrumento de rendicion de cuentas, y eso se manifiesta como 'no "
+        "pongamos dueno todavia'. "
+    ),
+}
+
+
+def _veredicto_tally(ok: bool, tasa: float, peor, faltantes: dict, base: int) -> str:
+    """El texto que decide si el proyecto sigue.
+
+    Estaba escrito como tres ternarios anidados dentro del `return`, y al
+    agregarle la rama de base cero se comio el prefijo "NO seguir" sin que
+    ningun test lo viera: el veredicto salia empezando por "Lo que mas falta
+    es...". Un veredicto que no dice su veredicto es la peor version de este
+    bug, porque lo lee alguien que esta decidiendo si sigue gastando.
+    """
+    if ok:
+        return "seguir a fase 1: la disciplina se sostiene sin herramienta"
+
+    cabeza = f"NO seguir. Tasa {tasa:.0%} bajo el minimo de {TASA_MINIMA:.0%}. "
+    if peor is None:
+        return (
+            cabeza + "Ningun punto de agenda cerro con algo escrito: no falla un "
+            "campo, falla el ritual. Empezar por si el facilitador esta diciendo la "
+            "frase en voz alta. El software no arregla esto."
+        )
+    return (
+        cabeza
+        + f"Lo que mas falta es '{peor}', en {faltantes[peor]:.0f}% de los {base} "
+        f"punto(s) que si cerraron. "
+        + _LECTURA_DEL_CAMPO.get(peor, "")
+        + "El software no arregla esto."
+    )
 
 
 # ---------------------------------------------------------------- encuesta
@@ -504,7 +552,8 @@ def protocol(site: str, start: date, control_series: str = "") -> str:
 ## Las dos semanas
 
 - El facilitador dice la frase-marcador al cerrar cada punto de decision.
-- Alguien llena las cinco columnas de `planilla.csv`.
+- Alguien llena los cuatro campos de la frase en `planilla.csv` (el supuesto,
+  solo si alguien declaro uno).
 - La agenda de cada reunion se arma **leyendo la planilla**: compromisos con
   fecha pasada y filas incompletas de la semana anterior.
 - **No se instala nada.** El punto de estas dos semanas es saber si la
