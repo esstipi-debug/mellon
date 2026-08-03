@@ -6,6 +6,7 @@ instalacion. Cualquier import pesado que entre aca rompe la regla 2 del repo.
 """
 
 from .cobertura import BUGS_HISTORICOS, CoberturaGuardia
+from .guardia import Guardia, evaluar
 from .hallazgo import Hallazgo, Procedencia
 
 __all__ = [
@@ -13,4 +14,6 @@ __all__ = [
     "Procedencia",
     "CoberturaGuardia",
     "BUGS_HISTORICOS",
+    "Guardia",
+    "evaluar",
 ]

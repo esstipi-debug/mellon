@@ -8,7 +8,7 @@ from datetime import date
 
 import pytest
 
-from fdekit.guard import CoberturaGuardia, Hallazgo, Procedencia
+from fdekit.guard import CoberturaGuardia, Guardia, Hallazgo, Procedencia, evaluar
 
 
 def _proc(commit="abc1234", dueno="stipi"):
@@ -69,3 +69,58 @@ def test_la_nota_publica_el_puntaje_crudo_contra_los_bugs_historicos():
 def test_sin_familias_la_nota_lo_dice_en_vez_de_quedar_muda():
     nota = CoberturaGuardia().nota()
     assert "ninguna familia" in nota
+
+
+# --------------------------------------------------------------- guardia
+
+
+def _guardia(nombre="sin_anualizar_dos_veces", sano=True):
+    return Guardia(
+        nombre=nombre,
+        motivo="anualizar en dos capas dejo L1 y L2 20% bajas, en silencio",
+        hallazgo=Hallazgo(regla="una sola anualizacion", evidencia="residuo 250/300", procedencia=_proc()),
+        predicado=lambda _obj: sano,
+    )
+
+
+def test_un_guardia_sin_motivo_no_se_construye():
+    """Cada excepcion del guardia de convenciones lleva su motivo escrito al
+    lado. Un guardia sin motivo es el que nadie sabe si puede borrar."""
+    with pytest.raises(ValueError, match="motivo"):
+        Guardia(
+            nombre="x",
+            motivo="",
+            hallazgo=Hallazgo(regla="r", evidencia="e", procedencia=_proc()),
+            predicado=lambda _obj: True,
+        )
+
+
+def test_evaluar_devuelve_hallazgos_no_booleanos():
+    """Un booleano pierde la procedencia. Lo que sale de un guardia violado
+    tiene que poder rastrearse hasta el commit que lo origino."""
+    hallazgos = evaluar([_guardia(sano=False)], obj={"cualquiera": 1})
+    assert len(hallazgos) == 1
+    assert hallazgos[0].procedencia.commit == "abc1234"
+
+
+def test_evaluar_no_devuelve_nada_cuando_todo_esta_sano():
+    assert evaluar([_guardia(sano=True)], obj={}) == []
+
+
+def test_un_guardia_que_revienta_no_tumba_la_evaluacion_entera():
+    """Un guardia roto tiene que degradar como el store degrada por archivo:
+    el que revienta se reporta como violado con el motivo, y los demas corren.
+    Que un guardia nuevo apague a los otros es como se pierde el corpus."""
+
+    def bomba(_obj):
+        raise KeyError("campo que ya no existe")
+
+    roto = Guardia(
+        nombre="roto",
+        motivo="quedo viejo",
+        hallazgo=Hallazgo(regla="r", evidencia="e", procedencia=_proc()),
+        predicado=bomba,
+    )
+    hallazgos = evaluar([roto, _guardia(sano=True)], obj={})
+    assert len(hallazgos) == 1
+    assert "reviento" in hallazgos[0].evidencia
