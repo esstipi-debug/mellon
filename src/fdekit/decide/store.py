@@ -30,6 +30,7 @@ from .schema import (
     Decision,
     Meeting,
     OpenQuestion,
+    PROFILES,
     parse_date,
     profile_of,
 )
@@ -41,6 +42,60 @@ from .schema import (
 #
 # Va a haber presion permanente para levantarlo. No levantarlo.
 MAX_PROMOTIONS_PER_MEETING = 7
+
+# El carril de los origenes DECLARADOS. No es una excepcion al techo de la sala:
+# es una segunda via, con su propio tope, para lo que no se decidio en la sala.
+#
+# Sembrar las 15-30 decisiones vigentes del kickoff contra el `meeting_id` de la
+# sesion de siembra explota en la octava si el techo cuenta por reunion, y la
+# unica salida que queda es borrar el `--meeting` — que es peor, porque por ahi
+# no hay roster ni consentimiento y `auditable` se cae. De ahi que el conteo sea
+# por `(meeting_id, origen)`.
+#
+# Treinta y no mas: 31 sembradas no son una siembra, son la minuta hibrida
+# entrando por la puerta de atras.
+DECLARED_BUDGET = {"SIEMBRA": 30, "ACTA_HISTORICA": 30}
+
+
+def promotion_ceiling(clase: str, origen: str) -> int:
+    """El unico techo del sistema. Dos carriles, una funcion.
+
+    `REUNION` sale del perfil de la clase, que solo puede BAJAR el 7 (un
+    HANDOVER tiene techo cero). Un origen declarado sale de `DECLARED_BUDGET` y
+    **no depende de la clase**: la siembra es un carril paralelo, no un permiso
+    que la sesion otorga.
+
+    Un origen sin presupuesto declarado —`CHAT`, `PASILLO`— no hereda el carril
+    ancho: cae al 7. Que una ventana de chat pudiera escribir 30 decisiones
+    porque no es `REUNION` seria el techo muerto por la puerta de al lado.
+    """
+    if origen == "REUNION":
+        return min(profile_of(clase).promotion_budget, MAX_PROMOTIONS_PER_MEETING)
+    return DECLARED_BUDGET.get(origen, MAX_PROMOTIONS_PER_MEETING)
+
+
+def _check_budget_ceiling() -> None:
+    """Corre al importar. La regla 7 pasa de comentario a propiedad verificada.
+
+    `schema._check_profile_ceilings` ya vigila los perfiles; esto vigila el otro
+    carril, que es el que nacio para tener un numero mas alto y por lo tanto es
+    el que va a recibir la presion.
+    """
+    malos = {o: n for o, n in DECLARED_BUDGET.items() if n > 30}
+    if malos:
+        raise RuntimeError(
+            f"origenes declarados con techo sobre 30: {malos}. Treinta decisiones "
+            "sembradas ya son el limite de lo que alguien revisa de una sentada; "
+            "mas que eso es la minuta hibrida con otro nombre."
+        )
+    if any(promotion_ceiling(c, "REUNION") > MAX_PROMOTIONS_PER_MEETING for c in PROFILES):
+        raise RuntimeError(
+            "un perfil declara un techo mayor a 7 y el carril REUNION lo esta "
+            "dejando pasar. La regla 7 no se afloja por un default nuevo."
+        )
+
+
+_check_budget_ceiling()
 
 _KINDS = {
     "D": ("decisions", Decision),
@@ -528,25 +583,35 @@ class DecideStore:
         self._check_roster(decision, decision.meeting_id, force, "Decision")
 
         if decision.meeting_id:
-            # El techo sale del perfil de la clase, que solo puede BAJAR el 7.
-            # Un HANDOVER tiene techo cero: un cambio de turno no decide, deja
-            # compromisos — y esos no tienen techo.
+            # Un solo techo, `promotion_ceiling`, y **dos carriles que no se
+            # tocan**: el conteo se filtra por `(meeting_id, origen)`. Asi 30
+            # sembradas no consumen ni una de las 7 de la sesion de siembra, y
+            # las 7 de una reunion normal siguen siendo 7 despues de sembrar.
             try:
                 clase = self.get_meeting(decision.meeting_id).clase
             except (KeyError, ValidationError):
                 clase = "COMITE"  # ya lo reporto `_issues` como issue
-            techo = min(profile_of(clase).promotion_budget, MAX_PROMOTIONS_PER_MEETING)
-            used = sum(1 for d in self.decisions() if d.meeting_id == decision.meeting_id)
+            techo = promotion_ceiling(clase, decision.origen)
+            used = sum(
+                1 for d in self.decisions()
+                if d.meeting_id == decision.meeting_id and d.origen == decision.origen
+            )
             if used >= techo and not force:
                 extra = (
                     f" La clase {clase} tiene techo {techo}"
-                    f" ({profile_of(clase).nota})." if techo != MAX_PROMOTIONS_PER_MEETING else ""
+                    f" ({profile_of(clase).nota})."
+                    if decision.origen == "REUNION" and techo != MAX_PROMOTIONS_PER_MEETING
+                    else ""
                 )
+                # La salida legitima se nombra: llevarlo a la recurrente, o
+                # partir la sesion. Nunca "sacale el --meeting" — por ahi no hay
+                # roster ni consentimiento y la decision deja de ser auditable.
                 raise PromotionBudgetExceeded(
-                    f"la reunion {decision.meeting_id} ya tiene {used} decision(es) y su "
-                    f"techo es {techo}.{extra} Treinta decisiones vuelven el registro "
-                    "ilegible: es la minuta hibrida otra vez. Si de verdad hacen falta "
-                    "mas, la reunion tenia que ser dos."
+                    f"la reunion {decision.meeting_id} ya tiene {used} decision(es) de "
+                    f"origen {decision.origen} y su techo es {techo}.{extra} Treinta "
+                    "decisiones vuelven el registro ilegible: es la minuta hibrida otra "
+                    "vez. Si de verdad hacen falta mas, la reunion tenia que ser dos, o "
+                    "el resto va a la recurrente."
                 )
         self._write_new("D", decision)
         return decision

@@ -607,6 +607,54 @@ def test_el_techo_del_perfil_solo_puede_bajar_el_siete(tmp_path):
     assert all(p.promotion_budget <= 7 for p in PROFILES.values())
 
 
+def test_el_carril_declarado_es_paralelo_al_techo_de_la_sala(tmp_path):
+    """El techo cuenta por `(meeting_id, origen)`, no por `meeting_id`.
+
+    Sin esto, sembrar las 15-30 decisiones vigentes del kickoff contra el
+    `meeting_id` de la sesion de siembra explota en la octava, y la unica salida
+    que queda es borrar el `--meeting` — que es peor: por ahi no hay roster ni
+    consentimiento. El carril declarado es PARALELO, no una excepcion al techo:
+    las sembradas no consumen ni una de las 7 de la sala, y las 7 de la sala
+    siguen siendo 7 despues de sembrar 30.
+    """
+    st = DecideStore(tmp_path / "decide")
+    _meet(st, "kickoff", clase="KICKOFF")
+
+    for i in range(30):
+        _dec(st, "kickoff", i, origen="SIEMBRA")
+
+    # ...y la sala conserva sus 7 intactas.
+    for i in range(7):
+        _dec(st, "kickoff", 100 + i)
+    with pytest.raises(PromotionBudgetExceeded, match="REUNION"):
+        _dec(st, "kickoff", 200)
+
+
+def test_el_carril_declarado_tambien_tiene_techo(tmp_path):
+    """Paralelo no es infinito. Treinta y una sembradas no son una siembra: son
+    la minuta hibrida entrando por la puerta de atras."""
+    st = DecideStore(tmp_path / "decide")
+    _meet(st, "kickoff", clase="KICKOFF")
+    for i in range(30):
+        _dec(st, "kickoff", i, origen="SIEMBRA")
+    with pytest.raises(PromotionBudgetExceeded, match="SIEMBRA"):
+        _dec(st, "kickoff", 99, origen="SIEMBRA")
+
+
+def test_el_techo_es_una_sola_funcion_y_el_siete_no_sube(tmp_path):
+    """`promotion_ceiling` es el unico techo del sistema, y `_check_budget_ceiling`
+    corre al importar: la regla 7 pasa de comentario a propiedad verificada."""
+    from fdekit.decide.store import DECLARED_BUDGET, promotion_ceiling
+
+    assert promotion_ceiling("COMITE", "REUNION") == 7
+    assert promotion_ceiling("HANDOVER", "REUNION") == 0
+    assert promotion_ceiling("KICKOFF", "SIEMBRA") == DECLARED_BUDGET["SIEMBRA"]
+    # Un origen sin presupuesto declarado no hereda el carril ancho.
+    assert promotion_ceiling("COMITE", "PASILLO") == 7
+    # El techo del carril declarado no depende de la clase de la sesion.
+    assert promotion_ceiling("HANDOVER", "SIEMBRA") == DECLARED_BUDGET["SIEMBRA"]
+
+
 def test_una_decision_impecable_colgada_de_un_daily_queda_afuera(tmp_path):
     """Las dos condiciones, no una: auditable Y su sesion en el corpus."""
     st = DecideStore(tmp_path / "decide")
