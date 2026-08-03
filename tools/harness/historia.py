@@ -15,10 +15,18 @@ historia real. El comando que la produce vive en el test marcado `historia`.
 
 from __future__ import annotations
 
+import re
+
 from .episodio import Episodio
 
 FORMATO = "C %H %ad %s"
 """Usar con: git log --format='C %H %ad %s' --date=short --name-only"""
+
+_ENCABEZADO = re.compile(r"^C ([0-9a-f]{40}) (\S+)(?: (.*))?$")
+"""Un encabezado real trae un hash de 40 hex despues de 'C '. Un path
+versionado que empiece con 'C ' (por ejemplo `C notas.md`) no matchea esto y
+se trata como archivo, no como encabezado -- si no, un archivo asi partiria
+un episodio real en dos, en silencio."""
 
 
 def episodios_de_git(salida: str) -> list[Episodio]:
@@ -45,12 +53,12 @@ def episodios_de_git(salida: str) -> list[Episodio]:
             )
 
     for linea in salida.splitlines():
-        if linea.startswith("C "):
+        m = _ENCABEZADO.match(linea)
+        if m:
             cerrar()
-            partes = linea[2:].split(" ", 2)
-            commit = partes[0]
-            fecha = partes[1] if len(partes) > 1 else ""
-            mensaje = partes[2] if len(partes) > 2 else ""
+            commit = m.group(1)
+            fecha = m.group(2)
+            mensaje = m.group(3) or ""
             archivos = []
         elif linea.strip():
             archivos.append(linea.strip())
