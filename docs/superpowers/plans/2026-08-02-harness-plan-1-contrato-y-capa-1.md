@@ -2109,11 +2109,27 @@ cd /c/fde && git status --short 2>/dev/null || echo "HANDOFF.md no esta en un re
   Falta: el `git worktree add` con su limpieza garantizada aun si la cosecha
   revienta, y la decisión de qué pasa cuando quedan worktrees huérfanos de una
   corrida anterior. Va junto con el `correr` real, porque es el mismo problema.
+
+  **Y de esta pieza depende también la verificación de la frontera del testigo
+  contra un diff real.** No hay diff del testigo hasta que haya un árbol del
+  testigo: hoy `destilar` está inyectado y devuelve una *declaración*, no un
+  diff. Por eso `cosechar` verifica la frontera del testigo **contra la
+  autodeclaración del agente** y lo dice — los guardias que entraron así quedan
+  en `Resultado.guardias_sin_diff` y contados en `CoberturaGuardia.nota()`.
+  Cuando exista el runner, le pasa el diff real por el parámetro opcional
+  `diff_del_testigo` y la declaración deja de decidir. Lo que **no** entra por
+  esa frontera en ninguno de los dos mundos es `Episodio.archivos_tocados`: es
+  el diff del commit de arreglo histórico, que toca `src/` por construcción, y
+  verificarlo contra la frontera del testigo hacía que **ningún episodio real
+  produjera guardia jamás** (regresión detectada y corregida el 2026-08-03).
 - **La verificación de la frontera del reparador.** `roles.FRONTERAS` declara
   `"reparador": ("src/",)` y nadie la consulta: `cosechar` sólo verifica al
   testigo. **No es un olvido: no hay reparador**, así que no hay archivos que
   verificar. El dato existe por simetría con el testigo y para que la frontera
   esté escrita antes que el rol, no después. Falta: el reparador mismo (Plan 2)
-  y, cuando exista, el mismo chequeo de dos fuentes que ya tiene el testigo —
-  declaración del agente unida al diff del episodio, nunca la declaración sola.
+  y, cuando exista, el mismo chequeo que ya tiene el testigo — el diff real de
+  su propio árbol si el runner de dos árboles existe para entonces, y si no, su
+  autodeclaración con el resultado diciendo que fue eso. Nunca
+  `Episodio.archivos_tocados`, que es el diff del arreglo histórico y no el del
+  rol.
 

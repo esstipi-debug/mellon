@@ -301,6 +301,19 @@ de cada rol se verifica contra su frontera; un diff que la cruza se rechaza
 entero. Un rol que puede violar su prohibición no tiene prohibición, tiene una
 sugerencia.
 
+> **Salvedad al 2026-08-03 — hoy esto todavía no se cumple.** El diff de un rol
+> sólo existe cuando su árbol existe, y el runner de dos árboles con `git
+> worktree` está pendiente (ver el plan, "Lo que queda deliberadamente sin
+> hacer"). Mientras tanto `cosecha.cosechar` verifica la frontera del testigo
+> sobre la **autodeclaración del agente** — el cuarto elemento de la tupla de
+> `destilar` — y lo **registra** en `Resultado.guardias_sin_diff` y en
+> `CoberturaGuardia.nota()`, en vez de presentarlo como una verificación por
+> diff. El parámetro opcional `diff_del_testigo` es el punto donde el runner
+> enchufa el diff real; cuando está, manda él y la declaración deja de decidir.
+> Lo que **nunca** se verifica contra esta frontera es
+> `Episodio.archivos_tocados`: ése es el diff del commit de arreglo histórico,
+> que toca `src/` por construcción.
+
 **El arreglo que cura el test y rompe otra cosa.** El oráculo corre la **suite
 completa** en los dos árboles. Si un test que pasaba antes ahora falla, el
 episodio se rechaza aunque el test nuevo esté verde.
