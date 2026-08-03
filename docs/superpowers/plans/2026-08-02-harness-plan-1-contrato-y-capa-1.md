@@ -22,6 +22,13 @@
   a 797 en veinte minutos. La Tarea 0 mide la base y la llama **B**; cada tarea declara
   su delta contra B. Si un `pytest -q` da menos de lo esperado, alguien más commiteó —
   verificar con `git log` antes de tocar nada.
+- **`tests/test_api_publica.py` esta parametrizado por subpaquete de `fdekit`.**
+  Crear `src/fdekit/guard/` agrega **2 tests solos** (`test_todo_lo_declarado_en_all_existe[guard]` y
+  `test_todo_paquete_declara_su_superficie[guard]`). Los deltas de este plan ya los
+  incluyen. Si un total no cierra, correr
+  `python -m pytest --collect-only -q | grep ::` y comparar contra la base **antes**
+  de atribuirlo a otra sesion: en la Tarea 1 un implementador atribuyo estos 2 tests
+  a "otra sesion de agente" y era falso.
 - **Rama de trabajo:** crear `harness/plan-1` desde `master` antes de la Tarea 1. No commitear a `master`.
 
 ---
@@ -224,7 +231,7 @@ Run: `python -m pytest tests/test_guard.py -q`
 Expected: `4 passed`
 
 Run: `python -m pytest -q`
-Expected: `B + 4` passed
+Expected: `B + 6` passed
 
 - [ ] **Step 5: Commit**
 
@@ -365,7 +372,7 @@ Run: `python -m pytest tests/test_guard.py -q`
 Expected: `8 passed`
 
 Run: `python -m pytest -q`
-Expected: `B + 8` passed
+Expected: `B + 10` passed
 
 - [ ] **Step 5: Commit**
 
@@ -552,7 +559,7 @@ Run: `python -m pytest tests/test_guard.py -q`
 Expected: `12 passed`
 
 Run: `python -m pytest -q`
-Expected: `B + 12` passed
+Expected: `B + 14` passed
 
 - [ ] **Step 5: Commit**
 
@@ -786,7 +793,7 @@ Run: `python -m pytest tests/test_harness_captura.py -q`
 Expected: `7 passed`
 
 Run: `python -m pytest -q`
-Expected: `B + 19` passed
+Expected: `B + 21` passed
 
 - [ ] **Step 5: Commit**
 
@@ -970,7 +977,7 @@ Run: `python -m pytest tests/test_harness_captura.py -q`
 Expected: `13 passed`
 
 Run: `python -m pytest -q`
-Expected: `B + 25` passed
+Expected: `B + 27` passed
 
 - [ ] **Step 5: Commit**
 
@@ -1086,7 +1093,7 @@ Run: `python -m pytest tests/test_harness_oraculo.py -q`
 Expected: `5 passed`
 
 Run: `python -m pytest -q`
-Expected: `B + 30` passed
+Expected: `B + 32` passed
 
 - [ ] **Step 5: Commit**
 
@@ -1289,7 +1296,7 @@ Run: `python -m pytest tests/test_harness_oraculo.py -q`
 Expected: `10 passed`
 
 Run: `python -m pytest -q`
-Expected: `B + 35` passed
+Expected: `B + 37` passed
 
 - [ ] **Step 5: Commit**
 
@@ -1465,7 +1472,7 @@ Run: `python -m pytest tests/test_harness_cosecha.py -q`
 Expected: `5 passed`
 
 Run: `python -m pytest -q`
-Expected: `B + 40` passed
+Expected: `B + 42` passed
 
 - [ ] **Step 5: Commit**
 
@@ -1549,7 +1556,7 @@ Run: `python -m pytest tests/test_convenciones.py -q`
 Expected: pasa
 
 Run: `python -m pytest -q`
-Expected: `B + 41` passed
+Expected: `B + 43` passed
 
 - [ ] **Step 5: Commit**
 
@@ -1783,7 +1790,7 @@ Run: `python -m pytest tests/test_harness_cosecha.py -q`
 Expected: `12 passed`
 
 Run: `python -m pytest -q`
-Expected: `B + 48` passed
+Expected: `B + 50` passed
 
 - [ ] **Step 5: Commit**
 
@@ -1983,7 +1990,7 @@ Run: `python -m pytest tests/test_harness_falsificacion.py::test_la_historia_del
 Expected: PASS. **Anotar el tiempo.** Si tarda más de 30 s, cambiar `addopts` a `-m 'not vision and not historia'` y anotarlo en el HANDOFF.
 
 Run: `python -m pytest -q`
-Expected: `B + 53` passed
+Expected: `B + 55` passed
 
 - [ ] **Step 7: Commit**
 
@@ -2018,7 +2025,7 @@ Eso es lo correcto: el corpus arranca vacío y el índice lo dice en vez de qued
 - [ ] **Step 2: Verificar la suite completa**
 
 Run: `python -m pytest -q`
-Expected: `B + 53` passed
+Expected: `B + 55` passed
 
 - [ ] **Step 3: Verificar que el paquete sigue liviano**
 
@@ -2071,7 +2078,7 @@ cd /c/fde && git status --short 2>/dev/null || echo "HANDOFF.md no esta en un re
 
 ## Verificación final
 
-- [ ] `python -m pytest -q` → `B + 53` passed, sin fallas
+- [ ] `python -m pytest -q` → `B + 55` passed, sin fallas
 - [ ] `python -m pytest -m historia -q` → `1 passed`
 - [ ] `python -c "import fdekit.guard, sys; print([m for m in sys.modules if m.split('.')[0] in ('numpy','pandas','scipy','matplotlib','torch','cv2')])"` → `[]`
 - [ ] `git log --oneline harness/plan-1 ^master` → 12 commits
