@@ -252,12 +252,18 @@ La razón de ser del toolkit.
 
 ```python
 def compare_travel(
-    modeled: EventLog,      # del log del WMS
-    measured: EventLog,     # de la cámara
+    modeled: EventLog,                            # del log del WMS
+    measured_tracks: dict[str, list[TrackPoint]], # pistas crudas de la cámara
     layout: Layout,
-    today: date,            # regla 4
+    coverage: MeasurementCoverage,                # regla 3
+    today: date,                                  # regla 4
 ) -> dict
 ```
+
+**Por qué recibe pistas crudas y no un `EventLog`** (corregido al implementar): la
+distancia **medida** no se puede recuperar de un `EventLog`, porque el `EventLog`
+guarda las paradas y no el camino entre ellas — y el camino es exactamente lo que
+el modelo no sabe. Y la cobertura tiene que entrar para poder salir.
 
 Devuelve el residual entre el recorrido calculado y el medido, descompuesto:
 
@@ -307,7 +313,7 @@ verifican las propiedades que hacen que los números sean defendibles.
 
 | etapa | entregable | criterio de éxito |
 |---|---|---|
-| **1 · mesa** | A completo: `vision`, `homography`, `tracks`, `privacy`, con tests | espagueti real en pantalla en < 2 min, sobre un escritorio, sin red |
+| **1 · mesa** ✅ **cerrada 2026-08-02** | A completo: `vision`, `homography`, `tracks`, `privacy`, con tests. Se adelantó también `groundtruth` (era de la etapa 3) porque sin él la etapa 1 entregaba un espagueti redundante. 540 → 763 tests. | cumplido: `fdekit field --detections det.csv --refs refs.csv --k 1` produce el espagueti medido en ~2,5 s, sobre un escritorio, sin red |
 | **2 · banco** | B: firmware ESP32 + `station.py` | tiempo de ciclo medido coincide con cronómetro ±5% |
 | **3 · CD real** | A (y B si llegó) instalado unos días; `groundtruth` con datos reales | residual reportado **con cobertura**; ≥ 60% de los pedidos de la ventana con marcador visible en ≥ 80% de su recorrido, o se declara el fracaso |
 | **4 · video + repo** | 3 min de video, firmware, análisis, datos versionados | un tercero lo reproduce desde el repo |
@@ -354,10 +360,27 @@ empieza la etapa 1, y esa conversión es parte de arrancarla.
 |---|---|---|---|
 | D1 | **Resuelta (2026-08-02).** ArUco vive en `opencv-contrib-python`, confirmado abriendo el paquete en un venv descartable (no en el del kit). La API nueva (`cv2.aruco.getPredefinedDictionary` + `cv2.aruco.DetectorParameters` + `cv2.aruco.ArucoDetector` + `detector.detectMarkers(frame)`) reemplaza a la vieja (`Dictionary_get` + `detectMarkers` de módulo) desde la serie 4.7, y se probó funcionando de punta a punta. La rueda en sí instala sin conflicto de versión de numpy en toda la serie 4.6–5.0 (el metadato no fija techo hasta la 4.12), pero eso no basta: la extensión compilada de las series 4.6.x a 4.8.x quedó enlazada contra la ABI de numpy 1.x y revienta en tiempo de ejecución contra numpy 2.4.6 (`AttributeError: _ARRAY_API not found`). Recién desde `opencv-contrib-python==4.10.0.84` la extensión es binariamente compatible con numpy 2.x — se importó, se detectó `aruco` y se corrió `detectMarkers` sobre un frame real sin error. Línea para el extra `vision` de la tarea 7: `opencv-contrib-python>=4.10.0.84`. Detalle completo, versión por versión, en `task-1-report.md`. | etapa 1 | tarea 7 (desbloqueada) |
 | D2 | Sensor de B: ToF (VL53L0X) vs barrera infrarroja. Se decide en el banco con ambos, no en el papel. | etapa 2 | etapa 2 |
-| D3 | Valor de *k* en la compuerta de anonimato. `k = 3` es un default sin evidencia; el número defendible depende de la dotación por zona. | etapa 3 | etapa 3 |
+| D3 | Valor de *k* en la compuerta de anonimato. `k = 3` es un default sin evidencia; el número defendible depende de la dotación por zona. **Parcialmente acotada (2026-08-02):** el mínimo es ahora `k ≥ 1` —validado en el dataclass y en el CLI, porque `k = 0` desactivaba la compuerta sin dejar rastro— y el `k` usado viaja en cada salida como `anonymity_k`, así que queda registrado con qué umbral se emitió cada resultado. Falta la evidencia que justifique el 3. | etapa 3 | etapa 3 |
 | D4 | ¿Existe el modo identificado detrás de bandera explícita? Quedó sin responder en el diseño. Default actual: **no existe**. | etapa 3 | regla 9 |
 | D5 | Acceso a un CD real. Sin esto, el toolkit se queda en maqueta y las etapas 3 y 4 no ocurren. | etapa 3 | etapas 3 y 4 |
 | D6 | Política de retención y documento de información al titular (Ley 21.719). | 1-dic-2026 | etapa 3 en producción |
+
+### Abiertas al cerrar la etapa 1 (2026-08-02)
+
+Salieron de la implementación y del review de rama. Ninguna bloqueó el cierre de
+la etapa 1; cada una dice qué bloquea de verdad. Detalle y evidencia ejecutada en
+el ledger de trabajo de la etapa.
+
+| # | qué falta | antes de | bloquea |
+|---|---|---|---|
+| D7 | **El residual de la etapa 1 mide cobertura de cámara, no error del modelo.** La ruta modelada es `[DOCK, paradas, DOCK]` y la cámara ve exactamente el tramo entre paradas, que es justo lo que no es tramo al muelle. De ahí sale la identidad estructural `residual_pct ≈ −dock_legs_pct_of_modeled`, verificada: modelo 26,4 m/pedido, medido 2,4 → residual −90,9 y dock legs 90,9, el mismo número. Hasta que exista la segmentación de viajes por cercanía al DOCK, el residual es una **demostración del mecanismo, no un hallazgo**. | antes de mostrarlo a un cliente | presentar el residual como "mi modelo tenía X% de error" |
+| D8 | **`track_pct` cuenta pistas sobre pedidos.** Una pista es un carro y un carro hace muchos pedidos: 3 pistas contra 2 pedidos reporta 150%. El criterio de éxito de la etapa 3 de este spec —"≥60% de los pedidos con marcador visible"— **no es computable** con ese numerador. O se renombra el campo a lo que mide, o se calcula la cobertura por pedido de verdad. | etapa 3 | evaluar el criterio de éxito de la etapa 3 |
+| D9 | **`measured_m_in_window` suma la distancia cruda**, incluidos los tramos cuyos extremos se descartaron por caer fuera de planta. Hoy el flag `medicion_contaminada` impide la mala lectura, pero el número sigue contaminado. La corrección de fondo es que `track_distance_m` no sume esos tramos; la asignación punto→ubicación ya se calcula en `dwell_events`. | etapa 3 | un residual limpio (no la lectura, que ya está protegida) |
+| D10 | **`dwell_events` fusiona dos paradas consecutivas legítimas en estantería densa.** Con `bay_pitch=0.4` y el `noise_radius_m=0.75` por defecto, 30 s reales en una bahía seguidos de 30 s en la contigua cuentan como una sola parada. `n_stops` alimenta la palanca L1 del caso económico. Ligado al límite de fondo: desde datos temporales solos, "ruido de detección" y "dos ubicaciones reales alternadas" son la misma forma con distinto período; el discriminador es espacial y hoy es un default. | antes de usar `n_stops` en un caso económico | L1 en layouts de pitch chico |
+| D11 | **`gate_output` cubre un solo campo agregado (`locations`) y sólo el nivel superior.** Cualquier agregado nuevo —o anidado dentro de `residual`— no queda cubierto y nada falla. La compuerta es correcta para lo que hay; no escala sola. | al agregar cualquier campo agregado nuevo | regla 10 sobre campos futuros |
+| D12 | **`MarkerID` en camelCase pasa el chequeo de identidad.** `casefold()`+`strip()` cierra mayúsculas y espacios; unificar separadores es un paso aparte, con su propia matriz de ataque, porque una transformación agresiva puede traer falsos positivos por coincidencia parcial. Límite declarado con test. | etapa 3 | leer cabeceras de un export de WMS en camelCase |
+| D13 | **El archivo del plan quedó con cuatro firmas viejas** (`load_detections`, `build_tracks`, `dwell_events`, `tracks_to_eventlog`). La regla acordada era corregir el código **y** el plan; sólo la tarea 2 tiene su nota. Quien reejecute el plan desde cero va a escribir contra interfaces que ya no existen. | antes de reejecutar el plan | reproducibilidad de la etapa 1 |
+| D14 | **`opencv-contrib-python==4.12.0.88` declara `numpy<2.3.0`** en su `Requires-Dist`, o sea excluye numpy 2.4.6. El extra no tiene techo de versión, así que pip resuelve a una más nueva y no hay conflicto — pero fijar esa versión exacta a mano rompe. | — | fijar esa versión puntual |
 
 ---
 
