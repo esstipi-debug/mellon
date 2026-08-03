@@ -366,6 +366,13 @@ class Decision:
     # existiera. Lo que SI cambia de significado para lo ya persistido es
     # `auditable`, y esta anunciado en el docstring de abajo.
     origen: str = "REUNION"
+    # El enunciado en ingles, traducido UNA VEZ al promover. El registro se
+    # escribe en espanol y el reporte a la matriz suele ser en ingles. Es barato
+    # ahora y es imposible de retrofitear a las 200 decisiones — no por el
+    # trabajo de traducir, sino porque a esa altura nadie se acuerda de cual era
+    # el matiz de cada enunciado, y una traduccion posterior es una
+    # reinterpretacion. Vacio significa sin traducir, y se DICE; no se inventa.
+    enunciado_en: str = ""
     # Con quien esta en conflicto. Puntero, no lista: un conflicto es entre DOS
     # enunciados; tres en disputa son dos conflictos y hay que verlos por
     # separado, porque resolver uno cambia el otro.

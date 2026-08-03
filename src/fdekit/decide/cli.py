@@ -469,6 +469,21 @@ def cmd_brief(a):
     return 0
 
 
+def cmd_publish(a):
+    """La pagina que el cliente si va a abrir."""
+    from .render import write_html
+
+    p = write_html(_store(a), a.scope, Path(a.out), today=_date.today(), idioma=a.idioma)
+    print(f"escrito: {p}")
+    print(
+        "Un archivo, sin red y sin login: se adjunta, se sube al SharePoint del\n"
+        "proyecto o se imprime. Va agrupado por decision y no por persona, y lo\n"
+        "dice en la pagina: un registro leido como tablero de desempeno individual\n"
+        "mata el sistema en dos semanas sin ninguna senal tecnica."
+    )
+    return 0
+
+
 def cmd_reassign(a):
     from .rotacion import reassign_owner
 
@@ -885,6 +900,12 @@ def register(subparsers):
     br.add_argument("--scope", default="", help="acota por CD o area; vacio trae todo")
     br.add_argument("--json", action="store_true")
     br.set_defaults(func=_guarded(cmd_brief))
+
+    pb = sub.add_parser("publish", help="pagina HTML para el cliente: sin red, sin login")
+    pb.add_argument("--scope", default="")
+    pb.add_argument("--out", required=True, help="ruta del .html")
+    pb.add_argument("--idioma", default="es", choices=["es", "en"])
+    pb.set_defaults(func=_guarded(cmd_publish))
 
     ra = sub.add_parser("reassign", help="rota el dueno de todo lo vivo de una persona")
     ra.add_argument("--sale", required=True)
