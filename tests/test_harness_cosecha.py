@@ -9,7 +9,8 @@ from pathlib import Path
 
 from tools.harness.indice import indice
 from tools.harness.cosecha import cosechar
-from tools.harness.episodio import Episodio
+from tools.harness.episodio import Episodio, agregar, leer, marcar
+from tools.harness.roles import viola_frontera
 
 _GUARDIA = '''"""Guardia de ejemplo."""
 
@@ -110,13 +111,20 @@ def test_archivos_sin_extension_py_no_aparecen_en_el_indice(tmp_path):
 # ---------------------------------------------------------------- cosecha
 
 
-def _ep(commit_antes="antes", commit_despues="despues", estado="abierto"):
+def _ep(commit_antes="antes", commit_despues="despues", estado="abierto", archivos_tocados=None):
+    """El default de `archivos_tocados` vive dentro de la frontera del testigo.
+
+    Es el diff de git, y la cosecha ahora lo verifica contra la misma frontera
+    que la declaracion del agente: un default con `src/` haria que todos los
+    casos de este archivo se descartaran por frontera y taparia lo que cada
+    test quiere medir. El caso de `src/` en el diff tiene su propio test.
+    """
     return Episodio(
         fecha="2026-08-02",
         commit_antes=commit_antes,
         commit_despues=commit_despues,
         tests_que_fallaban=("t::uno",),
-        archivos_tocados=("src/fdekit/x.py",),
+        archivos_tocados=("tests/guards/test_g.py",) if archivos_tocados is None else archivos_tocados,
         mensaje="fix: x",
         estado=estado,
     )
@@ -151,7 +159,7 @@ def test_un_test_vacuo_voltea_el_episodio():
 
 
 def test_un_testigo_que_toca_src_voltea_el_episodio():
-    """La prohibicion se verifica sobre los archivos que efectivamente toco."""
+    """La prohibicion se verifica sobre lo que el agente declara Y sobre el diff."""
 
     def destilar_invasor(_ep):
         return (
@@ -250,3 +258,269 @@ def test_la_frontera_se_chequea_antes_que_el_oraculo():
     r = cosechar([_ep()], destilar=destilar_invasor_y_vacuo, correr=correr_vacuo, today="2026-08-02")
     assert r.guardias == ()
     assert "frontera" in r.descartados[0][1]
+
+
+# ------------------------------------------- la frontera y sus dos fuentes
+
+
+def test_el_diff_del_episodio_voltea_aunque_destilar_declare_solo_tests():
+    """Hallazgo 1: la frontera no puede verificarse contra la autodeclaracion.
+
+    `destilar` es el punto agentico y el propio modulo declara que no es
+    confiable. Si el guardia mira solo lo que el agente dice haber tocado, un
+    agente que omite `src/fdekit/value/levers.py` de su lista pasa el control.
+    `ep.archivos_tocados` viene del diff de git (`git log --name-only`) y es la
+    fuente que no se puede fabricar: tiene que mirarse siempre.
+
+    Mata la mutacion de volver a `viola_frontera("testigo", tocados)` a secas.
+    """
+    ep = _ep(archivos_tocados=("src/fdekit/value/levers.py",))
+
+    def destilar_que_omite(_e):
+        return ("test_g", "anualizacion", "tests/guards/test_g.py::test_g", ["tests/guards/test_g.py"])
+
+    r = cosechar([ep], destilar=destilar_que_omite, correr=_correr_ok, today="2026-08-02")
+
+    assert r.guardias == ()
+    motivo = r.descartados[0][1]
+    assert "frontera" in motivo
+    assert "diff" in motivo, "el motivo tiene que nombrar al diff como la fuente de la violacion"
+    assert "src/fdekit/value/levers.py" in motivo
+
+
+def test_una_omision_del_agente_se_reporta_como_mas_grave_que_una_declarada():
+    """Que el diff muestre algo que el agente no declaro no es lo mismo que una
+    violacion declarada: la primera dice que la declaracion entera es
+    inservible. Quien lee el descarte tiene que poder distinguirlas."""
+    ep = _ep(archivos_tocados=("src/fdekit/value/levers.py",))
+
+    def destilar_que_omite(_e):
+        return ("test_g", "anualizacion", "tests/guards/test_g.py::test_g", ["tests/guards/test_g.py"])
+
+    r = cosechar([ep], destilar=destilar_que_omite, correr=_correr_ok, today="2026-08-02")
+    assert "omitio" in r.descartados[0][1]
+
+
+def test_con_las_dos_fuentes_limpias_el_guardia_entra():
+    """La contracara del test anterior: el chequeo doble no puede volverse un
+    guardia que descarta todo. Si declaracion y diff estan los dos dentro de
+    `tests/`, el episodio llega al oraculo y produce guardia."""
+    ep = _ep(archivos_tocados=("tests/guards/test_g.py", "tests/test_value.py"))
+    r = cosechar([ep], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02")
+    assert r.guardias == ("test_g",)
+    assert r.descartados == ()
+
+
+# ------------------------------------------------------ el oraculo que revienta
+
+
+def test_un_correr_que_revienta_no_tumba_la_cosecha():
+    """Hallazgo 3: `correr` shellea a git y a pytest, asi que reventar es su
+    modo de falla normal. Sin el try, el primer episodio con un `correr` roto se
+    lleva puestos todos los guardias ya acumulados en la corrida.
+
+    Mata la mutacion de sacar el try alrededor de `veredicto`.
+    """
+    llamadas = []
+
+    def correr_que_revienta(commit):
+        llamadas.append(commit)
+        if len(llamadas) <= 1:
+            raise RuntimeError("git worktree add fallo: el arbol esta sucio")
+        return _correr_ok(commit)
+
+    r = cosechar(
+        [_ep(commit_antes="a"), _ep(commit_antes="antes")],
+        destilar=_destilar_ok,
+        correr=correr_que_revienta,
+        today="2026-08-02",
+    )
+
+    assert r.guardias == ("test_g",), "el episodio sano tiene que sobrevivir al que reviento"
+    assert len(r.descartados) == 1
+    assert "oraculo exploto" in r.descartados[0][1]
+    assert "git worktree add fallo" in r.descartados[0][1]
+
+
+# ---------------------------------------------------------- bugs_atrapados
+
+
+def test_bugs_atrapados_sin_medir_no_se_reporta_como_cero():
+    """Hallazgo 4: `bugs_atrapados` en 0 se lee como 'medimos y no atrapamos
+    ninguno'. Nada mapea un episodio a uno de los 17 casos de HANDOFF.md, asi
+    que el dato no existe -- y ausencia de dato no es un resultado."""
+    r = cosechar([_ep()], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02")
+    assert r.cobertura.bugs_atrapados is None
+    assert "SIN MEDIR" in r.cobertura.nota()
+    assert "atrapa 0 de 17" not in r.cobertura.nota()
+
+
+def test_bugs_atrapados_se_puebla_solo_si_el_llamador_lo_provee():
+    r = cosechar([_ep()], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02", bugs_atrapados=1)
+    assert r.cobertura.bugs_atrapados == 1
+    assert "atrapa 1 de 17" in r.cobertura.nota()
+
+
+# --------------------------------------------------------------- marcas
+
+
+def test_el_resultado_trae_las_marcas_para_que_el_llamador_cierre_el_log():
+    """Hallazgo 5: sin esto el log queda en `abierto` para siempre y cada
+    cosecha reprocesa todo. `cosechar` no abre el log -- no sabe de que archivo
+    salieron los episodios -- pero devuelve el indice y el estado nuevo."""
+    r = cosechar(
+        [_ep(commit_antes="antes"), _ep(commit_antes="a"), _ep(commit_antes="z", estado="destilado")],
+        destilar=lambda e: _destilar_ok(e) if e.commit_antes == "antes" else None,
+        correr=_correr_ok,
+        today="2026-08-02",
+    )
+    assert r.marcas == ((0, "destilado"), (1, "descartado"))
+
+
+def test_un_episodio_que_no_esta_abierto_no_genera_marca():
+    """Ya tiene estado: remarcarlo lo pisaria con uno que no le corresponde."""
+    r = cosechar([_ep(estado="irreproducible")], destilar=_destilar_ok, correr=_correr_ok, today="2026-08-02")
+    assert r.marcas == ()
+
+
+def test_las_marcas_de_la_cosecha_se_aplican_al_log_de_verdad(tmp_path):
+    """El circulo completo: el llamador lee, cosecha y marca. Si `marcas` no
+    alcanzara para hacerlo, la promesa del docstring de episodio.py seria
+    falsa."""
+    log = tmp_path / "episodios.jsonl"
+    agregar(log, _ep(commit_antes="antes"))
+    agregar(log, _ep(commit_antes="a"))
+
+    eps = leer(log)
+    r = cosechar(
+        eps,
+        destilar=lambda e: _destilar_ok(e) if e.commit_antes == "antes" else None,
+        correr=_correr_ok,
+        today="2026-08-02",
+    )
+    for indice_ep, estado in r.marcas:
+        marcar(log, indice_ep, estado)
+
+    assert [e.estado for e in leer(log)] == ["destilado", "descartado"]
+
+
+# ------------------------------------------------- roles: normalizacion
+
+
+def test_una_ruta_con_dotdot_no_se_cuela_por_el_prefijo():
+    """Hallazgo 2: `tests/../src/fdekit/value/levers.py` empieza con `tests/` y
+    no es un archivo de tests. La premisa vieja -- que las rutas llegan
+    normalizadas del diff -- era falsa: tambien llegan del agente.
+
+    Mata la mutacion de volver a `a.startswith(permitidos)` a secas.
+    """
+    assert viola_frontera("testigo", ["tests/../src/fdekit/value/levers.py"]) == [
+        "tests/../src/fdekit/value/levers.py"
+    ]
+
+
+def test_una_ruta_con_barras_invertidas_se_normaliza_igual():
+    """En Windows `a\\..\\b` es la misma ruta que `a/../b`.
+
+    El caso que discrimina es el mixto: `tests/..\\src\\x.py` empieza con
+    `tests/`, asi que el prefijo lo deja pasar, y si el `..` se colapsa con
+    posixpath sin traducir antes las barras invertidas, el separador de Windows
+    no se reconoce y la ruta sigue leyendose como si viviera bajo `tests/`.
+
+    Mata la mutacion de sacar el `.replace("\\\\", "/")` de `_normalizada`.
+    """
+    assert viola_frontera("testigo", ["tests/..\\src\\fdekit\\x.py"]) == ["tests/..\\src\\fdekit\\x.py"]
+
+
+def test_una_ruta_de_tests_en_estilo_windows_sigue_permitida():
+    """La contracara: traducir las barras no puede volverse un guardia que
+    prohibe los paths que Windows entrega legitimamente dentro de `tests/`."""
+    assert viola_frontera("testigo", ["tests\\guards\\test_x.py"]) == []
+
+
+def test_una_ruta_que_escapa_del_arbol_es_violacion():
+    assert viola_frontera("testigo", ["../otro_repo/tests/test_x.py"]) != []
+
+
+def test_un_dotdot_que_vuelve_a_tests_sigue_estando_permitido():
+    """La normalizacion no puede volverse un guardia que prohibe todo: una ruta
+    que despues de colapsar `..` sigue dentro de `tests/` esta bien."""
+    assert viola_frontera("testigo", ["tests/guards/../test_x.py", "tests/./test_y.py"]) == []
+
+
+def test_la_frontera_no_toca_el_disco():
+    """Nada de `resolve()`: consulta el filesystem y sigue symlinks, asi que el
+    veredicto dependeria de que el arbol este montado. Una ruta inexistente
+    tiene que evaluarse igual."""
+    assert viola_frontera("testigo", ["tests/no/existe/test_x.py"]) == []
+    assert viola_frontera("testigo", ["src/no/existe/x.py"]) == ["src/no/existe/x.py"]
+
+
+# --------------------------------------- indice: procedencia y archivos rotos
+
+
+_GUARDIA_SIN_COMMIT = '''"""Guardia al que le falta el commit."""
+
+LECCION = {
+    "regla": "una regla cualquiera",
+    "familia": "anualizacion",
+    "fecha": "2026-08-03",
+    "dueno": "stipi",
+}
+
+
+def test_x():
+    assert True
+'''
+
+
+def test_un_leccion_incompleto_se_lista_como_sin_procedencia(tmp_path):
+    """Hallazgo 6: `Procedencia` levanta ValueError si falta commit o dueno,
+    pero el indice lo leia con `.get(..., '-')` y mostraba el guardia como sano
+    con un guion cosmetico. Un LECCION al que le falta un campo obligatorio no
+    tiene procedencia, igual que si faltara entero -- y el indice tiene que
+    decir CUAL falta.
+
+    Mata la mutacion de volver a `lec.get('commit', '-')` sin chequear.
+    """
+    md = indice(_guards(tmp_path, test_sin_commit=_GUARDIA_SIN_COMMIT))
+    assert "test_sin_commit" in md
+    assert "sin procedencia" in md
+    assert "commit" in md
+    assert "`-`" not in md, "no puede mostrarse como un guardia sano con el commit en guion"
+
+
+def test_el_indice_dice_cual_campo_de_procedencia_falta(tmp_path):
+    """Nombrar los campos no alcanza con buscarlos en todo el markdown: los tres
+    aparecen en el encabezado de la tabla. Hay que mirar el RENGLON del guardia,
+    que es donde alguien va a leer que le falta."""
+    faltan_dos = 'LECCION = {"regla": "r", "familia": "f"}\n\n\ndef test_x():\n    assert True\n'
+    md = indice(_guards(tmp_path, test_mocho=faltan_dos))
+    renglon = next(l for l in md.splitlines() if "test_mocho" in l)
+    assert "le falta" in renglon
+    assert "commit" in renglon
+    assert "fecha" in renglon
+    assert "dueno" in renglon
+
+
+def test_un_leccion_con_campo_vacio_tampoco_tiene_procedencia(tmp_path):
+    """`Procedencia` levanta con commit vacio, no solo con commit ausente."""
+    vacio = _GUARDIA.replace('"commit": "b2267bd",', '"commit": "",')
+    md = indice(_guards(tmp_path, test_vacio=vacio))
+    assert "sin procedencia" in md
+
+
+def test_un_py_con_bytes_no_utf8_no_apaga_el_indice(tmp_path):
+    """Hallazgo 8: el arreglo anterior cubrio el `.pyc` volviendo al
+    `glob("*.py")`, pero un `.py` corrupto seguia llegando a `read_text` sin
+    proteccion. Es el mismo modo de falla que el modulo existe para impedir."""
+    d = tmp_path / "guards"
+    d.mkdir()
+    (d / "test_ok.py").write_text(_GUARDIA, encoding="utf-8")
+    (d / "test_corrupto.py").write_bytes(b"LECCION = {'regla': '\xff\xfe roto'}\n")
+
+    md = indice(d)
+
+    assert "una sola anualizacion" in md, "el guardia sano tiene que seguir listandose"
+    assert "test_corrupto" in md
+    assert "ilegible" in md

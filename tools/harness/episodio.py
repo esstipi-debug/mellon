@@ -4,7 +4,13 @@ Un episodio se cierra cuando una corrida deja en verde tests que la corrida
 anterior tenia en rojo. El par (commit_antes, commit_despues) es lo unico que
 hace falta para reconstruir los dos arboles.
 
-El log es append-only. Un episodio que no dio leccion se MARCA, no se borra.
+El log es append-only. Un episodio que no dio leccion se MARCA, no se borra --
+pero marcar es responsabilidad del LLAMADOR, no de la cosecha. `cosechar`
+recibe un iterable de episodios y no sabe de que archivo salieron; devuelve en
+`Resultado.marcas` los pares (indice, estado_nuevo) para que quien leyo el log
+con `leer` cierre el circulo llamando a `marcar`. Si nadie llama a `marcar`, el
+log queda en `abierto` y la proxima cosecha reprocesa todo: eso es una falla del
+llamador, no una promesa rota de este modulo.
 """
 
 from __future__ import annotations
