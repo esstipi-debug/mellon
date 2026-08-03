@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from .schema import (
+    CONFLICT_RESOLUTIONS,
     LIVE_COMMITMENT_STATUS,
     Assumption,
     Commitment,
@@ -73,6 +74,9 @@ class Agenda:
     meeting_id: str
     meeting_date: date
     roster: tuple[str, ...]
+    # Primero de todo: mientras hay un conflicto abierto no se sabe cual
+    # decision rige, y cualquier otro punto se discute sobre arena.
+    conflicts: list = field(default_factory=list)
     overdue_commitments: list = field(default_factory=list)
     open_questions: list = field(default_factory=list)
     at_risk_decisions: list = field(default_factory=list)
@@ -93,7 +97,8 @@ class Agenda:
     @property
     def is_empty(self) -> bool:
         return not (
-            self.overdue_commitments
+            self.conflicts
+            or self.overdue_commitments
             or self.open_questions
             or self.at_risk_decisions
             or self.reopen_requests
@@ -117,6 +122,22 @@ class Agenda:
                 "dure lo que dura eso.",
                 "",
             ]
+
+        if self.conflicts:
+            L += [
+                "## CONFLICTO ABIERTO — primero esto",
+                "",
+                "Una decision de fuera de la sala contradice a una vigente. Hasta que se",
+                "resuelva, **lo que rige es lo que se decidio en la sala** — pero nadie",
+                "puede citar ninguna de las dos como cerrada.",
+                "",
+                "| pregunta | externa | contra | la resuelve | antes de |",
+                "|---|---|---|---|---|",
+            ]
+            for q, ext in self.conflicts:
+                L.append(f"| {q.id} | {ext.id} ({ext.origen}) | {ext.en_conflicto_con} | "
+                         f"{q.resolver} | {q.resolve_by.isoformat()} |")
+            L.append("")
 
         if self.overdue_commitments:
             L += ["## Compromisos vencidos", "", "| id | dueno | que | vencio hace | implementa |", "|---|---|---|---:|---|"]
@@ -248,7 +269,12 @@ def agenda(store: DecideStore, meeting_id: str, today: date | None = None) -> Ag
         if d and d.status in ("VIGENTE", "EN_RIESGO"):
             ag.at_risk_decisions.append((d, a))
 
+    en_conflicto = {d.id: d for d in decisions.values() if d.status == "EN_CONFLICTO"}
     for q in questions:
+        if q.status == "ABIERTA" and any(b in en_conflicto for b in q.blocks):
+            ext = next(en_conflicto[b] for b in q.blocks if b in en_conflicto)
+            ag.conflicts.append((q, ext))
+            continue
         if q.status == "EXPIRADA":
             ag.expired_questions.append((q, (today - q.resolve_by).days))
             continue
@@ -477,6 +503,166 @@ def head_of(store: DecideStore, decision_id: str, max_saltos: int = 50) -> dict:
     }
 
 
+class ConflictoAbierto(ValueError):
+    """Se intento superar una decision que esta en conflicto sin resolverlo."""
+
+
+def declare_conflict(
+    store: DecideStore,
+    externa_id: str,
+    vigente_id: str,
+    reason: str = "",
+    resolver: str = "",
+    resolve_by: date | None = None,
+    today: date | None = None,
+    apply: bool = False,
+) -> dict:
+    """Una decision de fuera de la sala contradice a una VIGENTE.
+
+    Es la regla de precedencia del diseno, y su punto entero: **la evidencia mas
+    reciente NO gana sola**. Sin esto, el canal asincronico corrompe el canal
+    decidido en vez de alimentarlo — un mensaje de WhatsApp a las 22:00 daria
+    vuelta una decision de comite sin que nadie la mire.
+
+    Lo declara una PERSONA. Detectarlo en automatico por solapamiento de slots
+    seria un heuristico decidiendo que dos enunciados se contradicen, y la regla
+    3 lo prohibe: empate = AMBIGUOUS reportado, jamas una eleccion. Pero lo que
+    si se hace es que declararlo sea barato y que el resultado no quede en
+    limbo: el resolver sale del REGISTRO —es el dueno de la decision
+    disputada— y la fecha limite es obligatoria.
+
+    `EN_CONFLICTO` es **suspension, no muerte**. Los compromisos que cuelgan de
+    la decision de sala NO se tocan: se enumeran para triage, misma doctrina que
+    `supersede`. Cancelarlos seria decidir el conflicto a favor de la externa
+    por la puerta de atras.
+    """
+    externa, vigente = store.get(externa_id), store.get(vigente_id)
+    triage = [
+        {"tipo": "compromiso", "id": c.id, "dueno": c.owner, "que": c.what,
+         "accion": "sigue corriendo: el conflicto suspende la decision, no la mata. "
+                   "Si el trabajo debe parar, es una decision aparte y se escribe."}
+        for c in implementations(store, vigente_id)
+        if c.status in LIVE_COMMITMENT_STATUS
+    ]
+    out = {
+        "externa": externa_id, "vigente": vigente_id,
+        "triage": triage, "referencias_a_resolver": len(triage), "applied": False,
+    }
+    if not apply:
+        out["nota"] = (
+            "no se toco nada. Con --apply, la externa queda EN_CONFLICTO y se abre "
+            "una pregunta que bloquea a la vigente y entra primera en la agenda."
+        )
+        return out
+
+    if not reason:
+        raise ValueError(
+            "declarar un conflicto exige un motivo: es lo que va a leer quien lo "
+            "resuelva, y sin eso la discusion arranca de cero"
+        )
+    if vigente.status == "EN_CONFLICTO" or externa.status == "EN_CONFLICTO":
+        raise ConflictoAbierto(
+            f"ya hay un conflicto abierto sobre {vigente_id if vigente.status == 'EN_CONFLICTO' else externa_id}. "
+            "Un conflicto es entre DOS enunciados; tres en disputa son dos conflictos y "
+            "hay que verlos por separado, porque resolver uno cambia el otro."
+        )
+
+    stamp = (today or externa.date_decided).isoformat()
+    # El resolver sale del registro: es el dueno de lo que se esta
+    # contradiciendo, el unico actor que el sistema puede nombrar sin inventar.
+    quien = resolver or vigente.owner
+    q = OpenQuestion(
+        id="", question=f"cual rige: {vigente_id} (sala) o {externa_id} ({externa.origen})?",
+        resolver=quien,
+        resolve_by=resolve_by or (today or externa.date_decided),
+        blocks=[vigente_id, externa_id],
+        meeting_id=externa.meeting_id,
+        new_evidence=reason,
+    )
+    store.add_question(q, force=True)
+
+    externa.status = "EN_CONFLICTO"
+    externa.en_conflicto_con = vigente_id
+    externa.historial_statements.append(
+        hist_line(stamp, "EN_CONFLICTO", f"contradice a {vigente_id}: {reason}"))
+    store.save(externa)
+
+    out.update({
+        "applied": True, "question": q.id, "resolver": quien,
+        "nota": (
+            f"{externa_id} quedo EN_CONFLICTO con {vigente_id}. {vigente_id} sigue "
+            f"VIGENTE: hasta que alguien resuelva, lo que rige es lo que se decidio en "
+            f"la sala. Las {len(triage)} referencia(s) de arriba siguen corriendo."
+        ),
+    })
+    return out
+
+
+def resolve_conflicto(
+    store: DecideStore,
+    question_id: str,
+    resolucion: str,
+    reason: str = "",
+    resuelto_por: str = "",
+    today: date | None = None,
+    apply: bool = False,
+) -> dict:
+    """Cierra un conflicto. Tres salidas, las tres humanas.
+
+        GANA_SALA     la externa se REVIERTE. Lo de la sala sigue rigiendo.
+        GANA_EXTERNA  la externa supersede a la de sala, por la puerta de
+                      adelante: pasa por `supersede`, con su triage.
+        COEXISTEN     no habia contradiccion. Suele ser el caso: dos decisiones
+                      sobre sitios o turnos distintos que se leyeron como una.
+
+    Ninguna se infiere. `COEXISTEN` existe porque la contradiccion aparente es
+    mas frecuente que la real, y sin esa salida la gente resuelve cualquier cosa
+    con tal de destrabar.
+    """
+    if resolucion not in CONFLICT_RESOLUTIONS:
+        raise ValueError(f"resolucion invalida: {resolucion!r}. Validas: {CONFLICT_RESOLUTIONS}")
+    q = store.get(question_id)
+    externas = [store.get(i) for i in q.blocks if store.get(i).status == "EN_CONFLICTO"]
+    if not externas:
+        raise ValueError(f"{question_id} no bloquea ninguna decision EN_CONFLICTO")
+    externa = externas[0]
+    vigente_id = externa.en_conflicto_con
+
+    out = {"question": question_id, "resolucion": resolucion, "externa": externa.id,
+           "vigente": vigente_id, "applied": False}
+    if not apply:
+        out["nota"] = "no se toco nada."
+        return out
+    if not reason:
+        raise ValueError("resolver un conflicto exige un motivo: es lo que explica la eleccion")
+
+    stamp = (today or q.resolve_by).isoformat()
+    if resolucion == "GANA_EXTERNA":
+        # Por la puerta de adelante: primero sale del conflicto, despues se
+        # supersede con su triage completo. Cambiar el estado a mano aca seria
+        # saltearse la enumeracion de referencias que `supersede` existe para dar.
+        externa.status = "VIGENTE"
+        externa.en_conflicto_con = ""
+        externa.historial_statements.append(
+            hist_line(stamp, "VIGENTE", f"conflicto resuelto a su favor: {reason}"))
+        store.save(externa)
+        out["supersede"] = supersede(store, vigente_id, externa.id, reason=reason,
+                                     today=today, apply=True)
+    else:
+        externa.status = "REVERTIDA" if resolucion == "GANA_SALA" else "VIGENTE"
+        externa.en_conflicto_con = ""
+        externa.historial_statements.append(hist_line(
+            stamp, externa.status,
+            f"conflicto con {vigente_id} resuelto como {resolucion}: {reason}"))
+        store.save(externa)
+
+    q.status = "RESUELTA"
+    q.answer_ref = f"{resolucion} por {resuelto_por or q.resolver}: {reason}"
+    store.save(q)
+    out.update({"applied": True, "estado_externa": externa.status})
+    return out
+
+
 def supersede(
     store: DecideStore,
     old_id: str,
@@ -588,6 +774,16 @@ def supersede(
             "superar exige un motivo: una decision que cambia de estado sin motivo "
             "escrito no se puede explicar seis semanas despues"
         )
+    # Un conflicto abierto es precisamente "no se sabe cual rige". Superar una
+    # de las dos mientras eso esta abierto decide el conflicto de costado, sin
+    # que nadie lo haya resuelto ni quede escrito por que.
+    for d, papel in ((vieja, old_id), (nueva, new_id)):
+        if d.status == "EN_CONFLICTO":
+            raise ConflictoAbierto(
+                f"{papel} esta EN_CONFLICTO con {d.en_conflicto_con}. Resolver el "
+                "conflicto primero (`resolve_conflicto`): superar mientras esta abierto "
+                "lo decide de costado y sin dejar escrito por que."
+            )
 
     stamp = (today or nueva.date_decided).isoformat()
     vieja.status = "SUPERADA"
@@ -822,3 +1018,57 @@ def tick(store: DecideStore, today: date, apply: bool = True) -> dict:
         if k not in _AVISOS and isinstance(v, list)
     )
     return changes
+
+
+def close_meeting(
+    store: DecideStore,
+    meeting_id: str,
+    today: date,
+    apply: bool = False,
+) -> dict:
+    """Cierra una sesion y **cuenta los aplazamientos**.
+
+    Es lo que hace posible `NO_DECISION`, y por eso existe como operacion
+    explicita en vez de inferirse: "aplazada por segunda vez" es respecto de
+    SESIONES DISTINTAS que terminaron sin resolverla, y eso solo lo sabe quien
+    cierra la sesion. `tick` no puede: la fecha de vencimiento pasando una vez
+    no es un aplazamiento, es una fecha vencida.
+
+    A la segunda sesion, la pregunta deja de ser un punto pendiente y pasa a ser
+    una decision: la de no decidir. El status quo continua, y eso tiene un costo
+    que hay que escribir — es lo que convierte el silencio en un objeto. La
+    validacion de `OpenQuestion` lo exige a partir del segundo aplazamiento.
+    """
+    store.get_meeting(meeting_id)  # levanta si no existe
+    ag = agenda(store, meeting_id, today=today)
+    abiertas = [q for q in ag.open_questions] + [q for q, _ in ag.expired_questions]
+
+    aplazadas, nuevas_no_decision = [], []
+    for q in abiertas:
+        if meeting_id in q.aplazada_en:
+            continue  # cerrar dos veces la misma sesion no cuenta dos veces
+        if apply:
+            q.aplazada_en = list(q.aplazada_en) + [meeting_id]
+            # `force`: la validacion que exige el costo es justamente la que
+            # queremos disparar en la AGENDA, no bloquear el cierre de la sesion.
+            # Bloquearlo dejaria la sesion sin cerrar y el conteo sin avanzar,
+            # que es como el aplazamiento se vuelve invisible otra vez.
+            store.save(q, force=True)
+        aplazadas.append(q.id)
+        if len(set(list(q.aplazada_en) + ([] if apply else [meeting_id]))) >= 2:
+            nuevas_no_decision.append(q.id)
+
+    return {
+        "meeting": meeting_id,
+        "aplazadas": aplazadas,
+        "no_decision": nuevas_no_decision,
+        "applied": apply,
+        "nota": (
+            f"{len(nuevas_no_decision)} pregunta(s) quedaron aplazadas por segunda vez: "
+            "dejan de ser un punto pendiente y pasan a ser una decision, la de no "
+            "decidir. Hay que escribir el costo de seguir sin decidir, o quien lo "
+            "averigua y para cuando."
+            if nuevas_no_decision
+            else f"{len(aplazadas)} pregunta(s) aplazada(s) por primera vez."
+        ),
+    }

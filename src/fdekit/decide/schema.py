@@ -15,7 +15,16 @@ import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
-DECISION_STATUS = ("VIGENTE", "SUPERADA", "REVERTIDA", "EN_RIESGO")
+# EN_CONFLICTO: una decision de fuera de la sala contradice a una VIGENTE.
+# **Es suspension, no muerte**, y por eso NO entra a `DEAD_DECISION_STATUS`: sus
+# compromisos no son zombis. Un zombi es gente ejecutando algo ya revertido; aca
+# nadie revirtio nada todavia — se dejo de saber cual rige, que es distinto y se
+# arregla mirandolo, no cancelandolo.
+DECISION_STATUS = ("VIGENTE", "SUPERADA", "REVERTIDA", "EN_RIESGO", "EN_CONFLICTO")
+# Como se cierra un conflicto. Las tres son decisiones humanas: ninguna se
+# infiere. COEXISTEN existe porque la contradiccion suele ser aparente — dos
+# decisiones sobre sitios o turnos distintos que se leyeron como una.
+CONFLICT_RESOLUTIONS = ("GANA_SALA", "GANA_EXTERNA", "COEXISTEN")
 COMMITMENT_STATUS = ("ABIERTO", "CUMPLIDO", "VENCIDO", "CANCELADO", "ZOMBI")
 # VERIFICADO no esta en el diseno original. Se agrega porque sin el, un supuesto
 # vencido no tiene forma de dejar de poner en riesgo a su decision, y la agenda
@@ -352,6 +361,10 @@ class Decision:
     # existiera. Lo que SI cambia de significado para lo ya persistido es
     # `auditable`, y esta anunciado en el docstring de abajo.
     origen: str = "REUNION"
+    # Con quien esta en conflicto. Puntero, no lista: un conflicto es entre DOS
+    # enunciados; tres en disputa son dos conflictos y hay que verlos por
+    # separado, porque resolver uno cambia el otro.
+    en_conflicto_con: str = ""
 
     @property
     def auditable(self) -> bool:
@@ -533,9 +546,38 @@ class OpenQuestion:
     # Solicitud de reapertura de una decision existente.
     reopen_of: str = ""
     new_evidence: str = ""
+    # ---- decision por inaccion (H5) ----------------------------------------
+    # La mas frecuente en operaciones y la mas invisible: nadie decide, el status
+    # quo sigue, y no queda objeto. Cuelga de `OpenQuestion` y no de una octava
+    # entidad porque el docstring de esta clase ya dice lo que hace falta — "un
+    # simbolo no resuelto: build rojo" — y una no-decision es exactamente eso,
+    # con la diferencia de que ya se sabe que no se va a resolver sola.
+    #
+    # IDs de las reuniones en cuya agenda estuvo y que cerraron sin resolverla.
+    # Se CUENTA, no se deriva de `status`: "segunda vez" es respecto de sesiones
+    # distintas, y `EXPIRADA` solo dice que paso la fecha una vez.
+    aplazada_en: list[str] = field(default_factory=list)
+    costo_de_no_decidir: str = ""
+    # La valvula de la regla 1: si el costo no se puede cuantificar, se dice
+    # QUIEN lo va a averiguar y para cuando. Inventar un numero seria peor que
+    # el hueco, y dejar el hueco callado seria peor que las dos cosas.
+    costo_en_cola: str = ""
+
+    @property
+    def es_no_decision(self) -> bool:
+        """Aplazada en dos sesiones distintas. Ahi deja de ser una pregunta
+        pendiente y pasa a ser una decision: la de no decidir."""
+        return len(set(self.aplazada_en)) >= 2
 
     def validate(self, roster: tuple[str, ...] | None = None) -> list[str]:
         issues: list[str] = []
+        if self.es_no_decision and not (self.costo_de_no_decidir or self.costo_en_cola):
+            issues.append(
+                f"aplazada en {len(set(self.aplazada_en))} sesiones sin declarar el costo "
+                "de seguir sin decidir. Es lo que convierte el silencio en un objeto: sin "
+                "eso vuelve a ser un punto que se arrastra. Si no se puede cuantificar, "
+                "`costo_en_cola` dice quien lo averigua y para cuando."
+            )
         if len(_norm(self.question)) < 8:
             issues.append("pregunta demasiado corta")
         if not self.resolver:
