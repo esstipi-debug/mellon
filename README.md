@@ -577,21 +577,37 @@ pasillo no se escribe.
 from fdekit.gemba import GembaSession, transcribe_to_session
 
 s = GembaSession("gemba.jsonl", site="CD Pudahuel", observer="FDE")
-agregadas, por_revisar = transcribe_to_session(
+agregadas, por_revisar, avisos, cobertura = transcribe_to_session(
     "turno1.m4a", s, area="Picking", shift="mañana", anonymize=("Rodrigo",)
 )
+print(cobertura["nota"])
+# 9 de 14 enunciado(s) produjeron borrador, **4 SIN CLASIFICAR**, 1 muy corto(s).
 ```
 
 Dos capas separadas a propósito. `transcribe()` necesita el extra `audio`
 (torch + transformers, Whisper local). `draft_observations()` es Python puro: si
 el audio ya viene transcrito, funciona sin instalar nada. Toda la lógica —
 clasificación de desperdicio, parseo de duración y frecuencia, anonimización —
-vive en la capa pura, que es por lo que tiene 37 tests.
+vive en la capa pura, que es por lo que tiene 81 tests.
+
+Las cuatro cosas se desempacan a la fuerza porque las cuatro hay que mirarlas.
+`avisos` dice si el vocabulario de bodega no se aplicó (entonces *todos* los
+borradores salieron de un texto degradado). `cobertura` dice cuántos enunciados
+del audio **no** produjeron nada: sin ese denominador, "se agregaron 9
+observaciones" se lee como "el audio tenía 9 observaciones", que es una
+afirmación que la función no puede hacer. La suma tiene que cerrar — si no
+cierra, `cobertura["cuadra"]` es `False` y hay un enunciado perdido por un
+camino que nadie previó.
 
 Lo que **no** hace: decidir. Un borrador sin duración o sin frecuencia no entra
 al Pareto, va a `review_queue()` ordenada para que la vuelta al pasillo sea una
 sola. El modelo no entiende la operación; solo evita que pierdas el hallazgo
 porque tenías las manos ocupadas.
+
+Y tampoco decide cuando el desperdicio es de dos tipos a la vez. "Mueve el
+pallet dos veces" es transporte **y** es reproceso; el borrador sale con
+`waste_type` en `missing` y los dos candidatos en `tied_wastes`, en vez de
+quedarse con el que estuviera escrito más arriba en el léxico.
 
 Consentimiento explícito antes de grabar, y `anonymize=` antes de que nada se
 persista. No es un trámite legal: decide si te vuelven a hablar en el segundo
