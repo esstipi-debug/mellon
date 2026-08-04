@@ -448,6 +448,7 @@ def cmd_value(a):
         build_archetype,
         cost_to_serve,
         gainshare_terms,
+        findings_contract,
         levers_from_findings,
         model_ladder,
         price_band,
@@ -455,6 +456,15 @@ def cmd_value(a):
 
     findings = json.loads(Path(a.findings).read_text(encoding="utf-8"))
     keys = [a.archetype] if a.archetype != "todos" else sorted(ARCHETYPES)
+
+    # Regla 3. Una palanca a la que le falta un bloque de entrada sale mas
+    # chica y no se distingue de una entera: el VAN se imprime igual de
+    # creible. `_reject_preannualized` cubre los nombres de clave viejos, no el
+    # bloque que nunca vino — que es el caso normal apenas el `hallazgos.json`
+    # lo produce algo que no sea `fdekit demo`.
+    _contrato = findings_contract(findings)
+    if _contrato["parciales"]:
+        print(f"AVISO: {_contrato['nota']}\n")
 
     if a.calibration == "generico":
         print(

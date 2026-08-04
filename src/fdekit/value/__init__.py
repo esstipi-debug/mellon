@@ -21,6 +21,7 @@ caso se caiga en la primera revision seria.
 
 from .labor_regimes import REGIMES, STAFFING_MODELS, regime_table
 from .archetypes import ARCHETYPES, SCALES, Archetype, build_archetype
+from .contract import CONTRACT_VERSION, FINDINGS_CONTRACT, findings_contract
 from .levers import LEVER_CATALOG, Lever, Range, levers_from_findings
 from .model import ValueCase, ValueResult
 from .pricing import PRICING_MODELS, cost_to_serve, gainshare_terms, model_ladder, price_band
@@ -34,6 +35,9 @@ __all__ = [
     "Lever",
     "Range",
     "levers_from_findings",
+    "findings_contract",
+    "FINDINGS_CONTRACT",
+    "CONTRACT_VERSION",
     "ValueCase",
     "ValueResult",
     "PRICING_MODELS",

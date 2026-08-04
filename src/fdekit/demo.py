@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from .a3 import build_a3_from_findings
+from .value.contract import CONTRACT_VERSION
 from .baseline import BaselineSpec, diff_in_diff, parallel_trends_check, pre_post
 from .baseline import icc_from_log, required_days, sd_from_log
 from .dataquality import audit_master, audit_summary, link_defects_to_rework, sampling_plan, stratified_sample
@@ -430,10 +431,14 @@ def run_full_diagnosis(outdir: str | Path = "out", seed: int = 7, quiet: bool = 
     results["a3_issues"] = a3.validate()
     (out / "A3.md").write_text(a3.to_markdown(), encoding="utf-8")
 
+    # Version del contrato de lectura, no del archivo: dice que nombres de
+    # campo espera `levers_from_findings`. Un consumidor externo (otro
+    # productor, otro sistema) necesita saber contra que esquema esta leyendo
+    # antes de confiar en que un bloque ausente significa "no medido" y no
+    # "se llama distinto". Ver `fdekit.value.contract`.
+    _payload = {"contract_version": CONTRACT_VERSION, **_json_safe(results)}
     (out / "hallazgos.json").write_text(
-        json.dumps(
-            _json_safe(results), indent=2, ensure_ascii=False, default=str, allow_nan=False
-        ),
+        json.dumps(_payload, indent=2, ensure_ascii=False, default=str, allow_nan=False),
         encoding="utf-8",
     )
     say(f"\nArtefactos escritos en {out.resolve()}")
