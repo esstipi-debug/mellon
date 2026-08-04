@@ -161,6 +161,12 @@ Procedimiento completo, sobre un escritorio, en menos de dos minutos:
                 --aisles 4 --bays 10 --aisle-pitch 3 --bay-pitch 1
    ```
 
+   > **Sin cámara ni maqueta:** los tres CSV ya están en
+   > [`examples/mesa/`](examples/mesa/README.md) con el comando exacto. Corre en
+   > cinco minutos y el residual sale **`sospechoso`** a propósito — el caso que
+   > enseña no es el que cierra. `tests/test_ejemplo_mesa.py` corre esos mismos
+   > archivos, así que el ejemplo no se puede pudrir sin que la suite lo diga.
+
    **Por qué `--k 1`, y por qué el software no lo pone solo.** El umbral por
    defecto es `k=3`: bajo tres sujetos, un "agregado por zona" no es un
    agregado, es una persona con otro nombre. Sobre un escritorio hay **una sola
