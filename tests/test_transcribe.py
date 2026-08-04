@@ -709,7 +709,7 @@ def test_transcribe_to_session_entrega_los_avisos_al_que_llama(tmp_path):
     from fdekit.gemba.transcribe import transcribe_to_session
 
     s = GembaSession(tmp_path / "g.jsonl", observer="ana")
-    added, pendientes, avisos = transcribe_to_session(
+    added, pendientes, avisos, cobertura = transcribe_to_session(
         "tests/data/audio_muestra.wav",
         s,
         area="picking",
@@ -720,3 +720,10 @@ def test_transcribe_to_session_entrega_los_avisos_al_que_llama(tmp_path):
     assert isinstance(avisos, list)
     assert avisos == [], "ruta feliz: nada que declarar"
     assert len(added) + len(pendientes) >= 1
+
+    # La cobertura viaja por el mismo camino que los avisos y por la misma
+    # razon: sin denominador, "se agregaron N observaciones" se lee como "el
+    # audio tenia N". Con audio real es donde mas importa, porque ahi los
+    # enunciados que el lexico no entiende son de verdad y no de laboratorio.
+    assert cobertura["con_borrador"] == len(added) + len(pendientes)
+    assert cobertura["cuadra"] is True
