@@ -3,13 +3,13 @@
 Kit de terreno para **Forward Deployed Engineers con perfil de supply chain**.
 
 > **Para retomar el trabajo: [`docs/HANDOFF.md`](docs/HANDOFF.md).** Estado,
-> montaje, las 8 reglas duras que no se rompen, y qué sigue.
+> montaje, las 9 reglas duras que no se rompen, y qué sigue.
 >
 > El paquete Python se llama `fdekit` y el directorio local `fde-field-kit`;
 > Mytra FDE es el nombre del proyecto. No se renombró el paquete porque el
-> import aparece en 858 tests y en cada docstring, y un renombre masivo es
-> exactamente el tipo de cambio que este repo trata de evitar: mucho diff, cero
-> comportamiento nuevo.
+> import aparece en más de mil tests y en cada docstring, y un renombre masivo
+> es exactamente el tipo de cambio que este repo trata de evitar: mucho diff,
+> cero comportamiento nuevo.
 
 Nueve herramientas que llevan un despliegue del log crudo del WMS a un A3 con
 números, en un comando. Incluye un centro de distribución sintético con defectos
@@ -301,10 +301,10 @@ gráfico de la reunión de capex.
 ## El canal DECIDIDA — `fdekit decide`
 
 **Fase 0 — el piloto, y en la sala no entra software.** Dos semanas con una
-planilla de cinco columnas y una hoja impresa. Es la fase más importante y la
-que se va a querer saltear: si el marcador verbal no aguanta dos semanas con una
-planilla, no aguanta con 4.500 líneas de Python, y descubrirlo cuesta dos
-semanas en vez de tres meses.
+planilla y una hoja impresa. Es la fase más importante y la que se va a querer
+saltear: si el marcador verbal no aguanta dos semanas con una planilla, no
+aguanta con 4.500 líneas de Python, y descubrirlo cuesta dos semanas en vez de
+tres meses.
 
 ```bash
 fdekit decide pilot init --out piloto --control "ops-semanal"
@@ -328,6 +328,12 @@ la tasa siempre 100%. La celda vacía no es un error — es la medición.
   *porqué*, la frase se dice a medias y se corrige al facilitador; si falta el
   *dueño*, el problema es político. En ninguno de los dos casos lo arregla el
   software.
+
+El diagnóstico se calcula **sólo sobre los puntos que cerraron**, y publica
+sobre cuántos. Un punto que no cerró no dice nada sobre cómo se dijo la frase —
+dice que no cerró, y eso ya lo cuenta la tasa. Contarlo dos veces manda al FDE a
+la conversación equivocada: medido en un ensayo, el dueño faltaba en 0% de los
+puntos cerrados y el reporte decía 38%.
 
 Y el **criterio de muerte se declara antes de empezar**: si a la semana 10 las
 horas-persona del scope tratado no bajaron ≥15% **contra una serie de control**,
@@ -468,6 +474,100 @@ una función que lee el reloj no se puede testear.
 nosotros no. Heredar la interfaz de esa promesa sin heredar la garantía —y
 callarlo— sería el error más grave del diseño.
 
+### Los huecos que matan el sistema entre el mes 2 y el mes 6
+
+Un crítico adversarial encontró 16 huecos en el diseño de `decide`. Los cuatro
+primeros eran de arranque; los que siguen son los que no se ven hasta que ya es
+tarde. Todos están cerrados, cada uno con el test que lo fija.
+
+**El día 1 el registro está vacío** y compite contra tres años de historial:
+`why()` y `referencing()` devuelven vacío justo en las cuatro semanas donde se
+juega la adopción.
+
+```bash
+fdekit decide seed --meeting kickoff --file planilla.csv --by "Marcela Perez"
+fdekit decide minutes --meeting kickoff --dir actas/
+```
+
+La siembra **no relaja `validate()`** —lo que no pasa sale nombrado con el
+motivo exacto— y no usa `force` nunca: hay un test que lee el archivo fuente y
+falla si aparece. Las sembradas van con `origen=SIEMBRA`, así que **no abren la
+compuerta de volumen**: 30 sembradas + 20 reales no son las 50 de la regla 5.
+Las actas históricas sacan su fecha del **nombre del archivo** —procesarlas
+contra hoy inventa plazos— y ninguna sale `ready`: todas llevan `sigue_vigente`
+en lo que falta, que es la única pregunta del ejercicio.
+
+**El compromiso renegociado en privado** es la muerte más común de estos
+sistemas. Dueño y solicitante acuerdan una fecha nueva por chat, el tablero
+sigue mostrando VENCIDO, y a la tercera vez el dueño concluye que el registro
+está mal y deja de mirarlo.
+
+```bash
+fdekit decide slip C-001 --nueva-fecha 2026-09-05 --motivo "el proveedor movió la entrega" --por "Rodrigo Munoz"
+```
+
+Es a propósito el comando más corto del CLI: **si renegociar cuesta más que
+incumplir en silencio, la gente elige el silencio.** La fecha se mueve pero la
+anterior queda al lado. A las tres corridas hacia adelante deja de ser un atraso
+y pasa a ser una decisión que no se tomó; la cuarta **no se rechaza** —eso
+mandaría al dueño al silencio— se aplica y abre la pregunta.
+
+**El actor que no estuvo:** el que llega en la semana 10, el que se va, y el que
+ejecuta en el piso y no leyó ningún correo.
+
+```bash
+fdekit decide brief --scope pudahuel          # qué está decidido, en qué orden
+fdekit decide reassign --sale "Ana Rojas" --entra "Luis Vera" --apply
+fdekit decide orphans --activos "Marcela Perez,Rodrigo Munoz"
+fdekit decide card C-001                      # tres líneas, para un WhatsApp
+```
+
+El brief va ordenado **por dependencia y no por fecha**: una lista plana obliga
+al recién llegado a reconstruir solo por qué existe cada decisión. La tarjeta de
+piso **sólo nombra al dueño**: sale hacia un canal sin ningún control, así que
+es el punto exacto donde un tercero mencionado deja de ser reversible.
+
+**El cliente no lee markdown en git.** El jefe de operaciones del CD es el
+consumidor más importante del canal DECIDIDA y su herramienta es Teams o
+SharePoint.
+
+```bash
+fdekit decide publish --out registro.html --scope pudahuel
+fdekit decide transcript --meeting 2026-08-10-comite --out transcripto.md
+fdekit decide handover --out entrega/ --por "Marcela Perez" --apply
+```
+
+Un archivo HTML sin red, sin login y sin herramienta nueva. Va **agrupado por
+decisión, nunca por persona**, y lo dice en la página: un registro leído como
+tablero de desempeño individual mata el sistema en dos semanas sin ninguna señal
+técnica. Nunca señala nada sólo con color — la mitad de las veces se imprime en
+blanco y negro.
+
+`handover` ejecuta la cláusula de entrega al cierre: escribe, **verifica que
+quedó escrito**, y recién ahí destruye el canal HABLADA dejando constancia. El
+orden es la garantía entera; al revés no se vuelve.
+
+**Dos FDE trabajando sin red** asignan `D-041` los dos, y el conflicto no
+aparece hasta el merge:
+
+```bash
+fdekit decide --autor JM add decision --statement "Bajar el corte de pedidos a las 14:00" \
+      --owner "Marcela Perez" --criteria "100% cortados antes de las 14:00" \
+      --rationale "el transporte sale 15:00" --date 2026-08-10 --meeting kickoff
+```
+
+Cada autor lleva su propia serie. Sin `--autor` los ids son los de siempre.
+
+Y el léxico es **bilingüe por término**: "reslotear" y "slotting" producen el
+mismo valor canónico. Si produjeran distintos, dos menciones del mismo proceso
+no se reconocerían como la misma cosa — que es justo lo que el resolutor existe
+para resolver.
+
+La página de política de datos que se firma en el kickoff está en
+[docs/politica-de-datos.md](docs/politica-de-datos.md): base de licitud,
+retención, terceros mencionados, la norma de uso no punitivo y qué pasa al
+cierre.
+
 ## Audio del pasillo → observaciones
 
 `fdekit.gemba.transcribe` cierra el cuello real de la herramienta 1: en el
@@ -556,7 +656,7 @@ poka-yoke, TWI Job Instruction, Toyota Kata, SPC, MSA, DMAIC.
 pytest -q
 ```
 
-422 tests. No verifican que el código corra: verifican las propiedades que hacen
+1.061 tests. No verifican que el código corra: verifican las propiedades que hacen
 que los números sean defendibles frente a un cliente — que el DFG no una casos
 distintos, que DiD recupere el efecto cuando la estacionalidad esconde el signo,
 que la tasa de falsa alarma del gráfico de control esté bajo 2%, que la auditoría
