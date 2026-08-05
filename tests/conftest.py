@@ -93,7 +93,55 @@ def _snapshot() -> tuple[dict[str, float], set[str]]:
     return files, raiz
 
 
+# ------------------------------------------- cobertura de la propia suite
+
+
+# Los marcadores que `addopts` excluye por defecto. Se listan aca y no se
+# derivan de la expresion `-m` porque derivarla obligaria a parsearla, y un
+# parser de expresiones booleanas para reportar un numero es peor que la lista.
+# Si se agrega un marcador a `addopts` y no aca, `test_cobertura_suite.py` falla.
+MARCADORES_EXCLUIDOS = ("vision", "audio")
+
+
+def pytest_deselected(items):
+    """Guarda lo que quedo fuera. Sin esto el dato no existe al final."""
+    _DESELECCIONADOS.extend(items)
+
+
+_DESELECCIONADOS: list = []
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """Imprime cuanto de la suite NO corrio. Ver `_cobertura_suite`.
+
+    "1135 passed, 4 deselected" se lee como cobertura y no lo es. Esta linea
+    existe porque una firma rota sobrevivio tres corridas verdes escondida
+    detras del marcador `audio`.
+    """
+    from _cobertura_suite import cobertura_de_la_suite, contar_por_marcador
+
+    ejecutados = sum(
+        len(terminalreporter.stats.get(k, [])) for k in ("passed", "failed", "error")
+    )
+    por_marcador = contar_por_marcador(
+        tuple(m.name for m in it.iter_markers() if m.name in MARCADORES_EXCLUIDOS)
+        for it in _DESELECCIONADOS
+    )
+    # El total lo pone pytest. Derivarlo de `ejecutados + por_marcador` daba un
+    # denominador inventado en cuanto alguien corria `-m <marcador>` a mano.
+    cob = cobertura_de_la_suite(
+        por_marcador,
+        ejecutados,
+        no_ejecutados=len(_DESELECCIONADOS),
+        recolectados=getattr(terminalreporter._session, "testscollected", 0),
+    )
+    if cob["no_ejecutados"]:
+        terminalreporter.write_sep("-", "cobertura de la suite")
+        terminalreporter.write_line(cob["nota"])
+
+
 def pytest_sessionstart(session):
+    _DESELECCIONADOS.clear()
     session.config._fdekit_antes = _snapshot()
 
 
