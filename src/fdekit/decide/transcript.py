@@ -316,7 +316,7 @@ def transcribe_meeting(
     meeting_id: str,
     vocabulary: list[str] | None = None,
     **kwargs,
-) -> tuple[list[Utterance], str]:
+) -> tuple[list[Utterance], str, list[str]]:
     """Audio -> canal HABLADA, con Whisper local.
 
     Requiere el extra `audio`. Reusa `fdekit.gemba.transcribe.transcribe()` — la
@@ -329,6 +329,11 @@ def transcribe_meeting(
     para el que se calibro `fdekit.gemba`. Implicancia de diseno: el transcripto
     sirve para anclaje y busqueda, **no para citar textual sin revision** — por
     eso la cita congelada la lee un humano al ratificar.
+
+    Devuelve (enunciados, sha256, avisos). El tercero no es decorativo: si el
+    vocabulario de decisiones no entro al prompt, el anclaje de `resolve` va a
+    buscar terminos que el transcripto escribio mal, y el sha256 congela esa
+    version degradada como si fuera buena.
     """
     from ..gemba.transcribe import WAREHOUSE_VOCAB, transcribe
     from .lexicon import DECISION_VOCAB
@@ -338,4 +343,4 @@ def transcribe_meeting(
 
     store = TranscriptStore(root, meeting_id)
     utts = store.ingest_segments(tr.segments) if tr.segments else store.ingest_text(tr.text)
-    return utts, store.sha256()
+    return utts, store.sha256(), list(tr.avisos)

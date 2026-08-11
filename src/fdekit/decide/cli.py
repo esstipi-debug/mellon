@@ -288,6 +288,7 @@ def cmd_transcribe(a):
     m = st.get_meeting(a.meeting)
     ts = TranscriptStore(a.root, a.meeting)
 
+    avisos: list[str] = []
     if a.text:
         utts = ts.ingest_text(Path(a.text).read_text(encoding="utf-8"))
         nota = "texto plano: sin timestamps, las citas van a quedar sin mm:ss"
@@ -299,13 +300,15 @@ def cmd_transcribe(a):
                 "valor. Re-registrar la reunion con --recording si corresponde."
             )
             return 2
-        utts, _ = transcribe_meeting(a.audio, a.root, a.meeting)
+        utts, _, avisos = transcribe_meeting(a.audio, a.root, a.meeting)
         nota = "audio local con Whisper"
 
     m.transcript_sha256 = ts.sha256()
     m.transcript_ref = str(ts.path)
     st.save(m)
     print(f"{len(utts)} enunciado(s) | sha256 {ts.sha256()[:12]} | {nota}")
+    for adv in avisos:
+        print(f"aviso: {adv}")
     return 0
 
 
