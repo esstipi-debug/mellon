@@ -38,6 +38,7 @@ where = ["src"]
 testpaths = ["tests"]
 markers = [
     "vision: necesita OpenCV y un video de muestra",
+    "audio: necesita torch + transformers y baja un modelo Whisper",
     "historia: recorre la historia completa del repo, lento",
 ]
-addopts = "-m 'not vision'"
+addopts = "-m 'not vision and not audio'"
