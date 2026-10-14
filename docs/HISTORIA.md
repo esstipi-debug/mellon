@@ -682,6 +682,7 @@ workflow se puede re-correr con `scratchpad/audit-handoff.mjs`.
 | `docs/calibracion-chile-2026.md` | costo laboral, jornada, FX, TPM, tarifas 3PL, con fuente |
 | `docs/mercado-y-monetizacion.md` | Palantir/Anaplan/Kinaxis, GitHub, y el modelo de precio |
 | `docs/huggingface.md` | modelos y datasets candidatos, con lo que HF **no** tiene |
+| `docs/gemba-walk.md` | la doctrina del gemba walk: protocolo, desperdicios, anti-patrones, y dónde el kit se aparta de la certificación |
 
 ---
 

@@ -574,6 +574,14 @@ La página de política de datos que se firma en el kickoff está en
 retención, terceros mencionados, la norma de uso no punitivo y qué pasa al
 cierre.
 
+## Gemba: el método, y en qué se aparta de la certificación
+
+La doctrina completa del gemba walk —el protocolo antes/durante/después, los ocho
+desperdicios, la corrección de *muda* contra *muri*/*mura*, los anti-patrones y
+las tres cosas que el kit **no** resuelve— está en
+[docs/gemba-walk.md](docs/gemba-walk.md). Se lee en veinte minutos y explica por
+qué el Pareto ordena por horas y no por frecuencia.
+
 ## Audio del pasillo → observaciones
 
 `fdekit.gemba.transcribe` cierra el cuello real de la herramienta 1: en el
