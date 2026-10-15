@@ -1,0 +1,1190 @@
+# MEETING-KILLER OS — Arquitectura v0.3
+
+**Sistema Inteligente de Prevención, Optimización y Reemplazo de Reuniones**
+
+| | |
+|---|---|
+| **Documento** | Entrega 1 de 5 — Arquitectura de Alto Nivel, Stack, Modelo de Datos, Algoritmo de Intercepción, Roadmap |
+| **Estado** | Propuesta para revisión (borrador arquitectónico) — **revisado con verificación de APIs contra documentación oficial** |
+| **Fecha de verificación** | 2026-10-14 |
+| **Documento complementario** | [02-verificacion-plataforma.md](C:\fde\meeting-killer-os\02-verificacion-plataforma.md) — informe de verificación con fuentes primarias y fechas de consulta |
+| **Audiencia** | CTO / VP Engineering / Chief of Staff / Tech Leads |
+| **Naturaleza** | Sistema interno *opinionado*. El 70% del riesgo es cultural y de gobernanza, no técnico. |
+
+---
+
+## Registro de correcciones — v0.1 → v0.2 → v0.3
+
+Las siguientes afirmaciones de la v0.1 fueron **verificadas contra documentación oficial y resultaron incorrectas o incompletas**. Se documentan aquí en lugar de corregirse en silencio, porque dos de ellas cambian el orden de prioridades del roadmap. La **v0.3** integra el informe de verificación completo (precios de TTS y orquestación, licenciamiento de Remotion, marco legal) sin revertir ninguna decisión.
+
+| # | Afirmación en v0.1 | Estado real verificado | Impacto |
+|---|---|---|---|
+| **C-1** | "Interceptar en el momento de composición es la superficie de mayor palanca del sistema" (ADR-002) | **Falso.** No existe trigger de composición en Google Calendar. En Outlook `OnNewAppointmentOrganizer` existe, pero `displayDialogAsync` y `messageParent` están **explícitamente bloqueados** en activación por eventos: no se puede mostrar un diálogo. | **ADR-002 reescrito.** Se reordena el roadmap: Outlook pasa antes que Google |
+| **C-2** | "NotebookLM no tiene API pública verificada" (ADR-008) | **Parcialmente falso, pero la conclusión se mantiene.** Existen dos APIs; la standalone está **deprecada y sin admisión de nuevos clientes**; la otra es **Preview (`v1alpha`)** con acoplamiento a notebook | **ADR-008 reescrito** con la ruta viable y sus restricciones reales |
+| **C-3** | Posibilidad de diálogo en add-ons de calendario | No confirmado en v0.1 | Se documenta lo que **sí** es posible (infobar, mutación del item, Smart Alerts al enviar) |
+| **C-4** | — | **El informe de verificación final (§4) volvió a recomendar la Podcast API como "mejor opción", sin la nota de deprecación.** El error se repitió pese a haberse detectado y corregido en la ronda anterior | Se mantiene la decisión de ADR-008. Refuerza la disciplina de procedencia de §2.4 |
+
+**Artefacto de respaldo:** el informe de verificación de plataforma completo, con fuentes y fechas de consulta, está en [02-verificacion-plataforma.md](C:\fde\meeting-killer-os\02-verificacion-plataforma.md) (consultado el 2026-10-14).
+
+> **Nota metodológica.** Durante esta revisión, una pasada de investigación intermedia reportó el hallazgo C-2 como *"NotebookLM SÍ tiene API — es la ruta mejor"* y recomendó invertir la decisión. La verificación directa de la página citada mostró que **esa API está deprecada y Google no está admitiendo nuevos clientes** — el dato principal era correcto y la conclusión, opuesta. El informe final **repitió la misma recomendación errónea** (C-4). Se deja constancia porque es exactamente el modo de falla que este documento advierte en §5: **una conclusión estratégica construida sobre un resumen en lugar de sobre la fuente primaria.** El resto del informe final es sólido, está bien citado y su sección de TTS convergió de forma independiente con verificación directa — lo que da confianza en esas cifras.
+
+---
+
+## Relación con `fdekit.decide` — hallazgo de integración (2026-10-14)
+
+Al preparar la incorporación de este documento al repo `mytra-fde`, aparece un hecho que **cambia el encuadre de todo el proyecto y responde por sí solo a la pregunta abierta #5 de §7**.
+
+**El repo `mytra-fde` ya contiene `fdekit.decide`: un registro de decisiones de reunión en producción interna**, con separación de canales **decidida / hablada**, `Meeting.clase`/`canal`, `Decision.origen`, presupuesto de promoción (`promotion_ceiling`, `DECLARED_BUDGET`), retención con ejecutor real, y CLI operativo:
+
+```bash
+fdekit decide agenda --meeting <id>     # puede decir "proponer cancelar"
+fdekit decide draft  --meeting <id> --file acta.txt
+fdekit decide metrics                    # con compuerta de volumen
+```
+
+Es decir: **`mk-decision-ledger` (entidad central de esta arquitectura) ya existe, resuelto y testeado, en el mismo repositorio donde se propone construirlo.** La pregunta #6 de §7 — *"¿cuál es la fuente de verdad de decisiones hoy?"* — queda respondida: **es esta**.
+
+### Convergencias que no son coincidencia
+
+| Esta arquitectura (§) | `fdekit.decide` / reglas duras del repo |
+|---|---|
+| **§5.4** — agregación por equipo, datos individuales sólo para la propia persona | **Regla 9** — *"el sensor ve al operador; el archivo que sale del sensor, no"*, implementada en `privacy.py` y **verificada por `tests/test_field_privacy.py`** |
+| **ADR-009** — grano de agregación, uso no punitivo | **H15** — `cierre.py` + `docs/politica-de-datos.md`: propiedad, salida y **uso no punitivo** |
+| **§5.2** — honestidad metodológica en el ahorro | **Regla 3** — *"no prometemos resolver siempre; prometemos no mentir nunca en silencio"* y **regla 1** — *"un registro con huecos es peor que ninguno: genera falsa confianza"* |
+| **§5.1** — North Star como decisiones, no reuniones | **Regla 7** — presupuesto de 7 decisiones por reunión, *"no levantarlo"* |
+| **ADR-001** — autoridad configurable, nunca unilateral | `promotion_ceiling` — *"el único techo del sistema"*, y `slip()` (H11): **renegociar más barato que el silencio** |
+
+**Conclusión:** `fdekit.decide` ya resolvió los problemas difíciles de procedencia, privacidad, retención y uso punitivo — y los resolvió **como propiedad del código verificada por tests**, no como promesa en un documento. Duplicar esa capa en un `mk-decision-ledger` nuevo violaría las reglas 1 y 9 del propio repo.
+
+### Decisión que hay que tomar antes de construir
+
+**¿MEETING-KILLER OS es una capa sobre `fdekit.decide`, o un sistema paralelo?**
+
+Recomendación: **capa**. El reparto natural queda así:
+
+- **`fdekit.decide` conserva** el registro de decisiones, la procedencia, la retención, la privacidad y la política de uso.
+- **MEETING-KILLER OS aporta lo que `decide` no tiene**: intercepción en calendario (§4), Knowledge Fabric / RAG (§1.4, §2.2), motor de síntesis multimodal (§2.3) y el bucle de validación asíncrona (§4.2).
+- El `mk-decision-ledger` de esta arquitectura **se elimina como componente** y pasa a ser un **adaptador hacia `fdekit.decide`**.
+
+Esto reduce el alcance del MVP de forma sustancial: desaparecen del roadmap el modelo de retención, la gobernanza de agregación y el uso punitivo — porque ya están construidos y testeados.
+
+### Advertencia sobre jurisdicción
+
+La sección §5.4 cita **Alemania (§87 BetrVG), España (AEPD) y UE (art. 88 RGPD / STJUE C-34/21)**. El contexto de `mytra-fde` es **Chile** (Pudahuel, IMM Chile, `docs/calibracion-chile-2026.md`), donde el marco relevante es la **Ley 21.719**, que **rige desde el 1-dic-2026** — es decir, el mes próximo, no un problema teórico.
+
+**Hay que confirmar la jurisdicción de despliegue antes de cerrar ADR-009.** Si es Chile, §5.4 se reescribe con la Ley 21.719 y el material alemán/español pasa a apéndice como referencia comparada; la conclusión de diseño (agregación en la capa de datos) no cambia, pero la base legal sí.
+
+### Nota sobre método
+
+El repo documenta su patrón de error dominante —*"no falla, miente"*— y una regla derivada de tres casos medidos:
+
+> *"Los mecanismos que reportan son reales, los conteos no. Implementar por el mecanismo, nunca por la cifra."*
+
+Eso describe con precisión lo ocurrido con la verificación de NotebookLM (C-2/C-4): **el mecanismo reportado era real** (las dos APIs existen, con esos parámetros y requisitos), **la conclusión no era reproducible contra la fuente**. La disciplina de procedencia de §2.4 es, en los hechos, la misma regla aplicada a la investigación de plataforma.
+
+---
+
+## 0. Confirmación de alcance y tesis arquitectónica
+
+Entiendo el alcance: no se trata de un "bot de calendario" ni de un "resumidor de reuniones". Se trata de un **sistema operativo interno que cambia el default organizacional de `sync-first` a `async-by-default`**, y que para hacerlo necesita: (a) interceptar la intención de sincronizar en el momento en que nace, (b) fabricar la alternativa asíncrona con calidad suficiente para que sea *preferible* a la reunión, (c) medir si la alternativa funcionó, y (d) cerrar la decisión con trazabilidad.
+
+Eso define **cuatro restricciones que mandan sobre todo el diseño**:
+
+### Los tres riesgos que definen la arquitectura
+
+1. **Riesgo de autoridad (el más grave).** Un bot no puede cancelar unilateralmente la reunión de un VP. Si lo intenta y falla una vez de forma visible, el sistema pierde legitimidad y muere en dos semanas. → **La arquitectura debe separar `decisión` de `ejecución` y ser configurable en autoridad** (coach → soft-block → hard-cancel) sin reescribir código. El veredicto es un dato versionado, no un `if`.
+
+2. **Riesgo de calidad de la síntesis.** Si el audio/video asíncrono es mediocre, la gente *pedirá la reunión de vuelta*. El sistema se autodestruye por su propio output. → **La calidad del asset es un requisito funcional de primer orden**, con presupuesto de cómputo, revisión humana opcional y telemetría de consumo real (no de "enviado").
+
+3. **Riesgo de Goodhart.** Si el KPI es "reuniones eliminadas", el sistema optimizará reuniones eliminadas — incluidas las necesarias — y las decisiones se volverán más lentas y peores. → **El North Star debe ser throughput de decisiones, no ahorro de reuniones.** Ver §5.
+
+### Restricción transversal: durabilidad temporal
+
+El ciclo de vida de una intercepción es: `invitación creada` → `checklist` → `síntesis (2–20 min)` → `ventana de validación (24–72 h)` → `ratificación o llamada quirúrgica`. **Es un proceso de días, con humanos en el medio, con timeouts, recordatorios, escalado y compensaciones.** Esto no es una app request/response: es un **motor de workflows duradero**. Es la decisión técnica #1 y condiciona el resto del stack.
+
+---
+
+## 1. Arquitectura de Alto Nivel
+
+### 1.1 C4 — Nivel 1: Contexto
+
+```mermaid
+graph TB
+    subgraph Personas["👥 Personas"]
+        IC["🧑‍💻 Maker / IC<br/><i>protege foco</i>"]
+        LEAD["👔 Tech Lead / DRI<br/><i>convoca y decide</i>"]
+        OPS["📋 Ops / Chief of Staff<br/><i>gobierna política</i>"]
+        IT["🛡️ IT / Admin<br/><i>instala y audita</i>"]
+    end
+
+    MKOS["⚙️ <b>MEETING-KILLER OS</b><br/>Intercepción · Síntesis Multimodal<br/>Validación Asíncrona · Decision Ledger"]
+
+    subgraph Fuentes["🗄️ Fuentes de verdad (Knowledge Fabric)"]
+        CAL["📅 Google Calendar /<br/>Microsoft 365"]
+        CHAT["💬 Slack / Teams"]
+        DOCS["📄 Notion / Confluence / Drive"]
+        CODE["🔀 GitHub / GitLab"]
+        TICK["🎫 Linear / Jira"]
+    end
+
+    subgraph Salidas["📤 Superficies de consumo"]
+        SLACK["💬 Slack / Teams"]
+        WEB["🖥️ Dashboard Web"]
+        MEDIA["🎧🎬 Assets de audio/video/diagrama"]
+    end
+
+    HR["💰 HRIS / Finanzas<br/><i>costo hora-hombre</i>"]
+    IDP["🔐 SSO / IdP (Okta, Entra ID)"]
+
+    IC -->|"consume síntesis, vota"| MKOS
+    LEAD -->|"convoca, responde checklist"| MKOS
+    OPS -->|"define políticas y umbrales"| MKOS
+    IT -->|"administra, audita"| MKOS
+
+    MKOS -->|"lee contexto (ACL-aware)"| CAL
+    MKOS -->|"lee contexto"| CHAT
+    MKOS -->|"lee contexto"| DOCS
+    MKOS -->|"lee contexto"| CODE
+    MKOS -->|"lee contexto"| TICK
+
+    MKOS -->|"intercepta, cancela,<br/>agenda quirúrgica"| CAL
+    MKOS -->|"publica y recolecta votos"| SLACK
+    MKOS -->|"sirve assets"| MEDIA
+    MKOS -->|"dashboards"| WEB
+
+    MKOS -.->|"costo/hora"| HR
+    MKOS -.->|"authn / authz"| IDP
+
+    style MKOS fill:#1f2937,stroke:#60a5fa,stroke-width:3px,color:#fff
+    style Fuentes fill:#0f172a,stroke:#334155,color:#cbd5e1
+    style Salidas fill:#0f172a,stroke:#334155,color:#cbd5e1
+    style Personas fill:#1a1a2e,stroke:#334155,color:#cbd5e1
+```
+
+### 1.2 C4 — Nivel 2: Contenedores
+
+```mermaid
+graph TB
+    subgraph Edge["🚪 Borde"]
+        GW["<b>mk-gateway</b><br/>API Gateway / BFF<br/><i>OAuth, rate limit, tenant routing,<br/>verificaci&oacute;n de firma de webhooks</i>"]
+    end
+
+    subgraph Core["🧠 Núcleo de dominio (TypeScript)"]
+        INT["<b>mk-interceptor</b><br/>Webhooks de calendario,<br/>Policy Engine, máquina de estados<br/>de intercepción,<br/>sweeper de reconciliación"]
+        KF["<b>mk-knowledge-fabric</b><br/>Conectores, sync incremental,<br/>normalización, ACL mirroring"]
+        VAL["<b>mk-validation</b><br/>Publicación async, polls,<br/>quórum, escalado,<br/>llamada quirúrgica"]
+        LEDGER["<b>mk-decision-ledger</b><br/>Registro canónico de decisiones<br/><i>append-only, versionado</i>"]
+        MET["<b>mk-metrics</b><br/>Focus Score,<br/>impacto neto"]
+    end
+
+    subgraph AI["🤖 Plano de IA (Python)"]
+        RAG["<b>mk-rag</b><br/>Chunking estructural,<br/>embeddings, retrieval híbrido,<br/>reranking, citas"]
+        SYN["<b>mk-synthesis</b><br/>DAG de generación:<br/>guion → TTS / Remotion / Mermaid"]
+        CLS["<b>mk-classifier</b><br/>Clasificación de intención<br/>+ score de necesitud de sync"]
+    end
+
+    subgraph Infra["🏗️ Infraestructura compartida"]
+        TEMP["<b>Temporal</b><br/>Workflows duraderos<br/><i>(corazón del sistema)</i>"]
+        PG[("<b>PostgreSQL 16</b><br/>+ pgvector + pg_search<br/>OLTP + vectores + BM25")]
+        S3[("<b>Object Storage</b><br/>S3 / R2<br/>assets, renders")]
+        REDIS[("<b>Redis</b><br/>cache, locks,<br/>rate limit")]
+        WH[("<b>Warehouse</b><br/>ClickHouse / DuckDB<br/>analítica")]
+        RENDER["<b>Render Farm</b><br/>Chromium headless<br/>+ FFmpeg"]
+    end
+
+    subgraph Clients["🖥️ Clientes"]
+        SLACKAPP["<b>Slack App</b> (Bolt)<br/><i>superficie principal</i>"]
+        WEBAPP["<b>Web App</b> (Next.js)<br/>dashboards, canvas"]
+        GADDON["<b>Google Workspace<br/>Add-on</b>"]
+        OADDIN["<b>Outlook Add-in</b><br/>(Office.js)"]
+    end
+
+    SLACKAPP --> GW
+    WEBAPP --> GW
+    GADDON --> GW
+    OADDIN --> GW
+    GW --> INT & KF & VAL & LEDGER & MET
+
+    INT -->|"inicia workflow"| TEMP
+    VAL -->|"inicia workflow"| TEMP
+    TEMP -->|"actividades"| SYN & RAG & VAL & INT
+
+    KF --> RAG
+    SYN --> RAG
+    INT --> CLS
+    CLS --> RAG
+
+    INT & KF & VAL & LEDGER & MET --> PG
+    RAG --> PG
+    SYN --> S3
+    SYN --> RENDER
+    INT & VAL --> REDIS
+    MET --> WH
+    LEDGER --> PG
+
+    style TEMP fill:#7c2d12,stroke:#fb923c,stroke-width:3px,color:#fff
+    style PG fill:#1e3a5f,stroke:#60a5fa,stroke-width:2px,color:#fff
+    style SYN fill:#4c1d95,stroke:#a78bfa,color:#fff
+    style RAG fill:#4c1d95,stroke:#a78bfa,color:#fff
+    style INT fill:#1f2937,stroke:#60a5fa,color:#fff
+```
+
+### 1.3 Flujo end-to-end (el "camino feliz" y sus bifurcaciones)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant O as 👔 Organizador
+    participant CAL as 📅 Calendar
+    participant INT as 🛡️ Interceptor
+    participant KF as 🗄️ Knowledge Fabric
+    participant SYN as 🎬 Synthesis
+    participant SL as 💬 Slack
+    participant T as 👥 Equipo
+    participant L as 📒 Decision Ledger
+
+    O->>CAL: Crea "Sync de avance Q3" (8 personas, 60 min)
+    CAL-->>INT: Push notification (watch channel)
+    INT->>INT: Policy Engine → TRIGGER<br/>(>2 personas, >25 min, keyword "sync")
+    INT->>CAL: Marca evento (extendedProperty) + estado HELD
+    INT->>SL: DM al organizador: Checklist de 4 filtros
+    O->>SL: Responde checklist (¿sincronía estricta? ¿hay doc?)
+    SL-->>INT: Webhook interactivo
+
+    alt Justificación válida (decisión binaria / incidente)
+        INT->>CAL: Libera evento + exige agenda y pre-read
+        INT->>SL: Publica agenda, pre-read y objetivo
+    else Es status / alineación
+        INT->>CAL: Cancela evento (soft-cancel, con override)
+        INT->>KF: Resuelve contexto (ticket, PR, doc, hilo)
+        KF-->>SYN: Corpus con citas y ACLs
+        SYN->>SYN: Genera guion → audio 3:30<br/>+ diagrama Mermaid + video 75s
+        SYN-->>INT: Assets listos (~4 min)
+        INT->>SL: Publica en #equipo con poll 1-clic + 1 pregunta
+        SL-->>T: Notificación
+        T->>SL: Vota (✅ / ⚠️ + objeción)
+        SL-->>INT: Recolecta votos
+        alt ≥80% aprueba y quórum alcanzado
+            INT->>L: Ratifica decisión (inmutable, con linaje)
+            INT->>SL: 🎉 Decisión cerrada sin reunión
+        else Discrepancia o quórum insuficiente
+            INT->>INT: Clusteriza objeciones → tema bloqueante
+            INT->>CAL: Agenda "Llamada Quirúrgica" 15 min<br/>solo objetores + DRI + agenda generada
+            INT->>SL: Publica agenda quirúrgica y contexto
+        end
+    end
+    INT->>INT: Emite eventos de telemetría → mk-metrics
+```
+
+### 1.4 El plano de datos (por qué un solo Postgres al inicio)
+
+```mermaid
+flowchart LR
+    subgraph Sources["Fuentes externas"]
+        N["Notion"]:::s
+        G["GitHub/GitLab"]:::s
+        L["Linear/Jira"]:::s
+        S["Slack"]:::s
+    end
+
+    subgraph Ingesta["Pipeline de ingesta"]
+        C["Conectores<br/><i>webhook + polling + cursor</i>"]:::i
+        NORM["Normalizador<br/>→ CanonicalDocument"]:::i
+        ACL["ACL Resolver<br/><i>hash de permisos</i>"]:::i
+        CHUNK["Chunker estructural<br/><i>headings, diffs, hilos, comentarios</i>"]:::i
+        EMB["Embeddings<br/><i>batch + cache por checksum</i>"]:::i
+    end
+
+    subgraph Almacen["Almacén unificado"]
+        PG[("PostgreSQL<br/><br/>documents<br/>chunks (vector 3072)<br/>chunks.tsvector (BM25)<br/>acl_principals[]<br/>sync_cursors")]:::pg
+    end
+
+    subgraph Retrieval["Retrieval"]
+        HYB["Búsqueda híbrida<br/><i>RRF: BM25 ⊕ coseno</i>"]:::r
+        RER["Reranker<br/><i>cross-encoder</i>"]:::r
+        FIL["Filtro de permisos<br/><i>a nivel de chunk, en SQL</i>"]:::r
+        CTX["Contexto con citas<br/>+ presupuesto de tokens"]:::r
+    end
+
+    N & G & L & S --> C --> NORM --> ACL --> CHUNK --> EMB --> PG
+    PG --> HYB --> RER --> FIL --> CTX
+
+    classDef s fill:#1e293b,stroke:#475569,color:#e2e8f0
+    classDef i fill:#312e81,stroke:#818cf8,color:#fff
+    classDef pg fill:#1e3a5f,stroke:#60a5fa,stroke-width:3px,color:#fff
+    classDef r fill:#4c1d95,stroke:#a78bfa,color:#fff
+```
+
+**Decisión de diseño: empezar con Postgres único (OLTP + pgvector + full-text).** Razón: el 90% de los bugs iniciales de un sistema RAG provienen de la **desincronización entre el índice vectorial y los metadatos/ACLs**, no de la performance del índice. Tener una sola fuente transaccional elimina esa clase entera de bugs. La migración a un vector store dedicado (Qdrant/Turboplex) se justifica recién por encima de ~10M de chunks o si se necesita filtrado por payload de baja latencia a gran escala.
+
+---
+
+## 2. Stack Tecnológico Recomendado
+
+### 2.1 Backend y orquestación
+
+| Capa | Recomendación | Alternativa | Justificación |
+|---|---|---|---|
+| **Control plane** | **TypeScript** — NestJS (o Fastify + Zod) | Go | El ecosistema de integraciones (Slack Bolt, Google APIs, Graph SDK, Octokit) es de primera clase en TS. NestJS da módulos, DI y colas out-of-the-box. |
+| **Plano de IA** | **Python 3.12 + FastAPI** | Todo en TS | El ecosistema multimodal (TTS, render, embeddings, evals) es Python-first. Forzar TS aquí es fricción permanente. |
+| **Contrato entre planos** | **OpenAPI + JSON Schema + cola** | gRPC | Frontera explícita. Los dos planos se comunican por cola (Temporal activities / SQS), no por llamadas sincrónicas acopladas. |
+| **Workflow duradero** | **Temporal** (Cloud o self-host) | Inngest (DX superior, más rápido de arrancar) / pg-boss o Graphile Worker (MVP) | El ciclo dura días con humanos y timeouts. Temporal da replay determinista, señales, timers, saga/compensación y visibilidad operativa. **Inngest es la elección pragmática si el MVP debe estar en 3 semanas.** |
+| **Colas internas** | Redis Streams o SQS | RabbitMQ | Volumen bajo; no justifica Kafka. |
+| **Base de datos** | **PostgreSQL 16** + `pgvector` + `pg_search` (ParadeDB) o `tsvector` | — | Ver §1.4. |
+| **Object storage** | S3 / Cloudflare R2 | GCS | Assets de audio/video, renders. R2 sin egress fees es significativo si el equipo consume video. |
+| **Cache / locks** | Redis | — | Idempotencia de webhooks, locks distribuidos, rate limiting. |
+| **Warehouse** | **ClickHouse** o DuckDB + dbt | BigQuery | Métricas de series temporales de calendario. DuckDB es suficiente hasta ~100M de eventos. |
+| **Infra** | Contenedores en ECS/Fly.io/Cloud Run + IaC (Terraform o Pulumi) | K8s | K8s es sobre-ingeniería hasta Fase 3. |
+
+### 2.2 Plano de IA
+
+| Componente | Recomendación | Notas |
+|---|---|---|
+| **LLM Gateway** | **LiteLLM** o **OpenRouter** como proxy propio | Un solo punto para routing de modelos, fallback, presupuesto por equipo, logging de prompts y *redaction*. Evita acoplamiento a un proveedor. |
+| **Modelos — razonamiento** | Claude Sonnet/Opus o GPT-class vía gateway | Para guiones, clasificación de intención, clustering de objeciones. |
+| **Modelos — volumen** | Modelo pequeño/rápido (Haiku / mini-class) | Clasificación de intención y resúmenes de hilos: 90% del volumen, 5% del costo. |
+| **Salidas estructuradas** | **JSON Schema / Structured Outputs obligatorio** | El clasificador debe devolver `{verdict, reason_code, confidence, evidence[]}`. Nunca parsear texto libre para tomar decisiones. |
+| **Embeddings** | `text-embedding-3-large`, `voyage-3` o `bge-m3` self-hosted | Self-host si hay repos con código propietario sensible. |
+| **Reranker** | Cross-encoder (Cohere Rerank o `bge-reranker-v2`) | Mejora la precisión del retrieval más que cualquier cambio de modelo generativo. Es el mejor ROI del pipeline. |
+| **Vector store** | `pgvector` + HNSW | Hasta ~10M chunks. Después: Qdrant. |
+| **Orquestación de agentes** | **NO usar un framework de agentes pesado.** Temporal + llamadas directas al SDK | LangGraph/LlamaIndex añaden una segunda capa de estado que colisiona con Temporal. Usar frameworks solo *dentro* de una activity, y solo si aportan evals. |
+| **Evals** | **Promptfoo** o **Braintrust** desde el día 1 | Sin evals no se puede cambiar un prompt sin miedo. Es infraestructura, no un lujo. |
+| **Observabilidad LLM** | Langfuse (self-host) o similar | Trazas de prompt→respuesta, costo por decisión, latencia. |
+
+### 2.3 Motor de síntesis multimodal
+
+| Formato | Stack recomendado | Notas de arquitectura |
+|---|---|---|
+| **Audio Overview (3–4 min, 2 locutores)** | **Ruta por defecto:** LLM genera guion dialogado con marcas de hablante → **TTS multi-hablante** — **Gemini TTS** (recomendado, ~0,11 USD/episodio) o ElevenLabs Text-to-Dialogue si prima el realismo (~0,56 USD) → mezcla con FFmpeg → MP3/M4A. **Ruta alternativa verificada:** API de audio overview de Gemini Notebook Enterprise (ver ADR-008). | ~700–900 palabras para 3.5 min. ⚠️ **OpenAI TTS y Cartesia NO soportan multi-hablante nativo** (un `voice` por request). **Cachear por hash de contenido**: la misma decisión no se regenera. El costo del audio **no es una restricción de diseño** a esta escala. |
+| **Video 60–90 s** | **Remotion** (React → MP4) + plantillas de escena bloqueadas por marca | Remotion es el estándar para video programático versionable. Un `storyboard.json` que produce el LLM se mapea a composiciones. Render en **Remotion Lambda** (elástico, pago por render) o granja propia de Chromium headless + FFmpeg (más barato a volumen). |
+| **Avatar / talking head** | HeyGen o similar, **solo para comunicaciones ejecutivas de alto valor** | Costo por minuto muy superior al video programático. Reservar para all-hands y anuncios. |
+| **Diagramas interactivos** | LLM emite **Mermaid** (flowchart / sequence / state) → render a SVG/PNG con `mermaid-cli` o Kroki → embebido en escenas de video y en Slack | **Determinístico, diffeable y versionable**: el diagrama evoluciona con el repo. Es la mejor relación valor/costo/riesgo del sistema. |
+| **Canvas interactivo** | **React Flow** en el dashboard web | Exploración del grafo de decisiones: qué supersede a qué, qué está bloqueado, quién objeta. |
+| **Slides** | `pptxgenjs` o Marp | Para comités que exigen formato presentación. |
+
+> **Aclaración importante sobre las herramientas mencionadas en el brief.** "Claude Design" no es un motor de render: es una capacidad de generación de diseño/UI. En el pipeline ocupa el lugar de **generación de guion y storyboard** (capa de texto), no de la capa de render. **Screen Studio es una aplicación de GUI para grabación manual**: no es automatizable de forma fiable en un pipeline headless con SLA. La alternativa automatizable para demos de producto es **Playwright + captura headless determinística** con guion de interacción. Recomiendo tratar la capa de render como: *Remotion (video programático) + Playwright (captura de producto) + HeyGen (avatar, selectivo)*.
+
+### 2.4 Webhooks de calendario y superficies de intercepción
+
+> **Provenance:** ✅ = verificado directamente contra documentación oficial durante esta revisión. ○ = reportado por la pasada de investigación, pendiente de verificación propia. No cerrar un ADR sobre un dato ○.
+
+#### 2.4.1 Ingesta de eventos (la superficie **primaria** y universal)
+
+| Proveedor | Mecanismo | Consideración crítica |
+|---|---|---|
+| **Google Calendar** | `events.watch` (canales push) + sincronización incremental por `syncToken` ✅ | **El push NO trae cuerpo.** Al crear un evento, la notificación llega como `X-Goog-Resource-State: exists` — un *ping*, no un payload — y **no distingue `created` / `updated` / `deleted`**. **Diseñar el handler como "algo cambió → sincronizar", nunca como "aquí está el evento".** ✅ Sin renovación automática: hay que re-`watch` con un `id` nuevo, con solapamiento, antes de la expiración; el valor real llega en la respuesta del `watch` y en `X-Goog-Channel-Expiration` ✅. `syncToken` caducado → **`410 GONE` → borrar el store y full sync** ✅. **Cuotas ✅:** 10.000 req/min por proyecto, 600 req/min por usuario, umbral de facturación 1.000.000 req/día. |
+| **Microsoft Graph** | `change notifications` con `subscription` sobre `/users/{id}/events` ✅ | ✅ Duración máxima <7 días (10.080 min); **con *rich notifications* baja a <1 día** (1.440 min), mínimo 45 min — un tradeoff real: más datos por notificación a cambio de cuadruplicar la carga de renovación. ✅ 1.000 suscripciones activas por buzón (de todas las apps). ✅ **La latencia de entrega de `event` está documentada como "Unknown"**: sin SLA. El sistema **no puede asumir puntualidad** y necesita el *sweeper* de §4.4 como mecanismo de correctitud, no como optimización. Las *rich notifications* exigen `includeResourceData`, certificado RSA 2048–4096, **`$select` obligatorio** y validación de `validationTokens` (`azp = 0bf30f3b-4a52-48df-9a82-234910c4a086`) ✅ |
+| **Lifecycle notifications (Graph)** | 3 tipos: `reauthorizationRequired`, `subscriptionRemoved`, `missed` ✅ | Exigen endpoint propio, respuesta `202` inmediata sin procesar, y **resincronizar con *delta query*** (en los huecos no llega nada) ✅. Reautorizar con `POST /subscriptions/{id}/reauthorize` **o** `PATCH` con nuevo `expirationDateTime` — **no ambas dentro de 10 minutos** ✅. **`lifecycleNotificationUrl` no se puede añadir a una suscripción existente: hay que recrearla.** ✅ Detalle que, descubierto tarde, fuerza a recrear todas las suscripciones. |
+
+#### 2.4.1-bis Cuota, costo y verificación pendiente
+
+**Cuota y costo a vigilar.** El umbral de **1.000.000 req/día** de Google Calendar pasaría a facturarse *"later in 2026"* ✅. Dado que estamos en **octubre de 2026**, esto es inminente, no teórico. Las cuotas son 10.000 req/min por proyecto y 600 req/min por usuario ✅. El *sweeper* de §4.4 consume cuota de forma proporcional a (número de buzones × frecuencia de reconciliación). **Dimensionar esa frecuencia contra el presupuesto de cuota antes de fijarla**, no después: un `sync` incremental agresivo sobre 500 buzones puede convertirse en el mayor costo operativo del sistema sin que nadie lo haya presupuestado. Este es ahora el ítem #9 de las preguntas abiertas de §7.
+
+**Checklist de verificación — estado tras la ronda del 2026-10-14:**
+
+| Ítem | Estado |
+|---|---|
+| Límites de suscripción Graph y valores de expiración | ✅ **Resuelto** (<7 días; <1 día con rich notifications; mín. 45 min) |
+| Inmutabilidad de `lifecycleNotificationUrl` | ✅ **Resuelto** — no se puede añadir a una suscripción existente |
+| Comportamiento de `eventUpdateTrigger` y `CalendarEventActionResponse` | ✅ **Resuelto** en cuanto a disparadores y acciones disponibles. **No establecido** que pueda *bloquear* el guardado → asumir que **no** |
+| Precios de TTS multi-hablante | ✅ **Resuelto** — ver ADR-008 |
+| Precios de orquestación duradera | ✅ **Resuelto** — ver ADR-003 |
+| Licenciamiento de Remotion | ✅ **Resuelto** — ver ADR-010. **No es open source OSI** |
+| Marco de cumplimiento (DE / ES / UE) | ✅ **Resuelto** — ver §5.4 |
+| Límite numérico máximo de expiración de canales `events.watch` | ❌ **No confirmado** — Google no lo publica. Diseñar leyendo `X-Goog-Channel-Expiration`, nunca asumiendo un valor |
+| Límite de canales push por usuario en Google | ❌ **No confirmado** — sin tope documentado |
+| Número de voces del audio overview de Gemini Notebook | ❌ **No confirmado** |
+| Precios de Creatomate y PlayHT | ❌ **No confirmado.** PlayHT además está **discontinuado** tras la compra por Meta → descartar |
+
+**Regla de diseño ante lo no confirmado:** los dos ítems de Google son exactamente la clase de dato que no se debe asumir. La implementación correcta **lee la expiración de la respuesta del `watch`** y renueva con margen, en lugar de codificar un TTL. Así el día que Google cambie el límite, el sistema no se rompe.
+
+#### 2.4.2 Superficies de intercepción *in-flow* — lo que realmente se puede hacer
+
+Aquí está la corrección más importante respecto de la v0.1. **El diálogo de composición no es una opción viable en ninguna de las dos plataformas.**
+
+| Superficie | Qué se puede hacer | Qué **no** se puede | Veredicto |
+|---|---|---|---|
+| **Outlook — `OnAppointmentSend`** (Smart Alerts, req. set 1.12) ✅ | Interceptar **en el momento del envío** de la invitación, con modos **`prompt user`** y **`soft block`** ✅ | Modo `block` sólo con despliegue por admin (no pasa validación de Marketplace) ✅ | ⭐ **La mejor superficie disponible.** Ver §2.4.3 |
+| **Outlook — `OnNewAppointmentOrganizer`** (1.10) / **`OnAppointmentOrganizer`** (1.12) ✅ | Infobar; mutar el item (asunto, cuerpo, asistentes); `OfficeRuntime.auth` **sí funciona** para SSO ✅ | **`displayDialogAsync` y `messageParent` están bloqueados** ✅ → sin diálogo. Sin soporte móvil ✅. El usuario debe permanecer en el item o la operación se cancela ✅. Máx. 5 add-ins event-based activos ✅. Timeout ~300 s ✅ | Útil como *nudge* pasivo, insuficiente como interceptor |
+| **Outlook — `OnAppointmentAttendeesChanged`** (1.11) ✅ | Reaccionar al agregar/quitar asistentes | — | Análogo al trigger de Google; buen disparador para el checklist |
+| **Google Workspace Add-on** ○ | `eventUpdateTrigger` corre antes de guardar y permite mutar vía `CalendarEventActionResponse` (`addAttendees`, `setConferenceData`, `addAttachments`) | ○ Sólo dispara al añadir/quitar asistentes o cambiar la solución de conferencia. Sin capacidad de diálogo equivalente. Sin soporte móvil. No se persiste hasta que el usuario guarda | **La superficie más débil de las tres.** Despriorizar |
+
+**Consecuencia arquitectónica:** la captura de contexto y el diálogo del checklist viven en **Slack**, no en el cliente de calendario. El calendario aporta *detección* y, donde se puede, un *nudge*; la conversación ocurre donde ya ocurre el trabajo.
+
+#### 2.4.3 El hallazgo que sí mejora el diseño: los modos de Smart Alerts son la escalera de autoridad
+
+Los modos de envío de Smart Alerts de Outlook — **`prompt user` / `soft block` / `block`** ✅ — se corresponden **uno a uno** con la escalera de autoridad de ADR-001 (**nudge / soft_cancel / escalate**). Esto no es una coincidencia afortunada: es una validación externa de que la escalera está bien diseñada, y provee implementación nativa para el nivel intermedio en la plataforma Microsoft.
+
+Además, **`OnAppointmentSend` intercepta en el momento de mayor peso conductual**: el organizador ya terminó de componer y está a punto de imponer la reunión a otras personas. Es un punto de intercepción *mejor* que el de composición, porque la intención ya está formada y el costo social de reconsiderar es mínimo.
+
+#### 2.4.4 Qué NO se puede hacer, y hay que decirlo antes de diseñar la UX
+
+- **No se puede mostrar un diálogo modal en el flujo de creación de la invitación** en ninguna plataforma. La intercepción *in-flow* es asíncrona por naturaleza.
+- **No se puede interceptar en móvil** con fidelidad (Outlook: los eventos de cita no listan Android/iOS ✅; Google: sin soporte móvil ○). Y una parte sustancial de las invitaciones se crean desde el móvil. **El webhook es la única cobertura universal.**
+- **No hay SLA de entrega** en Graph ○. Todo el diseño debe tolerar notificaciones tardías o perdidas.
+
+
+> ⚠️ **Restricción de autoridad.** Para cancelar o modificar el evento de otra persona, la app necesita **delegación domain-wide** (Google) o **admin consent con permisos de aplicación** (Graph), instalada como app de marketplace con revisión de seguridad. Esto es un proceso de **semanas**, no de días, y suele ser el camino crítico real del proyecto. **Debe iniciarse en la semana 1, en paralelo al código.**
+
+---
+
+## 3. Modelo de Datos y Entidades Principales
+
+### 3.1 Diagrama entidad-relación (núcleo)
+
+```mermaid
+erDiagram
+    ORGANIZATIONS ||--o{ USERS : tiene
+    ORGANIZATIONS ||--o{ TEAMS : tiene
+    ORGANIZATIONS ||--o{ POLICIES : define
+    TEAMS ||--o{ TEAM_MEMBERS : contiene
+    USERS ||--o{ TEAM_MEMBERS : pertenece
+    USERS ||--o{ CALENDAR_ACCOUNTS : conecta
+
+    CALENDAR_ACCOUNTS ||--o{ MEETINGS : origina
+    MEETINGS ||--o| MEETING_EVALUATIONS : "es evaluada por"
+    MEETING_EVALUATIONS ||--o{ INTERCEPTION_ACTIONS : "dispara"
+    MEETING_EVALUATIONS }o--|| POLICIES : "aplica versión de"
+
+    KNOWLEDGE_SOURCES ||--o{ DOCUMENTS : indexa
+    DOCUMENTS ||--o{ CHUNKS : fragmenta
+
+    DECISIONS ||--o{ SYNTHESIS_REQUESTS : "origina"
+    MEETINGS ||--o{ SYNTHESIS_REQUESTS : "origina"
+    DECISIONS }o--o| DECISIONS : "supersede"
+    DECISIONS }o--o{ DOCUMENTS : "cita como evidencia"
+
+    SYNTHESIS_REQUESTS ||--o{ SYNTHESIS_ASSETS : produce
+    DECISIONS ||--o{ VALIDATION_SESSIONS : "se valida en"
+    SYNTHESIS_ASSETS ||--o{ VALIDATION_SESSIONS : "se publica en"
+    VALIDATION_SESSIONS ||--o{ VALIDATION_PARTICIPANTS : convoca
+    VALIDATION_SESSIONS ||--o| SURGICAL_CALLS : "escala a"
+
+    USERS ||--o{ FOCUS_METRICS_DAILY : genera
+    TEAMS ||--o{ IMPACT_LEDGER : acumula
+
+    ORGANIZATIONS {
+        uuid id PK
+        text name
+        text authority_mode "coach / soft_block / hard_cancel"
+        jsonb working_hours
+        numeric blended_hourly_rate
+    }
+    MEETINGS {
+        uuid id PK
+        uuid calendar_account_id FK
+        text external_event_id "UNIQUE con provider"
+        text provider "google / microsoft"
+        uuid organizer_user_id FK
+        timestamptz starts_at
+        timestamptz ends_at
+        int duration_minutes
+        int attendee_count
+        uuid_list attendee_user_ids
+        text recurrence_rule
+        text status "held / allowed / cancelled / surgical / bypassed"
+        bool is_recurring_instance
+    }
+    MEETING_EVALUATIONS {
+        uuid id PK
+        uuid meeting_id FK
+        uuid policy_id FK
+        text policy_version
+        text verdict "ALLOW / ALLOW_NUDGE / HOLD / CANCEL_TO_ASYNC / SURGICAL / ESCALATE"
+        jsonb filter_answers "checklist de 4 filtros"
+        text reason_code
+        numeric sync_necessity_score
+        numeric confidence
+        text model_id
+        jsonb evidence_doc_ids
+        uuid decided_by_user_id "NULL = sistema"
+        timestamptz decided_at
+    }
+    SYNTHESIS_ASSETS {
+        uuid id PK
+        uuid request_id FK
+        text format "audio / video / diagram / slides / summary"
+        text status "queued / generating / ready / failed"
+        text uri
+        int duration_seconds
+        jsonb script_json
+        jsonb model_lineage
+        text content_checksum
+        int version
+        int render_ms
+        int cost_cents
+    }
+    VALIDATION_PARTICIPANTS {
+        uuid id PK
+        uuid session_id FK
+        uuid user_id FK
+        timestamptz notified_at
+        timestamptz viewed_at
+        int consumed_seconds "telemetría real de consumo"
+        numeric consumption_ratio
+        text vote "approve / object / abstain"
+        smallint confidence "1-5"
+        text objection_text
+        vector objection_embedding "para clustering"
+        timestamptz responded_at
+    }
+    DECISIONS {
+        uuid id PK
+        text title
+        text status "draft / proposed / ratified / rejected / superseded / zombie"
+        uuid owner_user_id
+        uuid supersedes_id FK
+        text rationale
+        jsonb quorum_rule
+        timestamptz ratified_at
+        int cycle_time_hours "métrica clave"
+    }
+```
+
+### 3.2 Campos y decisiones de modelado que importan
+
+**`meeting_evaluations` — el registro de por qué.** Es la tabla que permite responder *"¿por qué me cancelaron la reunión del 3 de marzo?"* seis meses después, y la que permite hacer A/B testing de intensidad de intervención. Guarda: la **versión de la política** aplicada (no la política actual), las respuestas literales del checklist, el `reason_code`, el score, el modelo usado y las evidencias. Es **append-only**.
+
+**`policies` — versionadas y por scope.** La config de gobernanza es el verdadero panel de control del producto:
+```jsonc
+{
+  "scope": "team:platform",
+  "version": 7,
+  "bypass_rules": ["SEV*", "customer_call", "interview", "1on1", "compliance_training"],
+  "triggers": {
+    "min_attendees": 3,
+    "min_duration_minutes": 25,
+    "keyword_patterns": ["status", "sync", "alineación", "update", "check-in", "weekly"],
+    "recurring_instances": true
+  },
+  "friction_budget_per_user_per_week": 3,
+  "min_confidence_to_intercept": 0.72,
+  "protected_focus_blocks": [{ "days": ["tue","thu"], "from": "09:00", "to": "13:00" }],
+  "validation": {
+    "quorum_rule": "max(3, ceil(0.6 * attendees))",
+    "approval_threshold": 0.80,
+    "window_hours": 48,
+    "lazy_consensus_after_hours": 72
+  },
+  "escalation_ladder": ["nudge", "dm_organizer", "soft_cancel", "escalate_to_lead"]
+}
+```
+
+**`validation_participants.consumed_seconds` — la métrica que casi todos omiten.** Sin telemetría real de consumo, el "ahorro de horas" es ficción: se contabilizan horas ahorradas y se ignora que 20 personas miraron un video de 4 minutos (= 80 minutos de costo). Es lo que hace que un CFO descarte el dashboard. **Medir consumo real (segundos escuchados / duración) y ponderar el ahorro por ese ratio.**
+
+**ACLs a nivel de chunk.** Cada chunk lleva `acl_principals[]` (o un `acl_hash` que referencia un snapshot de permisos del origen). El filtro de permisos se aplica **en la consulta SQL**, no después del retrieval. Requisito duro: el RAG **nunca** puede mostrar a un usuario un documento que no puede ver en Notion/GitLab. Un solo leak visible destruye la confianza en el sistema completo.
+
+**Idempotencia en todas las escrituras externas.** `(provider, external_event_id)` único, claves de idempotencia en cada llamada a Calendar/Slack/Graph. Los webhooks se entregan *at-least-once*: sin idempotencia hay eventos duplicados y cancelaciones dobles.
+
+**`decisions` — el libro mayor.** Entidad de primera clase, no un subproducto de Slack. Es el activo de conocimiento que queda cuando el sistema tiene éxito: el histórico de *qué se decidió, con qué evidencia, quién objetó y cómo se resolvió*. Es lo que convierte al sistema en infraestructura y no en una herramienta descartable.
+
+**`focus_metrics_daily` — agregación por defecto.** Ver §5.4 (gobernanza).
+
+---
+
+## 4. Algoritmo / Lógica de Intercepción de Reuniones
+
+### 4.1 Máquina de estados
+
+```mermaid
+stateDiagram-v2
+    [*] --> DETECTED : webhook de calendario
+
+    DETECTED --> BYPASSED : regla de bypass dura
+    DETECTED --> SCORING : cumple trigger determinístico
+
+    SCORING --> ALLOWED : score < umbral o presupuesto de fricción agotado
+    SCORING --> HELD : score ≥ umbral y confianza suficiente
+
+    HELD --> CHECKLIST_PENDING : se notifica al organizador
+    HELD --> EXPIRED : sin respuesta en 24 h
+
+    CHECKLIST_PENDING --> JUSTIFIED : sincronía estricta + doc asociado
+    CHECKLIST_PENDING --> ASYNC_PATH : es status / alineación / difusión
+    CHECKLIST_PENDING --> ESCALATED : el organizador apela
+
+    JUSTIFIED --> ALLOWED : libera + exige agenda y pre-read
+
+    ASYNC_PATH --> SYNTHESIZING : se genera el contexto desde Knowledge Fabric
+    SYNTHESIZING --> PUBLISHED : assets listos
+    SYNTHESIZING --> SYNTHESIS_FAILED : falla de pipeline
+    SYNTHESIS_FAILED --> ESCALATED : fallback a reunión de 15 min
+
+    PUBLISHED --> VALIDATING : ventana de 48 h abierta
+
+    VALIDATING --> RATIFIED : ≥80% aprueba y quórum alcanzado
+    VALIDATING --> LAZY_CONSENSUS : quórum no alcanzado, 0 objeciones, deadline vencido
+    VALIDATING --> SURGICAL_NEEDED : <80% aprueba o hay objeciones materiales
+
+    LAZY_CONSENSUS --> RATIFIED
+    RATIFIED --> [*] : decisión inmutable en el ledger
+
+    SURGICAL_NEEDED --> SURGICAL_SCHEDULED : llamada de 15 min, solo bloqueantes
+    SURGICAL_SCHEDULED --> RATIFIED : decisión tomada en la llamada
+    SURGICAL_SCHEDULED --> ZOMBIE : sin resolución en 7 días
+
+    EXPIRED --> ALLOWED : silencio = permiso (con registro)
+    ESCALATED --> ALLOWED : el DRI o el lead autoriza
+    ESCALATED --> ASYNC_PATH : el lead acepta la vía asíncrona
+
+    ZOMBIE --> ESCALATED : se alerta al owner
+
+    note right of BYPASSED
+        Nunca se intercepta:
+        SEV/incidentes, llamadas con
+        clientes, entrevistas, 1:1,
+        compliance, decisiones binarias
+    end note
+
+    note right of LAZY_CONSENSUS
+        Patrón RFC de GitLab:
+        el silencio es consentimiento.
+        Sin esto, el sistema se
+        bloquea esperando votos.
+    end note
+```
+
+### 4.2 Evaluación y puntuación (pseudocódigo)
+
+```python
+# ═══════════════════════════════════════════════════════════════════════════
+#  MEETING-KILLER OS · Policy Engine
+#  Principio rector: el LLM PROPONE, la política DISPONE.
+#  Ninguna decisión de cancelación se toma por salida de texto libre.
+# ═══════════════════════════════════════════════════════════════════════════
+
+REASON_CODES = {
+    # Códigos que habilitan la vía asíncrona
+    "STATUS_UPDATE", "INFO_BROADCAST", "SYNC_ALIGNMENT", "DEMO_RECAP",
+    "TRAINING", "RETROSPECTIVE",
+    # Códigos que exigen sincronía
+    "DECISION_REQUIRED", "CONFLICT_RESOLUTION", "INCIDENT",
+    "BRAINSTORM", "RELATIONSHIP", "NEGOTIATION", "INTERVIEW", "CUSTOMER_CALL",
+}
+
+def evaluate(meeting: Meeting, policy: Policy, ctx: EvalContext) -> Evaluation:
+    """
+    Devuelve un veredicto. Función PURA y determinística dado (meeting, policy, ctx).
+    La ejecución (cancelar, notificar) ocurre fuera, en un workflow duradero.
+    Esto es lo que permite hacer replay, auditoría y A/B testing de políticas.
+    """
+
+    # ── ETAPA 0 · Bypass duro. Se evalúa PRIMERO y es absoluto. ────────────
+    # Sin esto, un solo incidente interceptado destruye la credibilidad.
+    for rule in policy.bypass_rules:
+        if rule.matches(meeting, ctx):
+            return Evaluation(
+                verdict="ALLOW", reason_code=rule.code,
+                bypass=True, confidence=1.0,
+                explanation=f"Exento por regla '{rule.code}'")
+
+    # ── ETAPA 1 · Triggers determinísticos. Baratos, explicables, sin LLM. ─
+    triggers = []
+    if meeting.attendee_count >= policy.triggers.min_attendees:
+        triggers.append("ATTENDEE_COUNT")
+    if meeting.duration_minutes > policy.triggers.min_duration_minutes:
+        triggers.append("DURATION")
+    if match_keywords(meeting.title, policy.triggers.keyword_patterns):
+        triggers.append("KEYWORD")
+    if meeting.is_recurring_instance and policy.triggers.recurring_instances:
+        triggers.append("RECURRING")
+
+    if not triggers:
+        return Evaluation(verdict="ALLOW", reason_code="NO_TRIGGER")
+
+    # ── ETAPA 2 · Presupuesto de fricción. ────────────────────────────────
+    # Contrapresión deliberada: si interceptamos demasiado, la gente
+    # aprende a rodear el sistema. Es mejor perder una intercepción
+    # que agotar la paciencia del usuario.
+    used = ctx.interceptions_this_week(meeting.organizer_id)
+    if used >= policy.friction_budget_per_user_per_week:
+        return Evaluation(
+            verdict="ALLOW_NUDGE",
+            reason_code="FRICTION_BUDGET_EXHAUSTED",
+            explanation="Se sugiere vía asíncrona, pero no se bloquea (presupuesto agotado).",
+            nudge={"checklist_url": build_checklist_url(meeting)})
+
+    # ── ETAPA 3 · Recuperación de contexto desde Knowledge Fabric. ─────────
+    # ACL-aware: solo documentos que el ORGANIZADOR puede ver.
+    context = knowledge_fabric.retrieve(
+        query=meeting.title + " " + meeting.description,
+        attendees=meeting.attendee_user_ids,
+        require_acl_for=meeting.organizer_id,
+        top_k=12)
+    has_linked_artifact = bool(context.tickets or context.prs or context.docs)
+
+    # ── ETAPA 4 · Clasificación de intención. Salida ESTRUCTURADA. ─────────
+    cls = classify_meeting_intent(          # ← LLM con JSON Schema
+        meeting=meeting,
+        context_digest=context.summarize(max_tokens=3000),
+        recent_threads=ctx.recent_slack_threads(meeting.attendee_user_ids),
+        schema={
+            "reason_code": "enum(REASON_CODES)",
+            "sync_necessity_score": "number[0,1]",
+            "confidence": "number[0,1]",
+            "evidence_refs": "array[doc_id]",
+            "topics": "array[string]",
+            "explanation_es": "string"})
+
+    # Guardarraíl: baja confianza ⇒ NO se bloquea. Se sugiere.
+    if cls.confidence < policy.min_confidence_to_intercept:
+        return Evaluation(verdict="ALLOW_NUDGE", reason_code="LOW_CONFIDENCE",
+                          classifier=cls, evidence=context.refs)
+
+    # ── ETAPA 5 · Veredicto. La política manda, no el modelo. ──────────────
+    asyncable = cls.reason_code in ASYNC_ABLE_CODES
+    if asyncable and cls.sync_necessity_score < policy.async_override_threshold:
+        return Evaluation(
+            verdict="HOLD",
+            reason_code=cls.reason_code,
+            sync_necessity_score=cls.sync_necessity_score,
+            confidence=cls.confidence,
+            evidence=context.refs,
+            required_checklist=["REQUIRES_STRICT_SYNC",
+                                "HAS_LINKED_ARTIFACT",
+                                "IS_STATUS_OR_ALIGNMENT",
+                                "WHAT_BREAKS_IF_ASYNC"],
+            proposed_async=True)
+
+    if not has_linked_artifact and cls.sync_necessity_score < 0.85:
+        # Reunión sin documento: se exige pre-read antes de permitirla.
+        return Evaluation(verdict="HOLD", reason_code="NO_LINKED_ARTIFACT",
+                          require_preread=True, evidence=context.refs)
+
+    return Evaluation(verdict="ALLOW", reason_code=cls.reason_code,
+                      classifier=cls, evidence=context.refs)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  BUCLE DE VALIDACIÓN Y QUÓRUM
+# ═══════════════════════════════════════════════════════════════════════════
+
+def resolve_validation(session: ValidationSession) -> Resolution:
+    """
+    Se invoca al cerrar la ventana, o antes si se alcanza el quórum.
+    """
+    invited   = session.participants
+    responded = [p for p in invited if p.vote is not None]
+
+    # Quórum: participación mínima para que el resultado sea representativo.
+    quorum_n = max(3, ceil(0.60 * len(invited)))
+    approvals = [p for p in responded if p.vote == "approve"]
+    objections = [p for p in responded if p.vote == "object"]
+
+    # Ponderación por consumo real: quien no leyó, no vota con peso completo.
+    # Evita que un "approve" por reflejo cierre una decisión mal entendida.
+    weighted_approval = sum(p.consumption_ratio for p in approvals) / \
+                        max(sum(p.consumption_ratio for p in responded), 1e-6)
+
+    # ── Regla de corte principal ───────────────────────────────────────────
+    if len(responded) >= quorum_n and weighted_approval >= 0.80:
+        return Resolution("RATIFIED", artifacts=session.assets,
+                          rationale=summarize_consensus(responded))
+
+    # ── Consenso perezoso (patrón RFC): silencio = consentimiento ──────────
+    # Sin esta válvula, el sistema se bloquea esperando votos y las
+    # decisiones se vuelven MÁS lentas que con reuniones.
+    if (session.deadline_passed()
+            and len(objections) == 0
+            and len(responded) >= max(2, quorum_n // 2)):
+        return Resolution("RATIFIED_LAZY",
+                          note="Aprobado por consenso perezoso: sin objeciones al vencer el plazo.")
+
+    # ── Hay fricción: se aísla el bloqueo y se convoca lo mínimo ───────────
+    if objections:
+        # Se agrupan las objeciones por similitud semántica: 6 objeciones
+        # suelen ser 2 desacuerdos reales repetidos de formas distintas.
+        clusters = cluster_objections(
+            embeddings=[o.objection_embedding for o in objections],
+            min_cluster_size=1)
+
+        # Se prioriza por PODER DE BLOQUEO = personas afectadas × centralidad
+        # del tema en la decisión. No por quién grita más ni por jerarquía.
+        clusters.sort(key=lambda c: blocking_power(c, session.decision), reverse=True)
+        top = clusters[:2]                      # máximo 2 temas por llamada
+
+        # Solo asisten: quienes objetan en los temas bloqueantes + quien decide.
+        # Los demás reciben la minuta. Una llamada de 15 min con 4 personas
+        # solo es viable si el alcance está acotado quirúrgicamente.
+        required = {o.user_id for c in top for o in c.members}
+        required |= {session.decision.owner_user_id}          # quien decide
+        required |= {session.decision.author_user_id}         # quien propuso
+
+        return Resolution(
+            "SURGICAL",
+            topics=[c.label for c in top],
+            required_attendees=required,
+            optional_attendees={p.user_id for p in invited} - required,
+            duration_minutes=15,                # techo duro, no negociable
+            agenda=generate_surgical_agenda(top, session.decision),  # ← generada
+            exclusions_note="Los no bloqueantes reciben la minuta; no asisten.")
+
+    # ── Silencio total: no se decide por nadie. Se escala. ─────────────────
+    return Resolution("ESCALATE", to=session.decision.owner_user_id,
+                      reason="SIN_RESPUESTA", retry_after_hours=48)
+```
+
+### 4.3 Los cuatro filtros del checklist (UX)
+
+El checklist no es un formulario de compliance: es un **dispositivo de fricción cognitiva**. Su función es obligar al organizador a articular el propósito. Cada respuesta tiene consecuencia inmediata y visible:
+
+| Filtro | Pregunta al organizador | Respuesta | Consecuencia |
+|---|---|---|---|
+| **1. Sincronía** | ¿Requiere sincronía estricta? | Sí | → Pasa al filtro 2 |
+| | | No | → **Se cancela y se ofrece la vía asíncrona** |
+| **2. Artefacto** | ¿Existe documento o ticket asociado? | Sí (link) | → Se hereda como contexto de la síntesis |
+| | | No | → Se bloquea hasta crear pre-read (o se genera uno automático) |
+| **3. Naturaleza** | ¿Es status / alineación / difusión? | Sí | → **Cancelación + síntesis multimedia** |
+| | | No | → Pasa al filtro 4 |
+| **4. Costo de la ausencia** | ¿Qué se rompe si esto es asíncrono? | Texto libre | → Se evalúa; si es débil, se cancela con coaching |
+
+**Regla de UX crítica:** el botón de *override* ("Insisto, agendar de todas formas") está **siempre visible** y no requiere justificación. Un sistema sin salida de emergencia se rodea; un sistema con salida de emergencia genera datos sobre por qué la gente la usa. La fricción debe ser *social y visible*, no *técnica y opaca*.
+
+### 4.4 Confiabilidad: reconciliación, idempotencia y modos de falla
+
+Un sistema construido sobre webhooks de terceros **pierde eventos**. Los canales push expiran, las entregas fallan, los procesos se reinician en medio de un workflow. Sin un mecanismo explícito de reparación, el modo de falla más común no será un crash visible sino algo mucho peor: **reuniones atascadas en `held` que nadie entiende por qué no ocurren**. Eso destruye la confianza más rápido que un error ruidoso.
+
+**Tres mecanismos obligatorios:**
+
+1. **Bucle de reconciliación (*sweeper*).** Trabajo periódico que compara el estado local (`meetings`) contra el estado real del proveedor y **repara la deriva**:
+   - Eventos en el calendario que no existen localmente → ingerir y evaluar (webhook perdido o nunca entregado).
+   - Eventos locales en `held` cuyo evento remoto fue movido o borrado por un humano → liberar el hold.
+   - Eventos en `held` con más de 24 h sin respuesta al checklist → transición a `EXPIRED` (§4.1).
+   - Canales push de Google próximos a expirar → renovar proactivamente con un `id` nuevo y alertar si falla (no hay renovación automática ○).
+   - Suscripciones de Graph próximas a expirar → renovar; las *rich notifications* expiran en <1 día ○ y exigen renovación casi diaria.
+   - Ante `410 GONE` de `syncToken` ○ → **resincronización completa**, no incremental.
+
+   **Esto no es una optimización: es el mecanismo de correctitud.** Las razones son verificadas: el push de Google **no transporta el evento** (es un ping `exists` sin cuerpo ✅), y la latencia de entrega de Graph está documentada como **"Unknown", sin SLA** ○. Un sistema que dependa de que las notificaciones lleguen a tiempo y con contenido **está roto por diseño**. La arquitectura correcta trata el webhook como una *señal de "revisá ahora"* y la sincronización como la fuente de verdad.
+
+   Métrica operativa asociada: **tasa de reconciliaciones que reparan deriva**. Si sube, el webhook está fallando en silencio.
+
+2. **Idempotencia en todo borde.** Clave de idempotencia en cada escritura hacia Calendar/Slack/Graph, y restricción única `(provider, external_event_id)`. La entrega de webhooks es *at-least-once*: sin esto hay cancelaciones y notificaciones duplicadas, que el usuario percibe como un sistema roto.
+
+3. **Degradación con preferencia por el statu quo.** Ante fallo del clasificador, del RAG o del pipeline de síntesis, el sistema **libera la reunión** y lo registra. Un falso negativo (una reunión que debió interrumpirse y no se interrumpió) cuesta una reunión. Un falso positivo por falla técnica (una reunión legítima bloqueada por un bug) cuesta la credibilidad del sistema. **La asimetría es enorme y la política de fallback debe reflejarla.**
+
+**Observabilidad mínima para operar esto:** métrica de `held` sin resolver por antigüedad, tasa de reconciliaciones que reparan deriva, latencia p95 webhook→decisión, y tasa de fallo por etapa del pipeline de síntesis. Sin estas cuatro, el sistema no es operable.
+
+---
+
+## 5. Métricas de Impacto (definiciones formales)
+
+### 5.1 North Star Metric
+
+> **Decisiones ratificadas por cada 100 horas-ingeniero consumidas.**
+
+No "reuniones eliminadas". Si el sistema elimina reuniones pero las decisiones tardan el doble, **fracasó**, aunque el dashboard muestre ahorro. Esta métrica es el antídoto explícito contra la Ley de Goodhart.
+
+### 5.2 Ahorro neto (con honestidad metodológica)
+
+```
+bruto_horas      = Σ (duración_reunión_evitada_h × n_asistentes)
+costo_async_h    = Σ (duración_asset_h × n_consumidores × consumption_ratio)
+overhead_horas   = Σ (min_autoría_organizador + min_revisión) / 60
+ahorro_neto_h    = bruto_horas − costo_async_h − overhead_horas
+
+usd_ahorrado     = ahorro_neto_h × blended_loaded_rate
+```
+
+**La fórmula debe ser visible en la UI, con sus supuestos.** Un número de ahorro sin metodología publicada se descarta en la primera reunión de presupuesto. Se recomienda usar una **tarifa cargada media configurable** en lugar de datos salariales individuales del HRIS: reduce el riesgo de privacidad y la discusión se centra en la tarifa, no en la legitimidad del sistema.
+
+### 5.3 Focus Score (índice de fragmentación)
+
+**Nivel individuo/día:**
+```
+bloques_foco(u,d)    = segmentos contiguos ≥30 min sin reuniones, dentro del horario laboral
+bloque_max(u,d)      = max(bloques_foco)
+switches(u,d)        = transiciones foco → reunión → foco
+fragmentación(u,d)   = 1 − (Σ min_foco / min_disponibles)
+
+maker_score(u,d) = 100 × [ 0.40 · norm(bloque_max / 240)
+                         + 0.30 · (1 − min(reuniones_día / 6, 1))
+                         + 0.20 · (1 − min(switches / 8, 1))
+                         + 0.10 · pct_reuniones_≤30min ]
+```
+
+**Nivel equipo:** **mediana** de los scores individuales, no media. La media la aplasta un outlier (un manager en 8 h de reuniones diarias) y oculta el problema real del equipo.
+
+### 5.4 Guardarraíles y gobernanza de la medición
+
+Métricas de contrapeso — si empeoran, el sistema está haciendo daño aunque el ahorro suba:
+
+- **`cycle_time_hours`** por decisión (¿las decisiones se volvieron más lentas?)
+- **`rework_rate`**: decisiones ratificadas que se reabren en <30 días
+- **`zombie_decisions`**: propuestas sin resolver >7 días (el modo de falla típico del async mal implementado)
+- **`surgical_call_conversion`**: % de validaciones que terminan en llamada quirúrgica (si es alto, la síntesis no está funcionando)
+- **`quality_of_remaining_meetings`**: encuesta de 1 pregunta post-reunión sobre las que sí ocurren
+- **Sentimiento trimestral** (encuesta anónima dedicada)
+
+> ⚠️ **Advertencia de gobernanza — leer antes de construir el dashboard.**
+> Un sistema que mide el foco y la fragmentación por persona es, funcionalmente, **software de monitoreo de desempeño**. Esto no es una precaución genérica: tiene consecuencias jurídicas concretas y verificadas.
+>
+> | Jurisdicción | Norma | Consecuencia práctica |
+> |---|---|---|
+> | **Alemania** | **§ 87 BetrVG** | La introducción de dispositivos técnicos de vigilancia del rendimiento es **co-determinada por el Betriebsrat**. **Sin *Betriebsvereinbarung* previa, no se despliega.** Es un veto, no una consulta |
+> | **España** | **AEPD, resolución PS-00454-2024** | Sanción de **200.000 €** por monitorizar mediante apps en móviles personales (arts. 5.1.c, 6.1 y 13 RGPD) → minimización estricta, información granular, **nunca dispositivos personales** |
+> | **UE** | **Art. 88 RGPD + STJUE C-34/21** (`ECLI:EU:C:2023:270`) | Ni el convenio colectivo ni el consentimiento sustituyen la base del art. 6 ni las garantías del art. 88(2) |
+>
+> **Recomendación de diseño desde el día 1:** agregación **por equipo por defecto**; los datos individuales visibles **solo para la propia persona**; evaluación de impacto antes del piloto; y en Alemania, *Betriebsvereinbarung* **antes** de escribir código que mida personas. Esto no es solo cumplimiento: es la diferencia entre que el equipo adopte el sistema o lo sabotee.
+>
+> **Consecuencia de arquitectura:** si hay presencia en Alemania, el `sensitivity_tier` de ADR-007 necesita un nivel **T0 (prohibido indexar)** para datos de personas, y las métricas de foco deben nacer agregadas **en la capa de datos** — no como un filtro de la UI. Un filtro de presentación se revierte con un flag; una tabla con granularidad individual es un hallazgo en una auditoría.
+
+---
+
+## 6. Roadmap de Implementación
+
+### 6.1 MVP — 3 semanas (1 escuadra de 2–3 ingenieros)
+
+**Objetivo del MVP: demostrar el bucle completo end-to-end con UNA integración real y datos reales.** El error fatal aquí es intentar las 5 integraciones y los 4 formatos de síntesis. El MVP debe cerrar *un* ciclo intercepción → síntesis → validación → ledger en producción.
+
+| Semana | Entregables | Criterio de aceptación |
+|---|---|---|
+| **S1 — Intercepción** | OAuth Google Calendar (domain-wide delegation **iniciado**), canales `events.watch` + renovación, ingestión de eventos, tablas `meetings` / `policies` / `meeting_evaluations`, Policy Engine con triggers determinísticos (sin LLM), Slack app con DM de checklist (Block Kit), audit log append-only, *feature flag* de `authority_mode`. | Una reunión de 3+ personas creada en Google Calendar produce un DM de checklist en Slack en <30 s, y el veredicto queda registrado con su versión de política. |
+| **S2 — Síntesis** | Knowledge Fabric **solo lectura** con 2 conectores (Notion + Linear, *o* GitHub), ACL mirroring a nivel de chunk, RAG híbrido con citas, generador de resumen estructurado + **diagrama Mermaid** + **audio overview con TTS**, publicación en hilo de Slack con los assets. Temporal (o Inngest) para el workflow de síntesis con reintentos. | Dado un ticket + un doc de Notion, el sistema publica en Slack en <5 min: resumen con citas, un diagrama Mermaid renderizado y un audio de ~3 min. Sin fugas de ACL (test explícito). |
+| **S3 — Validación y métricas** | Poll de 1 clic + 1 pregunta + campo de objeción, motor de quórum/umbral, consenso perezoso, `decisions` ledger, auto-agendado de la **llamada quirúrgica de 15 min** con agenda generada desde las objeciones clusterizadas, métricas v0 (interceptadas, ahorro neto, adopción), dashboard mínimo. | Una decisión se cierra end-to-end sin reunión, con registro inmutable. Un caso con objeción genera una llamada de 15 min con solo los bloqueantes y agenda automática. |
+
+**Explícitamente FUERA del MVP** (y por qué): render de video (Remotion es un proyecto en sí mismo — el audio y el diagrama ya validan la hipótesis de "síntesis suficiente"), Outlook/Graph (el ciclo de vida de suscripciones duplica el trabajo de S1), clasificador ML (las reglas determinísticas son auditables y suficientes para aprender), canvas interactivo, multi-tenant, política A/B.
+
+**En paralelo y no negociable desde S1** (es el camino crítico real, no el código):
+- Aprobación de seguridad/legal para delegación domain-wide y acceso de lectura a repos.
+- Revisión de privacidad de las métricas de foco (§5.4).
+- **Dos equipos piloto voluntarios** con un sponsor ejecutivo visible. El sistema debe llegar *invitado*, no impuesto.
+- Definición de la política inicial **con los propios equipos** (los umbrales que ellos eligen los defienden ellos).
+
+### 6.2 Fase 2 — Semanas 4–10: Profundidad y escala
+
+- **Motor de video** con Remotion: plantillas de escena de marca + `storyboard.json` generado por LLM. Render vía Remotion Lambda y luego migración a granja propia según volumen.
+- **Microsoft 365 / Graph**: suscripciones con `lifecycleNotificationUrl` **definido en la creación** (no es modificable después ○), endpoint de ciclo de vida con `202` inmediato, resincronización por *delta query*. Decidir explícitamente si se usan *rich notifications* — dan más datos por notificación pero **reducen la vida de la suscripción a <1 día** ○, cuadruplicando la carga de renovación.
+- **Outlook `OnAppointmentSend` con Smart Alerts** (req. set 1.12 ✅): **prioridad alta — va antes que el add-on de Google.** Mapea directo a la escalera de autoridad de ADR-001 (`prompt user` / `soft block` / `block`) y es la mejor intercepción *in-flow* disponible. Requiere despliegue por admin del tenant y consentimiento administrativo para cada cambio de manifest ✅.
+- **Google Workspace Add-on** (`eventUpdateTrigger` + `CalendarEventActionResponse`): **prioridad reducida respecto de la v0.1.** Aporta un *nudge* limitado (sólo dispara ante cambios de asistentes o conferencia, sin diálogo, sin móvil). Construirlo después de Outlook, y sólo si los datos del piloto muestran que la intercepción vía Slack llega demasiado tarde.
+- **Clasificador ML propio** entrenado con las decisiones humanas reales de las semanas 1–6 (el sistema genera su propio dataset de etiquetas desde el día 1 — diseñarlo así desde el inicio).
+- **A/B testing de políticas**: intensidad de intercepción, copy del checklist, formato de síntesis preferido, longitud del audio. Con `policies` versionadas esto es casi gratis.
+- **Focus Score dashboard** con la gobernanza de agregación de §5.4.
+- **Modelo de costo** integrado (tarifa cargada configurable).
+- SSO/SCIM, multi-equipo, hardening hacia SOC 2.
+
+### 6.3 Fase 3 — Meses 3–6: De herramienta a sistema operativo
+
+- **Canvas interactivo de decisiones** (React Flow): grafo de decisiones, supersessiones, bloqueos, quién objetó qué.
+- **Pre-read generado automáticamente** para toda reunión que sobrevive al filtro: el sistema deja de solo bloquear y empieza a *mejorar* las reuniones que ocurren.
+- **Overlay de costo en el calendario**: al agendar, el organizador ve el costo estimado en horas-hombre y dinero. Puro efecto de *feedback* conductual, sin bloqueo.
+- **Agente proactivo**: detecta decisiones estancadas y propone cerrarlas; detecta reuniones recurrentes cuyo valor decae (asistencia, duración real vs. agendada, ausencia de outcome registrado) y propone retirarlas.
+- **Analítica de cultura**: qué equipos adoptaron async, cuáles no, y por qué.
+- **Productización multi-tenant** si el experimento interno valida.
+
+---
+
+## 7. Primeros Puntos de Decisión Técnica
+
+Formato ADR abreviado. Cada uno con recomendación y *tradeoff*. **Los marcados con 🔴 son bloqueantes: condicionan el diseño de todo lo demás y necesitan decisión esta semana.**
+
+---
+
+### 🔴 ADR-001 · Modelo de autoridad del interceptor
+
+**Pregunta:** ¿El sistema aconseja, bloquea suavemente o cancela unilateralmente?
+
+| Opción | Tradeoff |
+|---|---|
+| **A. Coach** (solo sugiere) | Adopción indolora, impacto medible ≈ 0. Es un buen piloto, un mal producto. |
+| **B. Soft-block** (mantiene el evento en *held* hasta que el organizador complete el checklist) | **Recomendado.** Fricción real y medible, pero el humano tiene la última palabra. Un *held* es reversible y no genera incidentes políticos. |
+| **C. Hard-cancel** | Máximo impacto teórico, máxima probabilidad de revuelta. Requiere sponsorship ejecutivo explícito y un VP dispuesto a que le cancelen reuniones. |
+
+**Recomendación:** implementar **B como default**, con `authority_mode` **configurable por organización y por equipo** desde el día 1 (esto es un campo en `organizations`, no una constante). Diseñar la escalera `nudge → dm → soft_cancel → escalate` como datos, y dejar C como opción que un equipo habilitará cuando ya confíe en el sistema. **Nunca hardcodear el nivel de autoridad.**
+
+---
+
+### 🔴 ADR-002 · Superficie de intercepción — **REESCRITO en v0.2**
+
+**Pregunta:** ¿Dónde se intercepta: en el cliente de calendario o después de creada la invitación?
+
+**La v0.1 recomendaba el add-on de Calendar como superficie primaria, describiéndolo como "la de mayor palanca". Eso era incorrecto.** La verificación contra documentación oficial (✅ §2.4) muestra que:
+
+1. **No existe un trigger de composición** en Google Calendar.
+2. En Outlook el trigger existe pero **`displayDialogAsync` y `messageParent` están explícitamente bloqueados** en activación por eventos: **no se puede mostrar un diálogo**.
+3. Ninguna de las dos plataformas soporta intercepción en móvil con fidelidad — y buena parte de las invitaciones se crean desde el móvil.
+
+**Recomendación revisada — en tres capas, en este orden de prioridad:**
+
+| Prioridad | Capa | Rol | Por qué |
+|---|---|---|---|
+| **1** | **Webhook de calendario → Slack DM** | Intercepción **primaria** | Única cobertura universal (móvil, API, scripts, recurrencias). Única superficie con diálogo real. Es donde vive el checklist de 4 filtros |
+| **2** | **Outlook `OnAppointmentSend` (Smart Alerts)** | Intercepción *in-flow* de alto valor | Intercepta en el momento de compromiso; sus modos `prompt user` / `soft block` / `block` **son** la escalera de ADR-001. Implementación nativa del nivel intermedio |
+| **3** | **Google Workspace Add-on** (`eventUpdateTrigger` + `CalendarEventActionResponse`) | *Nudge* oportunista | La más débil de las tres: dispara sólo ante cambios de asistentes o conferencia, sin diálogo, sin móvil. **Despriorizada respecto de la v0.1** |
+
+**Tradeoff asumido:** renunciar a la intercepción en el momento de composición significa que la fricción llega *después* de que el organizador ya se comprometió con la reunión. Es peor psicológicamente. **Se compensa con velocidad** — el DM debe llegar en segundos y ofrecer la alternativa asíncrona ya resuelta, no un formulario vacío. Si el sistema tarda 10 minutos en responder, el organizador ya movió la reunión a otro horario y la intercepción se pierde.
+
+**Consecuencia de roadmap:** la superficie #2 (**Outlook**) pasa a construirse **antes** que la #3 (**Google add-on**) — el orden inverso al de la v0.1.
+
+---
+
+### 🔴 ADR-003 · Motor de workflow duradero
+
+**Pregunta:** Temporal vs. Inngest vs. cola Postgres (pg-boss / Graphile Worker / Hatchet).
+
+**Panorama verificado (2026-10-14):**
+
+| Opción | Licencia / precio de entrada | Cuándo |
+|---|---|---|
+| **pg-boss** | **MIT, 0 USD** | Ya tenés Postgres; cron, reintentos, DLQ, TS nativo. **Riesgo: mantenedor único** |
+| **Graphile Worker** | **MIT, 0 USD** | Cola Postgres minimalista, SQL-first |
+| **Hatchet** | MIT + self-host; 30 USD/M runs | UI y durabilidad multi-paso sobre Postgres |
+| **Inngest** | Free (50k ejecuciones); **Pro 99 USD/mes** | Durable por pasos + cron sin operar infraestructura |
+| **Temporal Cloud** | **50 USD/M acciones** (25 USD/M por volumen) | Durabilidad fuerte; tolerás pagar SaaS |
+| **Temporal OSS** | **MIT**, self-host gratis | Control total del clúster |
+
+**Recomendación revisada:** **pg-boss** como default del MVP. Razones: ya hay Postgres en el stack (§1.4), es MIT y gratuito, soporta cron, reintentos y DLQ, y **elimina un proveedor externo del camino crítico** — lo que importa cuando el proyecto tiene que pasar una revisión de seguridad para la delegación domain-wide. Si se necesita UI y estado multi-paso visible: **Hatchet self-hosted** (MIT, sobre Postgres, mismo argumento de no introducir SaaS).
+
+**Cuándo escalar a Temporal:** cuando la durabilidad sea el core y el volumen de acciones justifique el costo. Una validación de 72 h con escalado multinivel y multi-proveedor genera muchas más transiciones de las que parece; hacer el cálculo de acciones/mes **antes** de comprometerse, no después.
+
+**El error caro no es elegir mal el motor: es acoplar la lógica de dominio al framework de turno.** Mantener el motor de política como **función pura y testeable** (§4.2) hace que cambiar de motor sea una semana de trabajo en lugar de una reescritura. Esa disciplina vale más que la elección en sí.
+
+> **Nota:** el informe de verificación recomendaba pg-boss sobre Inngest; coincido, con la salvedad de que la DX de Inngest acorta el MVP de 3 semanas. Si el equipo es chico y el plazo manda, Inngest Free (50k ejecuciones) cubre el piloto completo sin costo y la migración posterior es barata **siempre que** se respete la separación dominio/infraestructura.
+
+---
+
+### 🔴 ADR-004 · Recuperación con conciencia de permisos (el riesgo de seguridad #1)
+
+**Pregunta:** ¿Cómo se garantiza que el RAG nunca muestre a alguien un documento que no puede ver?
+
+**Recomendación:** **filtrado a nivel de chunk en la consulta SQL, con `acl_principals[]` sincronizado y un `acl_hash` por documento que invalida el índice cuando cambian los permisos.** Nunca post-filtrar en la aplicación: es donde ocurren los leaks. **Consecuencia de diseño:** el pipeline de ingesta necesita un webhook de cambios de permisos por cada fuente (Notion, GitLab, Drive), y eso es trabajo real, no un detalle. **Test obligatorio en CI:** un suite que verifique que un usuario sin permiso no recupera el chunk prohibido. Sin ese test, no se lanza.
+
+---
+
+### ADR-005 · ¿Un lenguaje o dos?
+
+**Recomendación:** **TypeScript para el control plane + Python para el plano de IA**, con la frontera en una cola y un contrato OpenAPI/JSON Schema. **Tradeoff:** dos toolchains, dos CI, dos perfiles de contratación. **Pero** forzar todo a TypeScript significa pelear permanentemente con el ecosistema de TTS, render, embeddings y evals, que es Python-first. La frontera por cola mantiene el acoplamiento bajo y permite que cada plano evolucione por separado.
+
+---
+
+### ADR-006 · Vector store: ¿`pgvector` o dedicado?
+
+**Recomendación:** **`pgvector` + HNSW + búsqueda híbrida con BM25 (`tsvector` / ParadeDB).** Razón principal: **elimina la clase de bugs más peligrosa del sistema** (índice vectorial desincronizado de las ACLs y de los metadatos). Migrar a Qdrant solo ante evidencia: >10M chunks, o latencia de filtrado por payload inaceptable. El híbrido BM25+vectorial aporta más precisión que cualquier tuning del índice.
+
+---
+
+### ADR-007 · Política de proveedores de LLM y residencia de datos
+
+**Pregunta:** ¿Qué modelos pueden ver código propietario, documentos de RRHH o hilos de incidentes?
+
+**Recomendación:** **clasificar las fuentes por nivel de sensibilidad y mapear cada nivel a una política de modelo**: (T1) documentos públicos internos → modelos frontera de API con acuerdo de retención cero; (T2) código propietario y documentos estratégicos → modelo con retención cero y *no-training* contractual, o modelo self-hosted (Qwen/Llama en vLLM); (T3) datos de personas/RRHH → **excluidos del índice por completo**. Esto se implementa como un campo `sensitivity_tier` en `knowledge_sources` que el *router* del gateway respeta. **No es opcional si la empresa tiene clientes europeos o código con secretos.**
+
+---
+
+### ADR-008 · Estrategia de síntesis de audio — **REESCRITO en v0.2**
+
+**Pregunta:** ¿Se usa una API gestionada de audio estilo NotebookLM, o se construye el pipeline de TTS propio?
+
+**Estado real verificado de la oferta de Google (✅ 2026-10-14).** Existen **dos** APIs distintas, y la conclusión de la v0.1 se mantiene — pero por razones distintas de las que yo suponía:
+
+| API | Estado | Requisitos | Viabilidad |
+|---|---|---|---|
+| **Podcast API** (`projects.locations.podcasts`) | ❌ **DEPRECADA.** *"The Podcast API is deprecated. Google isn't allowlisting new customers."* | — | **No viable.** No se puede adoptar |
+| **Audio Overview** (`notebooks.audioOverviews.create`) | ⚠️ **Preview** — sujeta a términos *Pre-GA*, endpoint `v1alpha` | Licencia de Gemini Notebook Enterprise + notebook con fuentes cargadas. **Sólo un audio overview por notebook a la vez** | Viable con condiciones |
+
+> **Corrección de un hallazgo erróneo.** Una pasada de investigación intermedia reportó que la Podcast API era *"la ruta MEJOR: no requiere notebook, ni licencia de Gemini Enterprise, ni data store"* y recomendó invertir este ADR. Esos requisitos técnicos eran correctos — **pero la API está deprecada y cerrada a nuevos clientes**, como dice la primera línea de la misma página citada. **La conclusión era la opuesta a la que correspondía.** Se documenta por transparencia y como recordatorio del riesgo de decidir sobre resúmenes en vez de fuentes primarias.
+
+**Recomendación:** **construir el pipeline propio de TTS como ruta por defecto**, y tratar la API de Audio Overview como **acelerador opcional**, no como fundamento.
+
+Razones para la ruta propia:
+- Se necesita control sobre **longitud exacta** (el brief pide 60–90 s / 3–4 min), **branding**, **citas verificables** y **regeneración** cuando la decisión cambia de versión.
+- Se necesita **redacción selectiva** de información sensible antes de enviar el texto a cualquier proveedor (ver ADR-007).
+- El costo por asset debe ser predecible y auditable por equipo.
+
+Condiciones bajo las cuales la API gestionada **sí** conviene, si la organización ya tiene licencias de Gemini Notebook Enterprise:
+- El contenido a sintetizar es de **sensibilidad baja (T1)**.
+- Se acepta la restricción de **un audio overview por notebook** — lo que en la práctica obliga a **un notebook por decisión**, con su ciclo de vida (crear → cargar fuentes → generar → archivar). Es una decisión de arquitectura de datos, no un detalle: implica que el notebook pasa a ser una entidad de primera clase del sistema.
+- Se acepta que es **Preview (`v1alpha`)**: puede cambiar sin aviso y sin garantías. **No usarlo en el camino crítico del MVP.**
+- A favor: soporta multi-región `us` / `eu` / `global` ✅ — relevante para residencia de datos en la UE — y la ruta de notebooks **sí** documenta CMEK, Model Armor y protección de datos sensibles, que la Podcast API no ofrecía.
+
+**Decisión de implementación:** el `mk-synthesis` debe definir una **interfaz abstracta `AudioRenderer`** con dos implementaciones (`SelfHostedTTS`, `ManagedAudioOverview`). Esto cuesta poco, permite evaluar ambas con datos reales durante el piloto, y evita que un cambio de rumbo de Google obligue a reescribir el pipeline.
+
+#### ADR-008-bis · Proveedor de TTS para el pipeline propio (precios verificados 2026-10-14)
+
+| Proveedor | Multi-hablante nativo | Precio | Veredicto |
+|---|---|---|---|
+| **Google Gemini TTS** | **Sí** — `speech_config.speakers` + etiqueta `speaker` por turno. **Máx. 2 voces** con voces prebuilt. es-ES / es-US OK | Gemini 2.5 Flash TTS: 10 USD/1M tokens de audio ≈ **0,11 USD por episodio de 7 min** | ⭐ **Recomendado** |
+| **ElevenLabs** | **Sí** — `POST /v1/text-to-dialogue`, ≤10 voces, ≤2.000 car./request. ⚠️ **Multilingual v2 y Turbo NO lo soportan** | 0,08 USD/1.000 car. (v3/v4) ≈ **0,56 USD/episodio** troceando | Si el realismo máximo es requisito |
+| **Azure AI Speech** | Sí por SSML multi-`<voice>`; diálogo nativo `MultiTalker` **sólo en inglés** (preview) | Neural 15 USD/1M car.; HD 22 USD/1M | Alternativa corporativa |
+| **OpenAI TTS** | **No** — un solo `voice` por request → trocear y unir | tts-1 15 USD/1M car. | No apto para diálogo |
+| **Cartesia** | **No** — un `voice` por request | ≈37–50 USD/1M car. | No apto |
+| **PlayHT / Play.ai** | — | — | ❌ **Descartar: producto discontinuado tras la compra por Meta** |
+
+**Recomendación:** **Gemini TTS multi-voz** como default del pipeline propio — 0,11 USD por episodio de 7 minutos, español nativo, **una sola request** y sin troceado. Es ~5× más barato que ElevenLabs y elimina la complejidad de segmentar y recomponer audio. ElevenLabs queda como opción de calidad si el piloto muestra que la voz sintética de Gemini no alcanza el estándar necesario para que la gente *prefiera* el asíncrono.
+
+**Dato operativo que evita un error de implementación:** **"Chirp 3: HD" de Google Cloud no soporta multi-locutor** — `multiSpeakerMarkup` funciona únicamente con la voz `en-US-Studio-MultiSpeaker`, **sin español**. La vía multi-voz de Google es Gemini TTS, no Cloud TTS. Confundir ambas cuesta días de trabajo.
+
+**A escala del sistema, el audio es barato:** a 0,11 USD por episodio, incluso 2.000 episodios al año cuestan ~220 USD. **El costo del audio no es una restricción de diseño** — el costo real está en el video (§ADR-010) y en el cómputo de embeddings. Esto refuerza la recomendación de la ruta propia: la objeción económica desaparece.
+
+---
+
+### ADR-009 · Grano de agregación de las métricas de foco
+
+**Recomendación:** **agregación por equipo por defecto; datos individuales visibles solo para la propia persona.** Ver §5.4. **Tradeoff:** se pierde granularidad analítica para detectar casos individuales de sobrecarga de reuniones — precisamente el caso donde una intervención temprana ayudaría más. **Mitigación:** un *opt-in* explícito del individuo para compartir sus datos con su manager, y alertas automáticas **al propio individuo** ("tu Focus Score cayó 30% este mes"), no a su jefe. Esto preserva el valor sin construir vigilancia.
+
+---
+
+### ADR-010 · Estrategia de render de video
+
+**Recomendación:** **Remotion + Remotion Lambda** al inicio, con migración a granja propia de Chromium headless + FFmpeg cuando el volumen mensual supere el punto de cruce de costo. **Optimización clave:** el guion y el storyboard se generan **una vez** y se renderizan **N veces** (16:9 para Slack, 9:16 para móvil, versión corta de 30 s). Separar generación de render es lo que hace que el costo marginal por formato sea casi cero.
+
+**Advertencia de licenciamiento — verificada, y hay que resolverla antes de construir.** **Remotion NO es open source OSI.** Gratis para individuos, organizaciones de ≤3 personas y non-profits; para empresas de 4+ requiere **Company License: 25 USD/asiento/mes** (modalidad Creators) o **0,01 USD/render con mínimo de 100 USD/mes** (modalidad Automators); Enterprise desde **500 USD/mes**.
+
+Dos matices que cambian la decisión:
+- **Remotion Lambda no cobra por render**: se paga **sólo AWS**, ≈**0,017–0,021 USD por minuto** de video (≈0,10 USD por 10 min en HD)', **más** la Company License si la organización es de 4+.
+- Los "asientos" son de **desarrolladores que escriben composiciones**, no de espectadores. Para un equipo interno eso son 2–4 asientos, no cientos. El costo es real pero acotado.
+
+**Alternativas verificadas, por si la licencia es un obstáculo de procurement:**
+| Opción | Licencia | Nota |
+|---|---|---|
+| **Motion Canvas** | MIT | React-like, orientado a animación explicativa |
+| **Revideo** | MIT | API programática, fork orientado a video generativo |
+| **Hyperframes** | Apache 2.0 | De HeyGen |
+| **Shotstack** | Comercial, 10 USD/50 min | API cloud, sin infraestructura propia |
+| **FFmpeg puro** | LGPL/GPL | Máximo control, máximo trabajo |
+
+**Recomendación final:** Remotion sigue siendo la mejor opción técnica por ecosistema y DX, pero **la licencia debe pasar por procurement antes de la Fase 2, no durante**. Si la organización tiene una política de "sólo OSS en herramientas internas", **Motion Canvas o Revideo (MIT)** evitan la conversación por completo a cambio de menos ecosistema. No dejar esta decisión para el momento del render.
+
+---
+
+### ADR-011 · Modelo de costo hora-hombre para el cálculo de dólares
+
+**Recomendación:** **tarifa cargada media por banda de rol, configurable por Ops, con la fórmula publicada en la UI.** No usar salarios individuales del HRIS: introduce riesgo de privacidad, requiere una integración sensible y desvía la discusión hacia la legitimidad de los datos en lugar de hacia el ahorro. **Tradeoff:** menos precisión por persona. **Aceptable:** el objetivo del número es dimensionar el orden de magnitud para una decisión de inversión, no liquidar un presupuesto.
+
+---
+
+### ADR-012 · Dónde "vive" el producto para el usuario
+
+**Recomendación:** **Slack-first para el bucle operativo** (intercepción, checklist, publicación, votación — todo ocurre donde la gente ya está), **web para los dashboards** y el canvas de decisiones. Razón: cada salto a una interfaz nueva es una pérdida de adopción medible. **Tradeoff:** Slack impone límites de formato (los assets de audio/video se consumen peor dentro de Slack que en un reproductor propio), lo que empuja hacia un reproductor web enlazado desde el mensaje, con medición de consumo vía *events* del reproductor.
+
+---
+
+### Preguntas abiertas que necesito responder con ustedes antes de la Entrega 2
+
+1. **¿Cuál es el tamaño de la organización y cuántos equipos serían el piloto?** (Determina si el MVP es mono-tenant o necesita aislamiento desde el inicio.)
+2. **¿Google Workspace, Microsoft 365 o ambos?** (Decide si se construye un conector o dos, y cambia el camino crítico de aprobaciones.)
+3. **¿Existe ya un sponsor a nivel VP/C-level dispuesto a que le intercepten sus propias reuniones?** (Sin esto, ADR-001 se resuelve en "coach" y el impacto será marginal.)
+4. **¿Hay Betriebsrat / comité de empresa / requisitos GDPR-EU en el alcance?** (Puede redefinir por completo el alcance de las métricas — §5.4.)
+5. **¿Cuál es la restricción de presupuesto de cómputo de IA por mes?** (Determina qué formatos de síntesis entran al MVP: el video es 10–50× más caro que el audio por unidad consumida.)
+6. ~~**¿Cuál es la fuente de verdad de decisiones hoy?**~~ ✅ **RESPONDIDA (2026-10-14) — es `fdekit.decide`, en este mismo repo.** Ver *Relación con `fdekit.decide`*. Consecuencia: el `mk-decision-ledger` se elimina como componente y pasa a ser un **adaptador**; el MVP se reduce.
+7. **¿Existe una política de retención de grabaciones/transcripciones?** (Aplica a los assets de síntesis: ¿cuánto viven? ¿quién puede borrarlos?) — **Parcialmente respondida:** `fdekit.decide` ya tiene retención con ejecutor real (`tick`) y `docs/politica-de-datos.md`. La pregunta abierta es si los assets multimodales de MK OS caen bajo esa misma política o necesitan una propia.
+8. **¿La organización tiene o planea licencias de Gemini Notebook Enterprise / Gemini Enterprise?** (Determina si ADR-008 puede usar la ruta gestionada como acelerador y si conviene invertir en la abstracción `AudioRenderer` desde el MVP.)
+9. **¿Cuántos buzones habría que sondear y con qué frecuencia?** (Determina el consumo de cuota de Google Calendar y el costo operativo del *sweeper* — ver §2.4.1-bis. Con el umbral de facturación entrando en vigor en 2026, esto deja de ser un detalle de implementación y pasa a ser una partida de presupuesto.)
+10. **¿La jurisdicción de despliegue es Chile (Ley 21.719, vigente 1-dic-2026) o la UE?** (Determina la base legal de §5.4 y de ADR-009. La conclusión de diseño no cambia; la fundamentación, sí.)
+
+---
+
+## Anexo A · Las 5 decisiones de producto que más determinan el éxito
+
+Estas no son técnicas, y pesan más que cualquier elección de stack:
+
+1. **El sistema debe llegar invitado, no impuesto.** Un piloto voluntario con dos equipos genera mejores datos y mejores defensores que un despliegue corporativo.
+2. **La salida de emergencia tiene que estar siempre visible.** La fricción es social y visible; nunca técnica y opaca.
+3. **La calidad de la síntesis es el producto.** Un audio malo justifica la próxima reunión. Presupuestar la calidad como requisito, no como pulido.
+4. **Medir el consumo real, no el envío.** El ahorro de horas sin telemetría de consumo es una ficción que un CFO desarma en una pregunta.
+5. **Definir el éxito como decisiones más rápidas y mejores, no como menos reuniones.** Todo el resto del dashboard se deriva de esta definición.
+
+---
+
+*Documento vivo. **v0.2** incorpora la verificación de APIs contra documentación oficial del 2026-10-14 (ver Registro de correcciones). Los ítems marcados ○ en §2.4 siguen pendientes de verificación propia y están listados como checklist en §2.4.1-bis.*
+
+*Entrega 2 pendiente: modelo de datos completo con DDL e índices, políticas RLS de permisos por chunk, contratos de API (OpenAPI), y especificación del pipeline de síntesis multimodal con presupuestos de costo y latencia por formato.*
