@@ -887,6 +887,23 @@ Un video condensado de 2 minutos reemplaza la exposición unidireccional de un r
    - Si persiste una discrepancia sobre qué camino tomar o el voto de aprobación no llega al 80%, el sistema agrupa las objeciones y **agenda automáticamente una Llamada Quirúrgica de 15 minutos**.
    - **Regla de aislamiento:** Si el video fue enviado a 8 personas pero solo 1 o 2 tienen un desacuerdo con el responsable (DRI), **solo esas 2–3 personas asisten a los 15 minutos**. Las otras 5 personas no pierden su bloque de foco y reciben el acuerdo final por escrito en el hilo.
 
+#### 4.5.1 Captura y síntesis de las dudas habladas en la reunión: Patrón **Granola** + `fdekit.decide`
+
+Cuando sí ocurre una **Llamada Quirúrgica de 15 min** (o cualquier reunión justificada que pasó el filtro), el riesgo es que los comentarios, dudas y acuerdos hablados se pierdan en el aire o alguien tenga que redactar una minuta manual. Para canalizar toda esa conversación se utiliza el **patrón Granola** conectado directamente al motor de [`fdekit.decide`](file:///c:/fde/fde-field-kit/src/fdekit/decide):
+
+1. **Por qué el enfoque de Granola es superior a los "bots de reunión" tradicionales:**
+   - **Sin bot fantasma en la videollamada:** A diferencia de Otter o Fireflies (que meten un participante artificial a la sala y generan fricción), Granola captura el audio del sistema localmente.
+   - **Fusión de Notas Crudas (Esqueleto) + Transcripción (Contexto):** El sistema precarga automáticamente como "esqueleto de notas" **las dudas y comentarios que la gente dejó en Slack tras ver el video de 2 minutos**, más los apuntes rápidos que el líder tome durante la llamada. La transcripción completa se usa para rellenar con precisión qué se respondió a cada punto, sin inventar.
+
+2. **Conexión directa con lo ya construido en `fdekit.decide` (`transcript.py` + `draft.py`):**
+   - **Ingesta al canal `HABLADA` ([`transcript.py`](file:///c:/fde/fde-field-kit/src/fdekit/decide/transcript.py)):** El transcripto de Granola (o del pipeline local con Whisper + vocabulario `DECISION_VOCAB`) entra a `TranscriptStore`, que exige la compuerta dura de consentimiento (`recording_allowed`), guarda las marcas de tiempo (`mm:ss`) con hash `sha256` y aplica la purga automática con lápida bajo la **Ley 21.719**.
+   - **Extracción estructurada de 4 objetos ([`draft.py`](file:///c:/fde/fde-field-kit/src/fdekit/decide/draft.py)):** En lugar de producir solo un "resumen de texto libre" que nadie vuelve a leer, la síntesis clasifica cada bloque hablado en `DecisionDraft`:
+     * **`decision`:** Qué se definió sobre la duda bloqueante (con cita congelada `mm:ss`).
+     * **`commitment`:** Quién se comprometió a hacer qué y con qué fecha límite verificada (`role="due"`).
+     * **`assumption`:** Qué supuesto se dio por válido para avanzar.
+     * **`question` (`OpenQuestion`):** Qué duda quedó todavía sin respuesta y con qué responsable.
+   - **Cierre del ciclo hacia el resto del equipo:** Al terminar los 15 minutos, el organizador confirma el borrador en 1 clic (`EXPIRA_EN_HORAS = 24`) y el bot publica en el hilo de Slack de todo el equipo un bloque de 30 segundos: *"Duda X resuelta en llamada de 15 min → Decisión ratificada: [Resumen + Cita]"* (y si la decisión cambió el diseño original, regenera la escena 4 del video de 2 minutos).
+
 ---
 
 ## 5. Métricas de Impacto (definiciones formales)
