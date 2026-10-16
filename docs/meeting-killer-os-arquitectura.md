@@ -112,48 +112,42 @@ El ciclo de vida de una intercepción es: `invitación creada` → `checklist` �
 ```mermaid
 graph TB
     subgraph Personas["👥 Personas"]
-        IC["🧑‍💻 Maker / IC<br/><i>protege foco</i>"]
-        LEAD["👔 Tech Lead / DRI<br/><i>convoca y decide</i>"]
-        OPS["📋 Ops / Chief of Staff<br/><i>gobierna política</i>"]
+        IC["🧑‍💻 Maker / IC<br/><i>consume video 2 min, comenta dudas, vota</i>"]
+        LEAD["👔 Tech Lead / DRI<br/><i>sube reporte 2-9 págs, responde bloqueos</i>"]
+        OPS["📋 Ops / Chief of Staff<br/><i>gobierna política y tarifa/h</i>"]
         IT["🛡️ IT / Admin<br/><i>instala y audita</i>"]
     end
 
-    MKOS["⚙️ <b>MEETING-KILLER OS</b><br/>Intercepción · Síntesis Multimodal<br/>Validación Asíncrona · Decision Ledger"]
+    MKOS["⚙️ <b>MEETING-KILLER OS + fdekit.decide</b><br/>Intercepción · Video Simple 2 min (Claude Design + Analogías)<br/>Triaje de Dudas (3 Vías) · Captura Granola · Registro DECIDIDA/HABLADA"]
 
     subgraph Fuentes["🗄️ Fuentes de verdad (Knowledge Fabric)"]
         CAL["📅 Google Calendar /<br/>Microsoft 365"]
         CHAT["💬 Slack / Teams"]
-        DOCS["📄 Notion / Confluence / Drive"]
+        DOCS["📄 Reportes 2-9 págs / Notion / Drive"]
         CODE["🔀 GitHub / GitLab"]
         TICK["🎫 Linear / Jira"]
     end
 
-    subgraph Salidas["📤 Superficies de consumo"]
-        SLACK["💬 Slack / Teams"]
-        WEB["🖥️ Dashboard Web"]
-        MEDIA["🎧🎬 Assets de audio/video/diagrama"]
+    subgraph Salidas["📤 Superficies de consumo y captura"]
+        SLACK["💬 Slack / Teams<br/><i>Poll 1-clic + Hilo de dudas RAG</i>"]
+        PLAYER["🎬 Reproductor Web Ligero + MP4<br/><i>Video 2 min Claude Design + telemetría</i>"]
+        GRANOLA["🎙️ Captura estilo Granola<br/><i>Notas de dudas + Audio sin bot intruso</i>"]
+        WEB["🖥️ Dashboard Web<br/><i>Ahorro 1-3h vs 2m (20 USD/h) + Focus</i>"]
     end
 
-    HR["💰 HRIS / Finanzas<br/><i>costo hora-hombre</i>"]
     IDP["🔐 SSO / IdP (Okta, Entra ID)"]
 
-    IC -->|"consume síntesis, vota"| MKOS
-    LEAD -->|"convoca, responde checklist"| MKOS
-    OPS -->|"define políticas y umbrales"| MKOS
+    IC -->|"mira video 2m, plantea dudas, vota"| MKOS
+    LEAD -->|"convoca, aporta doc base, cierra en 15m"| MKOS
+    OPS -->|"define políticas y tarifa (ej. 20 USD/h)"| MKOS
     IT -->|"administra, audita"| MKOS
 
-    MKOS -->|"lee contexto (ACL-aware)"| CAL
-    MKOS -->|"lee contexto"| CHAT
-    MKOS -->|"lee contexto"| DOCS
-    MKOS -->|"lee contexto"| CODE
-    MKOS -->|"lee contexto"| TICK
-
-    MKOS -->|"intercepta, cancela,<br/>agenda quirúrgica"| CAL
-    MKOS -->|"publica y recolecta votos"| SLACK
-    MKOS -->|"sirve assets"| MEDIA
-    MKOS -->|"dashboards"| WEB
-
-    MKOS -.->|"costo/hora"| HR
+    MKOS -->|"lee contexto (ACL-aware)"| CAL & CHAT & DOCS & CODE & TICK
+    MKOS -->|"intercepta reunión 1-3h,<br/>agenda llamada quirúrgica 15m"| CAL
+    MKOS -->|"publica video 2m, responde dudas con citas,<br/>recolecta votos"| SLACK
+    MKOS -->|"sirve animación HTML/SVG + MP4"| PLAYER
+    GRANOLA -->|"esqueleto de dudas + transcripto → DecisionDraft"| MKOS
+    MKOS -->|"métricas y grafo DECIDIDA"| WEB
     MKOS -.->|"authn / authz"| IDP
 
     style MKOS fill:#1f2937,stroke:#60a5fa,stroke-width:3px,color:#fff
@@ -167,114 +161,114 @@ graph TB
 ```mermaid
 graph TB
     subgraph Edge["🚪 Borde"]
-        GW["<b>mk-gateway</b><br/>API Gateway / BFF<br/><i>OAuth, rate limit, tenant routing,<br/>verificaci&oacute;n de firma de webhooks</i>"]
+        GW["<b>mk-gateway</b><br/>API Gateway / BFF<br/><i>OAuth, rate limit, firma de webhooks,<br/>heartbeats de reproducción (consumed_seconds)</i>"]
     end
 
-    subgraph Core["🧠 Núcleo de dominio (TypeScript)"]
-        INT["<b>mk-interceptor</b><br/>Webhooks de calendario,<br/>Policy Engine, máquina de estados<br/>de intercepción,<br/>sweeper de reconciliación"]
-        KF["<b>mk-knowledge-fabric</b><br/>Conectores, sync incremental,<br/>normalización, ACL mirroring"]
-        VAL["<b>mk-validation</b><br/>Publicación async, polls,<br/>quórum, escalado,<br/>llamada quirúrgica"]
-        LEDGER["<b>mk-decision-ledger</b><br/>Registro canónico de decisiones<br/><i>append-only, versionado</i>"]
-        MET["<b>mk-metrics</b><br/>Focus Score,<br/>impacto neto"]
+    subgraph Core["🧠 Núcleo de control (TypeScript)"]
+        INT["<b>mk-interceptor</b><br/>Webhooks de calendario,<br/>Policy Engine, máquina de estados,<br/>sweeper de reconciliación"]
+        KF["<b>mk-knowledge-fabric</b><br/>Conectores (reportes 2-9 págs, tickets),<br/>normalización, ACL mirroring"]
+        VAL["<b>mk-validation & doubt-triage</b><br/>Polls 1-clic, triaje de dudas (3 vías),<br/>quórum ponderado, llamada quirúrgica 15m"]
+        ADAPT["<b>mk-decide-adapter</b><br/>Puente hacia <code>fdekit.decide</code>"]
+        MET["<b>mk-metrics</b><br/>Calculadora ROI (1-3h vs 2m a 20 USD/h),<br/>Focus Score agregado"]
     end
 
-    subgraph AI["🤖 Plano de IA (Python)"]
-        RAG["<b>mk-rag</b><br/>Chunking estructural,<br/>embeddings, retrieval híbrido,<br/>reranking, citas"]
-        SYN["<b>mk-synthesis</b><br/>DAG de generación:<br/>guion → TTS / Remotion / Mermaid"]
-        CLS["<b>mk-classifier</b><br/>Clasificación de intención<br/>+ score de necesitud de sync"]
+    subgraph DecideEngine["📒 Motor de Decisiones Existente (Python · mytra-fde)"]
+        DECIDE["<b>fdekit.decide</b><br/>Canal <code>DECIDIDA</code> (inmutable en git)<br/>Canal <code>HABLADA</code> (<code>TranscriptStore</code> + purga Ley 21.719)<br/><code>DecisionDraft</code> (decision, commitment, assumption, question)"]
+    end
+
+    subgraph AI["🤖 Plano de IA y Síntesis (Python)"]
+        RAG["<b>mk-rag</b><br/>Chunking estructural de reportes 2-9 págs,<br/>búsqueda híbrida BM25+vector, filtro ACL en SQL"]
+        SYN["<b>mk-synthesis (Claude Design + Audio-First)</b><br/>Destilación a 4 escenas + Analogías visuales<br/>→ Gemini TTS (timestamps) → HTML/CSS/SVG animado"]
+        CLS["<b>mk-classifier</b><br/>Clasificador de intención de reunión<br/>y clasificador epistémico de dudas"]
     end
 
     subgraph Infra["🏗️ Infraestructura compartida"]
-        TEMP["<b>Temporal</b><br/>Workflows duraderos<br/><i>(corazón del sistema)</i>"]
-        PG[("<b>PostgreSQL 16</b><br/>+ pgvector + pg_search<br/>OLTP + vectores + BM25")]
-        S3[("<b>Object Storage</b><br/>S3 / R2<br/>assets, renders")]
-        REDIS[("<b>Redis</b><br/>cache, locks,<br/>rate limit")]
-        WH[("<b>Warehouse</b><br/>ClickHouse / DuckDB<br/>analítica")]
-        RENDER["<b>Render Farm</b><br/>Chromium headless<br/>+ FFmpeg"]
+        ORCH["<b>pg-boss / Hatchet / Temporal</b><br/>Workflows duraderos (ventanas 48-72h)"]
+        PG[("<b>PostgreSQL 16</b><br/>+ pgvector + BM25<br/>OLTP + vectores + ACLs")]
+        S3[("<b>Object Storage</b><br/>S3 / R2<br/>HTML bundles, MP3, MP4")]
+        PW["<b>Playwright Headless + FFmpeg</b><br/>Captura determinística de escena Claude Design → MP4<br/><i>($0 en licencias)</i>"]
     end
 
-    subgraph Clients["🖥️ Clientes"]
-        SLACKAPP["<b>Slack App</b> (Bolt)<br/><i>superficie principal</i>"]
-        WEBAPP["<b>Web App</b> (Next.js)<br/>dashboards, canvas"]
-        GADDON["<b>Google Workspace<br/>Add-on</b>"]
-        OADDIN["<b>Outlook Add-in</b><br/>(Office.js)"]
+    subgraph Clients["🖥️ Clientes y Superficies"]
+        SLACKAPP["<b>Slack App</b> (Bolt)<br/><i>Checklist, reproductor 2m, hilo de dudas, votos</i>"]
+        GRANOLA_CL["<b>Capturador estilo Granola</b><br/><i>Audio local sin bot + dudas de Slack como esqueleto</i>"]
+        OADDIN["<b>Outlook Smart Alerts</b><br/>(<code>OnAppointmentSend</code>)"]
+        WEBAPP["<b>Web App + Player Ligero</b> (Next.js)<br/><i>Reproductor con telemetría y Dashboard</i>"]
     end
 
-    SLACKAPP --> GW
-    WEBAPP --> GW
-    GADDON --> GW
-    OADDIN --> GW
-    GW --> INT & KF & VAL & LEDGER & MET
+    SLACKAPP & GRANOLA_CL & OADDIN & WEBAPP --> GW
+    GW --> INT & KF & VAL & ADAPT & MET
 
-    INT -->|"inicia workflow"| TEMP
-    VAL -->|"inicia workflow"| TEMP
-    TEMP -->|"actividades"| SYN & RAG & VAL & INT
+    INT & VAL -->|"inicia workflow"| ORCH
+    ORCH -->|"actividades"| SYN & RAG & VAL & INT & ADAPT
 
     KF --> RAG
     SYN --> RAG
-    INT --> CLS
+    INT & VAL --> CLS
     CLS --> RAG
 
-    INT & KF & VAL & LEDGER & MET --> PG
+    ADAPT --> DECIDE
+    GRANOLA_CL -->|"notas + audio/transcripto"| DECIDE
+
+    INT & KF & VAL & MET --> PG
     RAG --> PG
     SYN --> S3
-    SYN --> RENDER
-    INT & VAL --> REDIS
-    MET --> WH
-    LEDGER --> PG
+    SYN --> PW
+    PW --> S3
 
-    style TEMP fill:#7c2d12,stroke:#fb923c,stroke-width:3px,color:#fff
+    style ORCH fill:#7c2d12,stroke:#fb923c,stroke-width:3px,color:#fff
+    style DECIDE fill:#065f46,stroke:#34d399,stroke-width:3px,color:#fff
     style PG fill:#1e3a5f,stroke:#60a5fa,stroke-width:2px,color:#fff
     style SYN fill:#4c1d95,stroke:#a78bfa,color:#fff
     style RAG fill:#4c1d95,stroke:#a78bfa,color:#fff
-    style INT fill:#1f2937,stroke:#60a5fa,color:#fff
 ```
 
-### 1.3 Flujo end-to-end (el "camino feliz" y sus bifurcaciones)
+### 1.3 Flujo end-to-end (De reunión de 1–3 h a Video de 2 min + Canalización de Dudas + Granola)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant O as 👔 Organizador
+    participant O as 👔 Líder / DRI
     participant CAL as 📅 Calendar
     participant INT as 🛡️ Interceptor
-    participant KF as 🗄️ Knowledge Fabric
-    participant SYN as 🎬 Synthesis
-    participant SL as 💬 Slack
-    participant T as 👥 Equipo
-    participant L as 📒 Decision Ledger
+    participant KF as 🗄️ Knowledge Fabric (RAG)
+    participant SYN as 🎬 Synthesis (Claude Design)
+    participant SL as 💬 Slack (#equipo)
+    participant T as 👥 Equipo (8 pers · 20 USD/h)
+    participant GR as 🎙️ Captura Granola
+    participant DEC as 📒 fdekit.decide
 
-    O->>CAL: Crea "Sync de avance Q3" (8 personas, 60 min)
-    CAL-->>INT: Push notification (watch channel)
-    INT->>INT: Policy Engine → TRIGGER<br/>(>2 personas, >25 min, keyword "sync")
-    INT->>CAL: Marca evento (extendedProperty) + estado HELD
-    INT->>SL: DM al organizador: Checklist de 4 filtros
-    O->>SL: Responde checklist (¿sincronía estricta? ¿hay doc?)
-    SL-->>INT: Webhook interactivo
+    O->>CAL: Agenda reunión de 1 a 3 h (8 personas = 160–480 USD)<br/>para explicar reporte de 2–9 págs / avances / problemas
+    CAL-->>INT: Push ping (events.watch) / Smart Alert
+    INT->>CAL: Retiene evento (HELD) y envía Checklist en Slack DM
+    O->>SL: Confirma vía asíncrona y enlaza reporte de 2–9 págs
+    INT->>CAL: Cancela reunión de 1–3 h (con opción de override)
 
-    alt Justificación válida (decisión binaria / incidente)
-        INT->>CAL: Libera evento + exige agenda y pre-read
-        INT->>SL: Publica agenda, pre-read y objetivo
-    else Es status / alineación
-        INT->>CAL: Cancela evento (soft-cancel, con override)
-        INT->>KF: Resuelve contexto (ticket, PR, doc, hilo)
-        KF-->>SYN: Corpus con citas y ACLs
-        SYN->>SYN: Genera guion → audio 3:30<br/>+ diagrama Mermaid + video 75s
-        SYN-->>INT: Assets listos (~4 min)
-        INT->>SL: Publica en #equipo con poll 1-clic + 1 pregunta
-        SL-->>T: Notificación
-        T->>SL: Vota (✅ / ⚠️ + objeción)
-        SL-->>INT: Recolecta votos
-        alt ≥80% aprueba y quórum alcanzado
-            INT->>L: Ratifica decisión (inmutable, con linaje)
-            INT->>SL: 🎉 Decisión cerrada sin reunión
-        else Discrepancia o quórum insuficiente
-            INT->>INT: Clusteriza objeciones → tema bloqueante
-            INT->>CAL: Agenda "Llamada Quirúrgica" 15 min<br/>solo objetores + DRI + agenda generada
-            INT->>SL: Publica agenda quirúrgica y contexto
-        end
+    INT->>KF: Indexa reporte completo (2–9 págs) + tickets con ACLs
+    KF-->>SYN: Contexto verificado + cifras clave
+    SYN->>SYN: 1. Destila en 4 escenas + crea Analogía Visual del problema<br/>2. Genera voz (Gemini TTS) y mide tiempos exactos<br/>3. Genera animación HTML/SVG (Claude Design) + MP4 (Playwright)
+    SYN-->>SL: Publica Video Condensado de 2 min (~8 USD costo de lectura grupal)<br/>+ Poll 1-clic (✅ Apruebo / 💬 Tengo duda / ⚠️ Objeto)
+
+    T->>SL: Mira video de 2 min (Player mide consumed_seconds reales)
+
+    alt Caso 1: Duda factual cubierta en el reporte de 2–9 págs
+        T->>SL: Pregunta en el hilo: "¿Qué supuesto de merma se usó?"
+        SL->>KF: Consulta RAG con filtro ACL
+        KF-->>SL: Responde en segundos citando pág. y tabla exacta del reporte
+        T->>SL: Duda aclarada → Cambia voto a ✅ Apruebo (0 min de reunión)
+    else Caso 2: Laguna en el reporte ("Falta el turno de noche")
+        T->>SL: Comenta el punto omitido
+        SL->>O: Bot se abstiene de inventar y etiqueta al DRI para aclarar en 3 líneas
+        O->>SL: Publica aclaración en el hilo → Equipo vota ✅ (0 min de reunión)
+    else Caso 3: Desacuerdo de fondo o aprobación < 80%
+        INT->>CAL: Agenda "Llamada Quirúrgica" de 15 min<br/>SOLO entre los 2 objetores + DRI (los otros 5 siguen en foco)
+        O->>GR: En la llamada de 15m: Granola precarga las dudas de Slack como esqueleto<br/>y transcribe el audio local (sin bot intruso en la sala)
+        GR->>DEC: Ingesta canal HABLADA (con consentimiento y hash SHA-256)<br/>y genera DecisionDraft (decision, commitment, assumption, question)
+        O->>DEC: Confirma borrador en 1 clic → Pasa a canal DECIDIDA
+        DEC-->>SL: Publica el acuerdo resumido y minuto exacto (mm:ss) para todo el equipo
     end
-    INT->>INT: Emite eventos de telemetría → mk-metrics
+
+    INT->>DEC: Cierra decisión inmutable + registra ahorro neto (ej. 142–462 USD ahorrados)
 ```
 
 ### 1.4 El plano de datos (por qué un solo Postgres al inicio)
@@ -606,27 +600,32 @@ stateDiagram-v2
     HELD --> EXPIRED : sin respuesta en 24 h
 
     CHECKLIST_PENDING --> JUSTIFIED : sincronía estricta + doc asociado
-    CHECKLIST_PENDING --> ASYNC_PATH : es status / alineación / difusión
+    CHECKLIST_PENDING --> ASYNC_PATH : es reporte 2-9 págs / status / alineación
     CHECKLIST_PENDING --> ESCALATED : el organizador apela
 
     JUSTIFIED --> ALLOWED : libera + exige agenda y pre-read
 
-    ASYNC_PATH --> SYNTHESIZING : se genera el contexto desde Knowledge Fabric
-    SYNTHESIZING --> PUBLISHED : assets listos
+    ASYNC_PATH --> SYNTHESIZING : destila reporte en Video Simple 2m (Claude Design + Analogía)
+    SYNTHESIZING --> PUBLISHED : video 2m + audio listos
     SYNTHESIZING --> SYNTHESIS_FAILED : falla de pipeline
     SYNTHESIS_FAILED --> ESCALATED : fallback a reunión de 15 min
 
-    PUBLISHED --> VALIDATING : ventana de 48 h abierta
+    PUBLISHED --> VALIDATING : ventana de 48 h abierta (mide consumed_seconds)
 
-    VALIDATING --> RATIFIED : ≥80% aprueba y quórum alcanzado
+    VALIDATING --> DOUBT_TRIAGE : participante comenta duda / objeción en Slack
+    DOUBT_TRIAGE --> VALIDATING : Vía 1 (RAG responde con cita) o Vía 2 (DRI aclara laguna en hilo)
+    DOUBT_TRIAGE --> SURGICAL_NEEDED : Vía 3 (desacuerdo de fondo / trade-off)
+
+    VALIDATING --> RATIFIED : ≥80% aprueba y quórum ponderado alcanzado
     VALIDATING --> LAZY_CONSENSUS : quórum no alcanzado, 0 objeciones, deadline vencido
-    VALIDATING --> SURGICAL_NEEDED : <80% aprueba o hay objeciones materiales
+    VALIDATING --> SURGICAL_NEEDED : <80% aprueba al cerrar ventana
 
     LAZY_CONSENSUS --> RATIFIED
-    RATIFIED --> [*] : decisión inmutable en el ledger
+    RATIFIED --> [*] : decisión inmutable en fdekit.decide (canal DECIDIDA)
 
-    SURGICAL_NEEDED --> SURGICAL_SCHEDULED : llamada de 15 min, solo bloqueantes
-    SURGICAL_SCHEDULED --> RATIFIED : decisión tomada en la llamada
+    SURGICAL_NEEDED --> SURGICAL_SCHEDULED : llamada de 15 min, solo bloqueantes + DRI
+    SURGICAL_SCHEDULED --> GRANOLA_CAPTURE : captura sin bot (esqueleto de dudas Slack + audio)
+    GRANOLA_CAPTURE --> RATIFIED : DecisionDraft confirmado → fdekit.decide + minuta al hilo
     SURGICAL_SCHEDULED --> ZOMBIE : sin resolución en 7 días
 
     EXPIRED --> ALLOWED : silencio = permiso (con registro)
@@ -642,15 +641,15 @@ stateDiagram-v2
         compliance, decisiones binarias
     end note
 
-    note right of LAZY_CONSENSUS
-        Patrón RFC de GitLab:
-        el silencio es consentimiento.
-        Sin esto, el sistema se
-        bloquea esperando votos.
+    note right of GRANOLA_CAPTURE
+        Dudas de Slack = esqueleto de notas.
+        Audio local → TranscriptStore (HABLADA)
+        → DecisionDraft (decision, commitment,
+        assumption, question) → DECIDIDA.
     end note
 ```
 
-### 4.2 Evaluación y puntuación (pseudocódigo)
+### 4.2 Evaluación, triaje de dudas y captura estilo Granola (pseudocódigo)
 
 ```python
 # ═══════════════════════════════════════════════════════════════════════════
@@ -660,7 +659,7 @@ stateDiagram-v2
 # ═══════════════════════════════════════════════════════════════════════════
 
 REASON_CODES = {
-    # Códigos que habilitan la vía asíncrona
+    # Códigos que habilitan la vía asíncrona (Video Simple 2m Claude Design)
     "STATUS_UPDATE", "INFO_BROADCAST", "SYNC_ALIGNMENT", "DEMO_RECAP",
     "TRAINING", "RETROSPECTIVE",
     # Códigos que exigen sincronía
@@ -711,11 +710,11 @@ def evaluate(meeting: Meeting, policy: Policy, ctx: EvalContext) -> Evaluation:
             nudge={"checklist_url": build_checklist_url(meeting)})
 
     # ── ETAPA 3 · Recuperación de contexto desde Knowledge Fabric. ─────────
-    # ACL-aware: solo documentos que el ORGANIZADOR puede ver.
+    # ACL-aware: solo documentos que la intersección de destinatarios puede ver.
     context = knowledge_fabric.retrieve(
         query=meeting.title + " " + meeting.description,
         attendees=meeting.attendee_user_ids,
-        require_acl_for=meeting.organizer_id,
+        require_acl_for=meeting.attendee_user_ids,
         top_k=12)
     has_linked_artifact = bool(context.tickets or context.prs or context.docs)
 
@@ -762,7 +761,49 @@ def evaluate(meeting: Meeting, policy: Policy, ctx: EvalContext) -> Evaluation:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  BUCLE DE VALIDACIÓN Y QUÓRUM
+#  TRIAJE EPISTÉMICO DE DUDAS EN 3 VÍAS (POST-VIDEO DE 2 MIN)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def triage_doubt_or_comment(comment: SlackComment, session: ValidationSession) -> DoubtAction:
+    """
+    Canaliza comentarios/dudas sobre el video de 2 min sin revivir la reunión de 1-3 h.
+    """
+    chunks = knowledge_fabric.retrieve(
+        query=comment.text,
+        require_acl_for=session.participant_ids,
+        top_k=6)
+
+    triage = classify_doubt_epistemic(
+        question=comment.text,
+        chunks=chunks,
+        schema={
+            "kind": "enum(FACTUAL_COVERED, SPEC_GAP, TRADEOFF_CONFLICT)",
+            "exact_quote": "string | null",
+            "source_ref": "string | null",
+            "confidence": "number[0,1]"})
+
+    # Vía 1: El dato sí estaba en el reporte de 2-9 págs → cita directa (0 min reunión)
+    if triage.kind == "FACTUAL_COVERED" and triage.confidence >= 0.85 and triage.exact_quote:
+        return DoubtAction(
+            route="VIA_1_RAG_REPLY",
+            reply_text=f"Según {triage.source_ref}: «{triage.exact_quote}»",
+            prompt_vote_update=True)
+
+    # Vía 2: Laguna en el reporte → abstención del bot + ping al autor (0 min reunión)
+    if triage.kind == "SPEC_GAP":
+        return DoubtAction(
+            route="VIA_2_DRI_PATCH",
+            notify_user_id=session.decision.owner_user_id,
+            reply_text="Este punto no figura en el reporte base. Etiquetando al DRI para precisarlo en el hilo.")
+
+    # Vía 3: Desacuerdo real de diseño/prioridad → entra al clustering para Llamada Quirúrgica
+    return DoubtAction(
+        route="VIA_3_REGISTER_OBJECTION",
+        objection_embedding=embed(comment.text))
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  BUCLE DE VALIDACIÓN, LLAMADA QUIRÚRGICA Y CAPTURA ESTILO GRANOLA
 # ═══════════════════════════════════════════════════════════════════════════
 
 def resolve_validation(session: ValidationSession) -> Resolution:
@@ -772,49 +813,34 @@ def resolve_validation(session: ValidationSession) -> Resolution:
     invited   = session.participants
     responded = [p for p in invited if p.vote is not None]
 
-    # Quórum: participación mínima para que el resultado sea representativo.
     quorum_n = max(3, ceil(0.60 * len(invited)))
     approvals = [p for p in responded if p.vote == "approve"]
     objections = [p for p in responded if p.vote == "object"]
 
-    # Ponderación por consumo real: quien no leyó, no vota con peso completo.
-    # Evita que un "approve" por reflejo cierre una decisión mal entendida.
+    # Ponderación por consumo real del video de 2 min (heartbeats del reproductor):
     weighted_approval = sum(p.consumption_ratio for p in approvals) / \
                         max(sum(p.consumption_ratio for p in responded), 1e-6)
 
-    # ── Regla de corte principal ───────────────────────────────────────────
     if len(responded) >= quorum_n and weighted_approval >= 0.80:
         return Resolution("RATIFIED", artifacts=session.assets,
                           rationale=summarize_consensus(responded))
 
-    # ── Consenso perezoso (patrón RFC): silencio = consentimiento ──────────
-    # Sin esta válvula, el sistema se bloquea esperando votos y las
-    # decisiones se vuelven MÁS lentas que con reuniones.
     if (session.deadline_passed()
             and len(objections) == 0
             and len(responded) >= max(2, quorum_n // 2)):
         return Resolution("RATIFIED_LAZY",
                           note="Aprobado por consenso perezoso: sin objeciones al vencer el plazo.")
 
-    # ── Hay fricción: se aísla el bloqueo y se convoca lo mínimo ───────────
     if objections:
-        # Se agrupan las objeciones por similitud semántica: 6 objeciones
-        # suelen ser 2 desacuerdos reales repetidos de formas distintas.
         clusters = cluster_objections(
             embeddings=[o.objection_embedding for o in objections],
             min_cluster_size=1)
-
-        # Se prioriza por PODER DE BLOQUEO = personas afectadas × centralidad
-        # del tema en la decisión. No por quién grita más ni por jerarquía.
         clusters.sort(key=lambda c: blocking_power(c, session.decision), reverse=True)
         top = clusters[:2]                      # máximo 2 temas por llamada
 
-        # Solo asisten: quienes objetan en los temas bloqueantes + quien decide.
-        # Los demás reciben la minuta. Una llamada de 15 min con 4 personas
-        # solo es viable si el alcance está acotado quirúrgicamente.
         required = {o.user_id for c in top for o in c.members}
-        required |= {session.decision.owner_user_id}          # quien decide
-        required |= {session.decision.author_user_id}         # quien propuso
+        required |= {session.decision.owner_user_id}
+        required |= {session.decision.author_user_id}
 
         return Resolution(
             "SURGICAL",
@@ -822,12 +848,36 @@ def resolve_validation(session: ValidationSession) -> Resolution:
             required_attendees=required,
             optional_attendees={p.user_id for p in invited} - required,
             duration_minutes=15,                # techo duro, no negociable
-            agenda=generate_surgical_agenda(top, session.decision),  # ← generada
-            exclusions_note="Los no bloqueantes reciben la minuta; no asisten.")
+            granola_seed_notes=[o.objection_text for c in top for o in c.members],
+            agenda=generate_surgical_agenda(top, session.decision),
+            exclusions_note="Los no bloqueantes reciben la síntesis post-llamada; no asisten.")
 
-    # ── Silencio total: no se decide por nadie. Se escala. ─────────────────
     return Resolution("ESCALATE", to=session.decision.owner_user_id,
                       reason="SIN_RESPUESTA", retry_after_hours=48)
+
+
+def finalize_surgical_call_with_granola(
+    meeting_id: str,
+    slack_doubt_notes: list[str],
+    human_live_notes: list[str],
+    audio_segments: list[dict],
+    fdekit_root: str
+) -> list[DecisionDraft]:
+    """
+    Patrón Granola sobre fdekit.decide:
+    1. Guarda el audio transcrito en el canal HABLADA (con guardia de consentimiento y SHA-256).
+    2. Usa las dudas de Slack + apuntes en vivo como esqueleto prioritario.
+    3. Extrae borradores estructurados (decision, commitment, assumption, question) para confirmar en 1 clic.
+    """
+    store = TranscriptStore(fdekit_root, meeting_id)
+    utterances = store.ingest_segments(audio_segments)  # exige consent.recording_allowed
+
+    combined_skeleton = [*slack_doubt_notes, *human_live_notes]
+    drafts = extract_granola_styled_drafts(
+        skeleton_notes=combined_skeleton,
+        utterances=utterances,
+        meeting_id=meeting_id)
+    return drafts
 ```
 
 ### 4.3 Los cuatro filtros del checklist (UX)
