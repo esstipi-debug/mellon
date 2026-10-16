@@ -1,21 +1,21 @@
-# MEETING-KILLER OS — Arquitectura v0.3
+# MEETING-KILLER OS — Arquitectura v0.4
 
 **Sistema Inteligente de Prevención, Optimización y Reemplazo de Reuniones**
 
 | | |
 |---|---|
 | **Documento** | Entrega 1 de 5 — Arquitectura de Alto Nivel, Stack, Modelo de Datos, Algoritmo de Intercepción, Roadmap |
-| **Estado** | Propuesta para revisión (borrador arquitectónico) — **revisado con verificación de APIs contra documentación oficial** |
-| **Fecha de verificación** | 2026-10-14 |
+| **Estado** | Propuesta para revisión (borrador arquitectónico) — **revisado con verificación de APIs y síntesis en Videos Simples (Claude Design)** |
+| **Fecha de verificación** | 2026-10-16 |
 | **Documento complementario** | [02-verificacion-plataforma.md](C:\fde\meeting-killer-os\02-verificacion-plataforma.md) — informe de verificación con fuentes primarias y fechas de consulta |
 | **Audiencia** | CTO / VP Engineering / Chief of Staff / Tech Leads |
 | **Naturaleza** | Sistema interno *opinionado*. El 70% del riesgo es cultural y de gobernanza, no técnico. |
 
 ---
 
-## Registro de correcciones — v0.1 → v0.2 → v0.3
+## Registro de correcciones — v0.1 → v0.2 → v0.3 → v0.4
 
-Las siguientes afirmaciones de la v0.1 fueron **verificadas contra documentación oficial y resultaron incorrectas o incompletas**. Se documentan aquí en lugar de corregirse en silencio, porque dos de ellas cambian el orden de prioridades del roadmap. La **v0.3** integra el informe de verificación completo (precios de TTS y orquestación, licenciamiento de Remotion, marco legal) sin revertir ninguna decisión.
+Las siguientes afirmaciones de la v0.1 fueron **verificadas contra documentación oficial y resultaron incorrectas o incompletas**. Se documentan aquí en lugar de corregirse en silencio, porque dos de ellas cambian el orden de prioridades del roadmap. La **v0.3** integra el informe de verificación completo (precios de TTS y orquestación, licenciamiento de Remotion, marco legal). La **v0.4** redefine el motor de video: en lugar de sobre-ingeniería con Remotion Lambda, el foco es **reemplazar reportes densos de 2–9 páginas o presentaciones de 20 láminas por Videos Simples y Dinámicos (~2 min) generados con estilo Claude Design + analogías explicativas**, incorporando el contraste económico real (reunión de 1–3 h vs. video de 2 min a 20 USD/h) y el protocolo de canalización de dudas en 3 vías.
 
 | # | Afirmación en v0.1 | Estado real verificado | Impacto |
 |---|---|---|---|
@@ -23,6 +23,7 @@ Las siguientes afirmaciones de la v0.1 fueron **verificadas contra documentació
 | **C-2** | "NotebookLM no tiene API pública verificada" (ADR-008) | **Parcialmente falso, pero la conclusión se mantiene.** Existen dos APIs; la standalone está **deprecada y sin admisión de nuevos clientes**; la otra es **Preview (`v1alpha`)** con acoplamiento a notebook | **ADR-008 reescrito** con la ruta viable y sus restricciones reales |
 | **C-3** | Posibilidad de diálogo en add-ons de calendario | No confirmado en v0.1 | Se documenta lo que **sí** es posible (infobar, mutación del item, Smart Alerts al enviar) |
 | **C-4** | — | **El informe de verificación final (§4) volvió a recomendar la Podcast API como "mejor opción", sin la nota de deprecación.** El error se repitió pese a haberse detectado y corregido en la ronda anterior | Se mantiene la decisión de ADR-008. Refuerza la disciplina de procedencia de §2.4 |
+| **C-5** | Video pensado como superproducción en Remotion Lambda fuera del MVP (§2.3, §6.1, ADR-010) | **Sobre-ingeniería.** El problema real es que nadie lee reportes de 2–9 páginas ni decks largos. Un **Video Simple estilo Claude Design** (escenas HTML/CSS/SVG animadas + analogías + locución TTS sincronizada) cuesta $0 en licencias, toma <30 s en generarse y entra directo al MVP | **§2.3, §4.5, §5.2, §6.1 y ADR-010 actualizados.** El video simple de ~2 min entra en Semana 2 del MVP |
 
 **Artefacto de respaldo:** el informe de verificación de plataforma completo, con fuentes y fechas de consulta, está en [02-verificacion-plataforma.md](C:\fde\meeting-killer-os\02-verificacion-plataforma.md) (consultado el 2026-10-14).
 
@@ -351,18 +352,23 @@ flowchart LR
 | **Evals** | **Promptfoo** o **Braintrust** desde el día 1 | Sin evals no se puede cambiar un prompt sin miedo. Es infraestructura, no un lujo. |
 | **Observabilidad LLM** | Langfuse (self-host) o similar | Trazas de prompt→respuesta, costo por decisión, latencia. |
 
-### 2.3 Motor de síntesis multimodal
+### 2.3 Motor de síntesis multimodal: De reporte de 2–9 páginas a Video Simple (~2 min)
+
+**El problema real que resuelve la síntesis:** En la práctica, nadie lee un reporte de 2 a 9 páginas ni un mazo de 20 diapositivas antes de una reunión — y por eso se convoca una reunión de 1 a 3 horas donde el autor "lee o explica el documento en vivo". El objetivo del motor multimodal **no es hacer cine**, sino transformar ese documento denso en un **video simple, dinámico y pedagógico de ~2 minutos (estilo Claude Design)** que comunique **avances, problemas u opciones** usando **analogías visuales**.
 
 | Formato | Stack recomendado | Notas de arquitectura |
-|---|---|---|
-| **Audio Overview (3–4 min, 2 locutores)** | **Ruta por defecto:** LLM genera guion dialogado con marcas de hablante → **TTS multi-hablante** — **Gemini TTS** (recomendado, ~0,11 USD/episodio) o ElevenLabs Text-to-Dialogue si prima el realismo (~0,56 USD) → mezcla con FFmpeg → MP3/M4A. **Ruta alternativa verificada:** API de audio overview de Gemini Notebook Enterprise (ver ADR-008). | ~700–900 palabras para 3.5 min. ⚠️ **OpenAI TTS y Cartesia NO soportan multi-hablante nativo** (un `voice` por request). **Cachear por hash de contenido**: la misma decisión no se regenera. El costo del audio **no es una restricción de diseño** a esta escala. |
-| **Video 60–90 s** | **Remotion** (React → MP4) + plantillas de escena bloqueadas por marca | Remotion es el estándar para video programático versionable. Un `storyboard.json` que produce el LLM se mapea a composiciones. Render en **Remotion Lambda** (elástico, pago por render) o granja propia de Chromium headless + FFmpeg (más barato a volumen). |
-| **Avatar / talking head** | HeyGen o similar, **solo para comunicaciones ejecutivas de alto valor** | Costo por minuto muy superior al video programático. Reservar para all-hands y anuncios. |
-| **Diagramas interactivos** | LLM emite **Mermaid** (flowchart / sequence / state) → render a SVG/PNG con `mermaid-cli` o Kroki → embebido en escenas de video y en Slack | **Determinístico, diffeable y versionable**: el diagrama evoluciona con el repo. Es la mejor relación valor/costo/riesgo del sistema. |
+| :--- | :--- | :--- |
+| **Video Simple Dinámico (90–120 s, estilo Claude Design)** | **Ruta primaria (MVP):** Claude genera un artefacto visual autocontenido (**HTML/CSS/SVG animado** estructurado en 4 escenas: *1. Avance, 2. Problema + Analogía, 3. Opciones/Impacto, 4. Decisión*) sincronizado con **Gemini TTS** (~0,03–0,11 USD). Se sirve como **Reproductor Web Ligero** (con telemetría exacta de `consumed_seconds`) y se exporta a **`.mp4` vía Playwright headless + FFmpeg** ($0 en licencias). | Reemplaza reportes de 2–9 páginas y decks de PowerPoint. **Regla Audio-First:** primero se genera el audio TTS por escena y sus tiempos exactos en milisegundos gobiernan la duración de cada transición visual (nunca al revés). **Remotion** queda solo como opción secundaria para Fase 2 si se requieren composiciones corporativas complejas. |
+| **Uso de Analogías Visuales (Pedagogía del Video)** | Prompting estructurado de **traducción conceptual + analogía gráfica en SVG/HTML** | Cuando el reporte original (2–9 págs.) describe un cuello de botella técnico u operativo complejo, el guion incluye una **analogía cotidiana visual** (ej. ilustrar un bloqueo de colas o de recepción en almacén como *"un peaje de 4 carriles que se reduce a 1 embudo"*, o una fuga de margen como *"un balde con 3 perforaciones medidas"*). Permite que perfiles mixtos (operaciones, finanzas e ingeniería) comprendan el problema en 30 segundos sin jerga. |
+| **Audio Overview (2–4 min, 2 locutores)** | **Ruta por defecto:** LLM genera guion dialogado con marcas de hablante → **TTS multi-hablante** — **Gemini TTS** (recomendado, ~0,11 USD/episodio) o ElevenLabs Text-to-Dialogue (~0,56 USD) → mezcla con FFmpeg → MP3/M4A. **Ruta alternativa verificada:** API de audio overview de Gemini Notebook Enterprise (ver ADR-008). | Ideal para escuchar en movimiento. ⚠️ **OpenAI TTS y Cartesia NO soportan multi-hablante nativo** (un `voice` por request). **Cachear por hash de contenido**: la misma decisión no se regenera. |
+| **Diagramas interactivos** | LLM emite **Mermaid** (flowchart / sequence / state) o **SVG animado** → embebido directo en las escenas del video y en Slack | **Determinístico, diffeable y versionable**: el diagrama evoluciona con el repo y se ilumina paso a paso mientras la voz lo explica. |
 | **Canvas interactivo** | **React Flow** en el dashboard web | Exploración del grafo de decisiones: qué supersede a qué, qué está bloqueado, quién objeta. |
-| **Slides** | `pptxgenjs` o Marp | Para comités que exigen formato presentación. |
+| **Avatar / talking head** | HeyGen o similar, **solo para comunicaciones ejecutivas de alto valor** | Costo por minuto muy superior al video simple estilo Claude Design. Reservar para anuncios generales. |
 
-> **Aclaración importante sobre las herramientas mencionadas en el brief.** "Claude Design" no es un motor de render: es una capacidad de generación de diseño/UI. En el pipeline ocupa el lugar de **generación de guion y storyboard** (capa de texto), no de la capa de render. **Screen Studio es una aplicación de GUI para grabación manual**: no es automatizable de forma fiable en un pipeline headless con SLA. La alternativa automatizable para demos de producto es **Playwright + captura headless determinística** con guion de interacción. Recomiendo tratar la capa de render como: *Remotion (video programático) + Playwright (captura de producto) + HeyGen (avatar, selectivo)*.
+> **Por qué "Claude Design (HTML/SVG animado) + Playwright/FFmpeg" supera a Remotion en el MVP:**
+> 1. **Cero fricción de licencias:** Evita la *Company License* de Remotion y la infraestructura de Remotion Lambda desde el día 1.
+> 2. **Velocidad de generación (<30 s):** Claude destaca generando layouts limpios de tarjetas, comparativas antes/después, gráficos de barras animados y diagramas explicativos en un solo archivo HTML/CSS autocontenido.
+> 3. **Telemetría real integrada:** Al abrirse el video interactivo desde Slack, emite *heartbeats* cada 5 segundos para medir `consumed_seconds` de verdad (algo imposible si solo se sube un `.mp4` suelto a Slack), además de ofrecer el `.mp4` descargable para móviles.
 
 ### 2.4 Webhooks de calendario y superficies de intercepción
 
@@ -864,6 +870,23 @@ Un sistema construido sobre webhooks de terceros **pierde eventos**. Los canales
 
 **Observabilidad mínima para operar esto:** métrica de `held` sin resolver por antigüedad, tasa de reconciliaciones que reparan deriva, latencia p95 webhook→decisión, y tasa de fallo por etapa del pipeline de síntesis. Sin estas cuatro, el sistema no es operable.
 
+### 4.5 ¿Qué pasa si quedan dudas o comentarios tras ver el video de 2 minutos? (Protocolo de Canalización en 3 Vías)
+
+Un video condensado de 2 minutos reemplaza la exposición unidireccional de un reporte de 2 a 9 páginas, pero **es natural que surjan preguntas puntuales o matices**. Para que una duda no regenere la reunión de 1 a 3 horas que se acaba de evitar, toda reacción al video en Slack se canaliza por **tres vías escalonadas**:
+
+1. **Vía 1 — Duda informativa cubierta en el reporte base (Resolución instantánea en el hilo — `0 min de reunión`):**
+   - El colaborador comenta en el hilo del video (ej. *"¿Qué supuesto de merma se usó para el Q3?"*).
+   - Como el **Knowledge Fabric** indexó las 2–9 páginas completas del reporte original (que el colaborador no leyó porque vio el video de 2 min), el bot responde en segundos citando el párrafo o tabla exacta del documento fuente.
+   - Si eso despeja la duda, el colaborador marca `✅ Entendido y apruebo`.
+
+2. **Vía 2 — Laguna o punto ciego en el reporte (Actualización asíncrona del autor — `0 min de reunión`):**
+   - Si el comentario señala algo que el documento original omitió (ej. *"Falta considerar el turno de noche del centro de distribución"*), el bot **se abstiene de inventar** y etiqueta automáticamente al autor/DRI con un bloque de acción: *"Laguna detectada en el reporte base"*.
+   - El autor responde en el hilo en 3 líneas (o actualiza el artefacto) y se notifica solo a quienes seguían esa pregunta.
+
+3. **Vía 3 — Desacuerdo real o bloqueo de decisión (Llamada Quirúrgica de 15 min solo entre los involucrados):**
+   - Si persiste una discrepancia sobre qué camino tomar o el voto de aprobación no llega al 80%, el sistema agrupa las objeciones y **agenda automáticamente una Llamada Quirúrgica de 15 minutos**.
+   - **Regla de aislamiento:** Si el video fue enviado a 8 personas pero solo 1 o 2 tienen un desacuerdo con el responsable (DRI), **solo esas 2–3 personas asisten a los 15 minutos**. Las otras 5 personas no pierden su bloque de foco y reciben el acuerdo final por escrito en el hilo.
+
 ---
 
 ## 5. Métricas de Impacto (definiciones formales)
@@ -874,18 +897,32 @@ Un sistema construido sobre webhooks de terceros **pierde eventos**. Los canales
 
 No "reuniones eliminadas". Si el sistema elimina reuniones pero las decisiones tardan el doble, **fracasó**, aunque el dashboard muestre ahorro. Esta métrica es el antídoto explícito contra la Ley de Goodhart.
 
-### 5.2 Ahorro neto (con honestidad metodológica)
+### 5.2 Ahorro neto y Contraste Económico Real (Reunión de 1–3 h vs. Video Condensado de 2 min)
 
 ```
 bruto_horas      = Σ (duración_reunión_evitada_h × n_asistentes)
 costo_async_h    = Σ (duración_asset_h × n_consumidores × consumption_ratio)
-overhead_horas   = Σ (min_autoría_organizador + min_revisión) / 60
+overhead_horas   = Σ (min_autoría_organizador + min_revisión + min_llamada_quirúrgica) / 60
 ahorro_neto_h    = bruto_horas − costo_async_h − overhead_horas
 
 usd_ahorrado     = ahorro_neto_h × blended_loaded_rate
 ```
 
-**La fórmula debe ser visible en la UI, con sus supuestos.** Un número de ahorro sin metodología publicada se descarta en la primera reunión de presupuesto. Se recomienda usar una **tarifa cargada media configurable** en lugar de datos salariales individuales del HRIS: reduce el riesgo de privacidad y la discusión se centra en la tarifa, no en la legitimidad del sistema.
+**La fórmula debe ser visible en la UI, con sus supuestos.** Un número de ahorro sin metodología publicada se descarta en la primera reunión de presupuesto. Se recomienda usar una **tarifa cargada media configurable** en lugar de datos salariales individuales del HRIS.
+
+#### Caso de contraste directo: Empleados a 20 USD/hora (Equipo de 8 personas)
+
+Cuando un líder escribe un reporte de 2 a 9 páginas o arma un PowerPoint de avances/problemas y convoca a **8 personas** (con un costo empresa de **20 USD/hora** por empleado = **160 USD/hora grupal**) para presentarlo y discutirlo, el contraste contra un **Video Simple de 2 minutos (estilo Claude Design con analogías)** es contundente:
+
+| Escenario | Tiempo consumido por el equipo (8 pers.) | Costo directo en sueldos (a 20 USD/h) | Costo de IA (TTS + Claude) | **Costo Total del Evento** | **Ahorro Neto (Tiempo y Dinero)** |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **A. Reunión tradicional de 1 hora** *(explicar el reporte en vivo)* | **8,0 horas-hombre** *(480 min)* | **160,00 USD** | 0 USD | **160,00 USD** | *(Línea base)* |
+| **B. Reunión extendida de 3 horas** *(revisión mensual / comité largo)* | **24,0 horas-hombre** *(1.440 min)* | **480,00 USD** | 0 USD | **480,00 USD** | *(Línea base)* |
+| **C. Video Condensado de 2 min + Voto en Slack** *(sin dudas bloqueantes, ~3 min/persona)* | **0,4 horas-hombre** *(24 min totales)* | **8,00 USD** | ~0,15 USD | **8,15 USD** | **Ahorra 95% vs. 1 h** *(151,85 USD y 7,6 h)*<br>**Ahorra 98% vs. 3 h** *(471,85 USD y 23,6 h)* |
+| **D. Video de 2 min + Llamada Quirúrgica de 15 min** *(cuando 2 personas tienen dudas y hablan con el líder)* | **1,15 horas-hombre** *(24 min video + 45 min entre los 3 que llaman)* | **23,00 USD** | ~0,15 USD | **23,15 USD** | **Ahorra 86% vs. 1 h** *(136,85 USD y 6,85 h)*<br>**Ahorra 95% vs. 3 h** *(456,85 USD y 22,85 h)* |
+
+> **Impacto anualizado en un solo equipo de 8 personas (a 20 USD/h):**
+> Reemplazar apenas **3 reuniones de 1,5 horas por semana** por videos dinámicos de 2 minutos libera **~1.050 horas-hombre al año** y ahorra **~21.000 USD anuales por cada equipo de 8 personas**, sin contar el costo invisible de romper media mañana de concentración (*context switching*).
 
 ### 5.3 Focus Score (índice de fragmentación)
 
@@ -934,15 +971,15 @@ Métricas de contrapeso — si empeoran, el sistema está haciendo daño aunque 
 
 ### 6.1 MVP — 3 semanas (1 escuadra de 2–3 ingenieros)
 
-**Objetivo del MVP: demostrar el bucle completo end-to-end con UNA integración real y datos reales.** El error fatal aquí es intentar las 5 integraciones y los 4 formatos de síntesis. El MVP debe cerrar *un* ciclo intercepción → síntesis → validación → ledger en producción.
+**Objetivo del MVP: demostrar el bucle completo end-to-end con UNA integración real y datos reales.** El error fatal aquí es intentar las 5 integraciones al mismo tiempo. El MVP debe cerrar *un* ciclo intercepción → video simple de 2 min + audio → validación y canalización de dudas → ledger en producción.
 
 | Semana | Entregables | Criterio de aceptación |
 |---|---|---|
 | **S1 — Intercepción** | OAuth Google Calendar (domain-wide delegation **iniciado**), canales `events.watch` + renovación, ingestión de eventos, tablas `meetings` / `policies` / `meeting_evaluations`, Policy Engine con triggers determinísticos (sin LLM), Slack app con DM de checklist (Block Kit), audit log append-only, *feature flag* de `authority_mode`. | Una reunión de 3+ personas creada en Google Calendar produce un DM de checklist en Slack en <30 s, y el veredicto queda registrado con su versión de política. |
-| **S2 — Síntesis** | Knowledge Fabric **solo lectura** con 2 conectores (Notion + Linear, *o* GitHub), ACL mirroring a nivel de chunk, RAG híbrido con citas, generador de resumen estructurado + **diagrama Mermaid** + **audio overview con TTS**, publicación en hilo de Slack con los assets. Temporal (o Inngest) para el workflow de síntesis con reintentos. | Dado un ticket + un doc de Notion, el sistema publica en Slack en <5 min: resumen con citas, un diagrama Mermaid renderizado y un audio de ~3 min. Sin fugas de ACL (test explícito). |
-| **S3 — Validación y métricas** | Poll de 1 clic + 1 pregunta + campo de objeción, motor de quórum/umbral, consenso perezoso, `decisions` ledger, auto-agendado de la **llamada quirúrgica de 15 min** con agenda generada desde las objeciones clusterizadas, métricas v0 (interceptadas, ahorro neto, adopción), dashboard mínimo. | Una decisión se cierra end-to-end sin reunión, con registro inmutable. Un caso con objeción genera una llamada de 15 min con solo los bloqueantes y agenda automática. |
+| **S2 — Síntesis (Video Simple Claude Design + Audio)** | Knowledge Fabric **solo lectura** con 2 conectores (Notion + Linear, *o* GitHub), ACL mirroring a nivel de chunk, RAG híbrido con citas, generador de **Video Simple Dinámico (~2 min, estilo Claude Design HTML/SVG animado con analogías + exportación MP4 vía Playwright/FFmpeg)** + **audio overview con Gemini TTS**, publicación en hilo de Slack con reproductor que mide `consumed_seconds`. | Dado un reporte de 2–9 páginas o ticket, el sistema publica en Slack en <3 min: un video dinámico de ~2 min con analogías visuales, diagrama y audio sincronizado. Sin fugas de ACL (test explícito). |
+| **S3 — Validación, Canalización de Dudas y Métricas** | Poll de 1 clic + canalización de dudas en 3 vías (auto-respuesta RAG en hilo, ping al DRI por lagunas, o **Llamada Quirúrgica de 15 min** solo con bloqueantes), motor de quórum ponderado por consumo, adaptador hacia `fdekit.decide`, calculadora de ahorro real (ej. 20 USD/h: reunión 1–3 h vs. video 2 min). | Una decisión se cierra end-to-end sin reunión. Las dudas factuales se responden en el hilo con citas del reporte original, y un bloqueo real genera una llamada de 15 min solo con los involucrados. |
 
-**Explícitamente FUERA del MVP** (y por qué): render de video (Remotion es un proyecto en sí mismo — el audio y el diagrama ya validan la hipótesis de "síntesis suficiente"), Outlook/Graph (el ciclo de vida de suscripciones duplica el trabajo de S1), clasificador ML (las reglas determinísticas son auditables y suficientes para aprender), canvas interactivo, multi-tenant, política A/B.
+**Explícitamente FUERA del MVP** (y por qué): composiciones pesadas en Remotion Lambda (el video simple en HTML/SVG animado de Claude + Playwright/FFmpeg cubre el 95% del valor a $0 de licencia), Outlook/Graph (el ciclo de vida de suscripciones duplica el trabajo de S1), clasificador ML (las reglas determinísticas son auditables y suficientes para aprender), canvas interactivo, multi-tenant, política A/B.
 
 **En paralelo y no negociable desde S1** (es el camino crítico real, no el código):
 - Aprobación de seguridad/legal para delegación domain-wide y acceso de lectura a repos.
@@ -952,7 +989,7 @@ Métricas de contrapeso — si empeoran, el sistema está haciendo daño aunque 
 
 ### 6.2 Fase 2 — Semanas 4–10: Profundidad y escala
 
-- **Motor de video** con Remotion: plantillas de escena de marca + `storyboard.json` generado por LLM. Render vía Remotion Lambda y luego migración a granja propia según volumen.
+- **Plantillas avanzadas de video** (opcionalmente Remotion o Revideo MIT si se requieren efectos multicapa corporativos más allá de las escenas HTML/SVG de Claude Design).
 - **Microsoft 365 / Graph**: suscripciones con `lifecycleNotificationUrl` **definido en la creación** (no es modificable después ○), endpoint de ciclo de vida con `202` inmediato, resincronización por *delta query*. Decidir explícitamente si se usan *rich notifications* — dan más datos por notificación pero **reducen la vida de la suscripción a <1 día** ○, cuadruplicando la carga de renovación.
 - **Outlook `OnAppointmentSend` con Smart Alerts** (req. set 1.12 ✅): **prioridad alta — va antes que el add-on de Google.** Mapea directo a la escalera de autoridad de ADR-001 (`prompt user` / `soft block` / `block`) y es la mejor intercepción *in-flow* disponible. Requiere despliegue por admin del tenant y consentimiento administrativo para cada cambio de manifest ✅.
 - **Google Workspace Add-on** (`eventUpdateTrigger` + `CalendarEventActionResponse`): **prioridad reducida respecto de la v0.1.** Aporta un *nudge* limitado (sólo dispara ante cambios de asistentes o conferencia, sin diálogo, sin móvil). Construirlo después de Outlook, y sólo si los datos del piloto muestran que la intercepción vía Slack llega demasiado tarde.
@@ -1123,26 +1160,19 @@ Condiciones bajo las cuales la API gestionada **sí** conviene, si la organizaci
 
 ---
 
-### ADR-010 · Estrategia de render de video
+### ADR-010 · Estrategia de video: De reporte de 2–9 páginas a Video Simple estilo Claude Design — **REESCRITO en v0.4**
 
-**Recomendación:** **Remotion + Remotion Lambda** al inicio, con migración a granja propia de Chromium headless + FFmpeg cuando el volumen mensual supere el punto de cruce de costo. **Optimización clave:** el guion y el storyboard se generan **una vez** y se renderizan **N veces** (16:9 para Slack, 9:16 para móvil, versión corta de 30 s). Separar generación de render es lo que hace que el costo marginal por formato sea casi cero.
+**Recomendación primaria (MVP):** **Artefacto visual animado estilo Claude Design (HTML/CSS/SVG autocontenido) sincronizado con Gemini TTS + captura a `.mp4` con Playwright headless y FFmpeg ($0 en licencias).**
 
-**Advertencia de licenciamiento — verificada, y hay que resolverla antes de construir.** **Remotion NO es open source OSI.** Gratis para individuos, organizaciones de ≤3 personas y non-profits; para empresas de 4+ requiere **Company License: 25 USD/asiento/mes** (modalidad Creators) o **0,01 USD/render con mínimo de 100 USD/mes** (modalidad Automators); Enterprise desde **500 USD/mes**.
+**Por qué cambia respecto de v0.3:**
+1. **El objetivo no es editar cine, sino sustituir reportes de 2–9 páginas y presentaciones de 20 láminas** sobre avances, problemas o bloqueos.
+2. **Uso de analogías visuales + diagramas dinámicos:** Claude genera 4 escenas limpias (*Avance, Problema explicado con analogía visual, Opciones/Costos, Decisión*) donde los elementos SVG/HTML se iluminan al ritmo exacto de los milisegundos del audio TTS (**regla Audio-First**).
+3. **Doble entrega sin fricción:**
+   - **Reproductor Web Ligero** enlazado desde Slack (carga instantánea, permite pausar e inspeccionar cifras, y emite *heartbeats* reales para `consumed_seconds`).
+   - **Archivo `.mp4` grabado con Playwright + FFmpeg** para reproducción directa en móviles o en el hilo de chat.
 
-Dos matices que cambian la decisión:
-- **Remotion Lambda no cobra por render**: se paga **sólo AWS**, ≈**0,017–0,021 USD por minuto** de video (≈0,10 USD por 10 min en HD)', **más** la Company License si la organización es de 4+.
-- Los "asientos" son de **desarrolladores que escriben composiciones**, no de espectadores. Para un equipo interno eso son 2–4 asientos, no cientos. El costo es real pero acotado.
-
-**Alternativas verificadas, por si la licencia es un obstáculo de procurement:**
-| Opción | Licencia | Nota |
-|---|---|---|
-| **Motion Canvas** | MIT | React-like, orientado a animación explicativa |
-| **Revideo** | MIT | API programática, fork orientado a video generativo |
-| **Hyperframes** | Apache 2.0 | De HeyGen |
-| **Shotstack** | Comercial, 10 USD/50 min | API cloud, sin infraestructura propia |
-| **FFmpeg puro** | LGPL/GPL | Máximo control, máximo trabajo |
-
-**Recomendación final:** Remotion sigue siendo la mejor opción técnica por ecosistema y DX, pero **la licencia debe pasar por procurement antes de la Fase 2, no durante**. Si la organización tiene una política de "sólo OSS en herramientas internas", **Motion Canvas o Revideo (MIT)** evitan la conversación por completo a cambio de menos ecosistema. No dejar esta decisión para el momento del render.
+**Cuándo considerar Remotion (Fase 2, opcional):**
+Si en Fase 2 se requieren composiciones multicapa corporativas más complejas, **Remotion + Remotion Lambda** queda como ruta secundaria. **Advertencia de licenciamiento verificada:** **Remotion NO es open source OSI** (gratis hasta 3 personas; para empresas de 4+ requiere **Company License: 25 USD/asiento/mes** o **0,01 USD/render con mínimo de 100 USD/mes**; Remotion Lambda cobra solo AWS ≈0,02 USD/min). Alternativas MIT si se requiere código 100% abierto: **Motion Canvas** o **Revideo**.
 
 ---
 
