@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MEETING-KILLER OS · Demo Video Simple (Claude Design) + Granola → fdekit.decide</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --panel: #111827;
+      --panel-2: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --violet: #a78bfa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 20px;
+    }
+    .header {
+      max-width: 1400px;
+      margin: 0 auto 18px auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: linear-gradient(90deg, #111827 0%, #1e293b 100%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .badge-focus {
+      background: rgba(56, 189, 248, 0.15);
+      color: #7dd3fc;
+      border-color: rgba(56, 189, 248, 0.35);
+    }
+    .grid {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 1080px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    /* Reproductor de Video Simple estilo Claude Design */
+    .stage {
+      position: relative;
+      height: 410px;
+      background: radial-gradient(circle at top right, #1e293b, #0f172a 70%);
+      border: 1px solid #475569;
+      border-radius: 10px;
+      padding: 24px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .scene {
+      display: none;
+      animation: fadeSlide 0.45s ease forwards;
+      height: 100%;
+    }
+    .scene.active { display: flex; flex-direction: column; justify-content: space-between; }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .scene-tag {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .scene-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-top: 4px;
+      color: #fff;
+    }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .kpi-box {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .kpi-val { font-size: 26px; font-weight: 800; color: var(--accent); }
+    .kpi-lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .analogy-box {
+      background: rgba(167, 139, 250, 0.09);
+      border: 1px solid rgba(167, 139, 250, 0.4);
+      border-radius: 10px;
+      padding: 14px;
+      margin: 8px 0;
+    }
+    .analogy-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #c4b5fd;
+      margin-bottom: 6px;
+    }
+    .subtitle-bar {
+      background: rgba(0, 0, 0, 0.72);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #e2e8f0;
+      text-align: center;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    button {
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+    button:hover { border-color: var(--accent); }
+    .btn-primary {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+    .btn-approve {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border-color: #10b981;
+    }
+    .btn-doubt {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border-color: #f59e0b;
+    }
+    .scene-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .scene-tab {
+      font-size: 12px;
+      padding: 8px;
+      text-align: center;
+      border-radius: 6px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .scene-tab.active {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.15);
+      color: #fff;
+    }
+    .roi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .roi-card {
+      padding: 12px;
+      border-radius: 8px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+    }
+    .roi-card.highlight {
+      border-color: var(--emerald);
+      background: rgba(16, 185, 129, 0.08);
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .input-row input {
+      width: 68px;
+      padding: 4px 8px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: #fff;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+    .thread-box {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      max-height: 230px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .msg {
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: var(--panel-2);
+      border-left: 3px solid var(--accent);
+    }
+    .msg.via1 { border-left-color: var(--emerald); }
+    .msg.via2 { border-left-color: var(--amber); }
+    .msg.via3 { border-left-color: var(--rose); }
+    .granola-box {
+      background: #0f172a;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: #cbd5e1;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <h1 style="font-size:20px;">🎬 MEETING-KILLER OS · De Reporte de 6 Páginas (A3 CD Pudahuel) a Video Simple de 2 min</h1>
+        <span class="badge">⚡ Ahorro: 95% tiempo y costo</span>
+        <span class="badge badge-focus">🛡️ +1h 55m Bloque de Foco Recuperado en Google Calendar</span>
+      </div>
+      <p style="font-size:13px; color:var(--muted); margin-top:4px;">
+        Reemplaza reunión de comité de 2 horas (8 personas) por síntesis animada estilo <b>Claude Design con analogías</b> + canalización de dudas en 3 vías y captura <b>Granola → fdekit.decide</b>.
+      </p>
+    </div>
+    <div style="text-align:right; font-size:12px; color:var(--muted);">
+      <div>Telemetría real (<code>consumed_seconds</code>): <strong id="telemetrySec" style="color:#38bdf8;">0s / 120s (0%)</strong></div>
+      <div>Estado del voto: <strong id="voteStatus" style="color:#fbbf24;">Pendiente de ver síntesis (mín. 30%)</strong></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- COLUMNA IZQUIERDA: VIDEO SIMPLE CLAUDE DESIGN + CALCULADORA ROI -->
+    <div style="display:flex; flex-direction:column; gap:20px;">
+      <div class="card">
+        <div class="scene-tabs">
+          <div class="scene-tab active" onclick="goToScene(0)">1. Avance y Hallazgo (25s)</div>
+          <div class="scene-tab" onclick="goToScene(1)">2. Problema + Analogía (40s)</div>
+          <div class="scene-tab" onclick="goToScene(2)">3. Opciones e Impacto (30s)</div>
+          <div class="scene-tab" onclick="goToScene(3)">4. Decisión a Votar (25s)</div>
+        </div>
+
+        <div class="stage">
+          <!-- ESCENA 1 -->
+          <div class="scene active" id="scene-0">
+            <div>
+              <div class="scene-tag">Escena 1 de 4 · Diagnóstico Medido (CD Pudahuel)</div>
+              <div class="scene-title">Auditamos 800 pedidos reales del WMS: el proceso oficial solo ocurre el 54% de las veces</div>
+              <div class="kpi-row">
+                <div class="kpi-box">
+                  <div class="kpi-val">54,12%</div>
+                  <div class="kpi-lbl">Conformidad con el flujo ideal (existen 31 variantes ocultas)</div>
+                </div>
+                <div class="kpi-box">
+                  <div class="kpi-val" style="color:#f43f5e;">707,2 h</div>
+                  <div class="kpi-lbl">Perdidas entre Liberación y Picking (61,2% de toda la espera)</div>
+                </div>
+                <div class="kpi-box">
+                  <div class="kpi-val" style="color:#f59e0b;">25,2%</div>
+                  <div class="kpi-lbl">SKUs con medidas erradas en el maestro (desvío mediano 150,7%)</div>
+                </div>
+              </div>
+              <p style="font-size:13px; color:var(--muted);">
+                📄 <i>Fuente verificada: <code>out/A3.md</code> y <code>out/hallazgos.json</code> (reproducible con <code>fdekit demo</code>).</i>
+              </p>
+            </div>
+            <div class="subtitle-bar" id="sub-0">
+              🎙️ "En vez de leer las 6 páginas del reporte A3 en una reunión de 2 horas, aquí están los 3 números reales de los 800 pedidos en CD Pudahuel..."
+            </div>
+          </div>
+
+          <!-- ESCENA 2: ANALOGÍAS VISUALES -->
+          <div class="scene" id="scene-1">
+            <div>
+              <div class="scene-tag">Escena 2 de 4 · El Problema Explicado con 2 Analogías</div>
+              <div class="scene-title">¿Por qué re-empacamos tanto y por qué se atrasan los pedidos?</div>
+
+              <div class="analogy-box">
+                <div class="analogy-title">📦 Analogía 1: "El abrigo en la caja de zapatos" (Maestro de SKUs errado)</div>
+                <p style="font-size:13px; color:#e2e8f0;">
+                  1 de cada 4 productos tiene mal cargadas sus medidas en el sistema (error de <b>150,7%</b>). Es como si el sistema te mandara a guardar un abrigo de invierno en una caja de zapatos: al llegar a Packing no entra, obligando a desarmar y re-empacar <b>2,26 veces más</b> (<code>p = 2.19e-11</code>).
+                </p>
+              </div>
+
+              <div class="analogy-box" style="border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.08);">
+                <div class="analogy-title" style="color:#7dd3fc;">🛣️ Analogía 2: "Peaje de 4 carriles que se reduce a 1" (707 h de espera)</div>
+                <p style="font-size:13px; color:#e2e8f0;">
+                  Los operarios no caminan lento: las <b>707 horas</b> se pierden en la fila <i>antes</i> de empezar a pickear (<code>ORDER_RELEASED → PICK</code>) porque en la hora pico sueltan 4 olas juntas con la misma dotación de valle.
+                </p>
+              </div>
+            </div>
+            <div class="subtitle-bar" id="sub-1">
+              🎙️ "Piénsalo con dos analogías simples: primero, el sistema pide meter abrigos en cajas de zapatos porque el 25% del catálogo está mal medido..."
+            </div>
+          </div>
+
+          <!-- ESCENA 3: OPCIONES E IMPACTO -->
+          <div class="scene" id="scene-2">
+            <div>
+              <div class="scene-tag">Escena 3 de 4 · Opciones y Contramedidas</div>
+              <div class="scene-title">No hay que tocar el software del WMS: hay que corregir datos y turno pico</div>
+              <div class="kpi-row">
+                <div class="kpi-box" style="border-color:#10b981;">
+                  <div class="kpi-val" style="color:#34d399;">-13,8%</div>
+                  <div class="kpi-lbl"><b>Acción 1 (Sem 3):</b> Re-medir SKUs Clase A baja de inmediato el reproceso de cartón sin tocar código.</div>
+                </div>
+                <div class="kpi-box" style="border-color:#38bdf8;">
+                  <div class="kpi-val" style="color:#38bdf8;">-50%</div>
+                  <div class="kpi-lbl"><b>Acción 2 (Sem 4):</b> Redimensionar dotación en ventana pico ataca las 707 h de cola.</div>
+                </div>
+                <div class="kpi-box" style="border-color:#a78bfa;">
+                  <div class="kpi-val" style="color:#c4b5fd;">XmR</div>
+                  <div class="kpi-lbl"><b>Acción 3 (Go-live):</b> Congelar límites de control con grupo de control firmado.</div>
+                </div>
+              </div>
+            </div>
+            <div class="subtitle-bar" id="sub-2">
+              🎙️ "Arreglar las medidas de los productos Clase A elimina casi el 14% del reproceso en la semana 3, sin escribir una sola línea de código..."
+            </div>
+          </div>
+
+          <!-- ESCENA 4: DECISIÓN -->
+          <div class="scene" id="scene-3">
+            <div>
+              <div class="scene-tag">Escena 4 de 4 · Decisión Requerida (Cierre en fdekit.decide)</div>
+              <div class="scene-title">¿Aprobamos las 3 contramedidas sin hacer la reunión de comité de 2 horas?</div>
+              <div style="background:#0f172a; border:1px solid var(--border); border-radius:8px; padding:14px; margin-top:12px; font-size:13px;">
+                <p>✅ <b>Decisión propuesta:</b> Autorizar auditoría física de SKUs Clase A (Dueño: Jefe Datos Maestros, plazo Semana 3) y ajuste de ventana pico (Dueño: Jefe Operaciones, plazo Semana 4).</p>
+                <p style="margin-top:8px; color:#34d399;">🛡️ <b>Beneficio inmediato para ti:</b> Si ≥80% aprueba aquí, la reunión del jueves (10:00–12:00) queda cancelada y bloqueada en tu calendario como <b>1h 55m de Foco Protegido</b>.</p>
+              </div>
+            </div>
+            <div class="subtitle-bar" id="sub-3">
+              🎙️ "Si estás de acuerdo, vota Aprobar a la derecha. Si tienes una duda puntual, escríbela abajo: el bot responde con citas del A3 o agenda 15 min solo contigo."
+            </div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="btn-primary" id="playBtn" onclick="togglePlay()">▶️ Reproducir Video (2:00)</button>
+          <button onclick="prevScene()">⏮️ Escena Anterior</button>
+          <button onclick="nextScene()">⏭️ Siguiente Escena</button>
+          <span style="font-size:12px; color:var(--muted); margin-left:auto;">
+            Audio-First TTS sincronizado · Estilo Claude Design (HTML/SVG)
+          </span>
+        </div>
+      </div>
+
+      <!-- CALCULADORA DE CONTRASTE ECONÓMICO (20 USD/H) -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h2 style="font-size:16px;">💰 Contraste de Costo Real: Reunión de 1–3 h vs. Video de 2 min</h2>
+          <div class="input-row">
+            Personas: <input type="number" id="inpPeople" value="8" min="2" max="50" onchange="recalcROI()" />
+            Horas reunión evitada: <input type="number" id="inpHours" value="2" min="0.5" max="4" step="0.5" onchange="recalcROI()" />
+            Sueldo USD/h: <input type="number" id="inpRate" value="20" min="5" max="200" onchange="recalcROI()" />
+          </div>
+        </div>
+
+        <div class="roi-grid">
+          <div class="roi-card">
+            <div style="font-size:12px; color:var(--muted);">❌ Reunión Tradicional (<span id="lblHours">2</span> h)</div>
+            <div style="font-size:24px; font-weight:800; color:#f43f5e; margin:4px 0;" id="valSyncCost">$320,00 USD</div>
+            <div style="font-size:12px; color:var(--muted);" id="valSyncHours">16,0 horas-hombre en sala</div>
+          </div>
+          <div class="roi-card highlight">
+            <div style="font-size:12px; color:#34d399;">✅ Video 2 min + Voto en Slack</div>
+            <div style="font-size:24px; font-weight:800; color:#34d399; margin:4px 0;" id="valAsyncCost">$8,15 USD</div>
+            <div style="font-size:12px; color:var(--muted);" id="valSavings">Ahorras $311,85 USD (97%)</div>
+          </div>
+          <div class="roi-card">
+            <div style="font-size:12px; color:#7dd3fc;">🩺 Si hay dudas: Video + Llamada 15m (3 pers.)</div>
+            <div style="font-size:24px; font-weight:800; color:#7dd3fc; margin:4px 0;" id="valSurgCost">$23,15 USD</div>
+            <div style="font-size:12px; color:var(--muted);" id="valSurgSavings">Ahorras $296,85 USD (93%)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: VOTACIÓN, TRIAJE DE DUDAS EN 3 VÍAS Y GRANOLA -> FDEKIT.DECIDE -->
+    <div style="display:flex; flex-direction:column; gap:20px;">
+      <div class="card">
+        <h2 style="font-size:16px;">🗳️ 1. Termómetro Asíncrono y Canalización de Dudas (3 Vías)</h2>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn-approve" onclick="castApproval()">✅ Entendido y Apruebo (1-Clic)</button>
+          <button class="btn-doubt" onclick="preloadDoubt(1)">💬 Probar Vía 1 (Duda de dato del A3)</button>
+          <button class="btn-doubt" onclick="preloadDoubt(2)">🔎 Probar Vía 2 (Laguna no escrita)</button>
+          <button class="btn-doubt" onclick="preloadDoubt(3)">⚡ Probar Vía 3 (Desacuerdo → 15m + Granola)</button>
+        </div>
+
+        <div class="thread-box" id="threadBox">
+          <div class="msg">
+            <b>🤖 Meeting-Killer Bot:</b> Video de 2 min publicado a partir de <code>out/A3.md</code>. Quórum requerido: ≥80% ponderado por lectura real. Si tienes cualquier duda o comentario, usa los botones de arriba o escríbela aquí:
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="font-size:16px;">🎙️ 2. Captura Estilo Granola → <code>fdekit.decide</code></h2>
+          <span class="badge">cuadra = True</span>
+        </div>
+        <p style="font-size:12px; color:var(--muted);">
+          Cuando una duda requiere la <b>Llamada Quirúrgica de 15 min</b> (solo entre quien objetó y el líder), <b>Granola</b> precarga las dudas de Slack como esqueleto de notas y las cruza con el audio local (sin bot intruso) para generar los borradores de <code>fdekit.decide</code>:
+        </p>
+        <div class="granola-box" id="granolaOutput">// Haz clic en "⚡ Probar Vía 3 (Desacuerdo → 15m + Granola)" arriba para simular la llamada quirúrgica de 15 min y ver cómo Granola reconcilia el esqueleto de dudas con el transcripto hacia fdekit.decide.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentScene = 0;
+    let isPlaying = false;
+    let consumedSeconds = 0;
+    let timer = null;
+
+    const sceneNarrations = [
+      "Escena 1. En vez de leer las 6 páginas del reporte A3 en una reunión de 2 horas, auditamos 800 pedidos en CD Pudahuel. El flujo oficial solo se cumple el 54 por ciento de las veces y se pierden 707 horas en la cola previa al picking.",
+      "Escena 2. Piénsalo con dos analogías simples: primero, el sistema intenta meter abrigos en cajas de zapatos porque el 25 por ciento de los productos están mal medidos, multiplicando por 2,26 el reproceso. Segundo, las 707 horas de espera son un peaje de 4 carriles reducido a 1 en hora pico.",
+      "Escena 3. No hace falta cambiar el código del WMS. Re-medir los productos Clase A en la semana 3 elimina casi el 14 por ciento del reproceso de cartón, y ajustar la dotación pico en la semana 4 reduce a la mitad la espera.",
+      "Escena 4. Si apruebas estas 3 acciones con un clic, cancelamos el comité de 2 horas y bloqueamos 1 hora y 55 minutos de Foco Protegido en tu calendario. Si tienes dudas, escríbelas en el hilo."
+    ];
+
+    function updateTelemetry() {
+      const pct = Math.min(100, Math.round((consumedSeconds / 120) * 100));
+      document.getElementById("telemetrySec").innerText = `${consumedSeconds}s / 120s (${pct}%)`;
+      const voteEl = document.getElementById("voteStatus");
+      if (pct >= 30) {
+        voteEl.innerText = `Habilitado con peso completo (consumo verificado: ${pct}%)`;
+        voteEl.style.color = "#34d399";
+      }
+    }
+
+    function goToScene(idx) {
+      currentScene = idx;
+      for (let i = 0; i < 4; i++) {
+        document.getElementById(`scene-${i}`).classList.toggle("active", i === idx);
+        document.querySelectorAll(".scene-tab")[i].classList.toggle("active", i === idx);
+      }
+      consumedSeconds = Math.min(120, consumedSeconds + 30);
+      updateTelemetry();
+      if (isPlaying && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(sceneNarrations[idx]);
+        u.lang = "es-ES";
+        u.rate = 1.08;
+        window.speechSynthesis.speak(u);
+      }
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      const btn = document.getElementById("playBtn");
+      if (isPlaying) {
+        btn.innerText = "⏸️ Pausar Video";
+        goToScene(currentScene);
+        timer = setInterval(() => {
+          consumedSeconds = Math.min(120, consumedSeconds + 5);
+          updateTelemetry();
+        }, 1000);
+      } else {
+        btn.innerText = "▶️ Reproducir Video (2:00)";
+        clearInterval(timer);
+        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      }
+    }
+
+    function nextScene() { goToScene((currentScene + 1) % 4); }
+    function prevScene() { goToScene((currentScene + 3) % 4); }
+
+    function recalcROI() {
+      const people = Number(document.getElementById("inpPeople").value) || 8;
+      const hours = Number(document.getElementById("inpHours").value) || 2;
+      const rate = Number(document.getElementById("inpRate").value) || 20;
+
+      const syncHours = people * hours;
+      const syncCost = syncHours * rate;
+
+      const asyncHours = (people * 3) / 60; // 3 min por persona (2m video + 1m voto)
+      const asyncCost = (asyncHours * rate) + 0.15;
+
+      const surgHours = asyncHours + ((3 * 15) / 60); // + 15 min entre 3 personas
+      const surgCost = (surgHours * rate) + 0.15;
+
+      const saveAsync = syncCost - asyncCost;
+      const saveAsyncPct = Math.round((saveAsync / syncCost) * 100);
+      const saveSurg = syncCost - surgCost;
+      const saveSurgPct = Math.round((saveSurg / syncCost) * 100);
+
+      document.getElementById("lblHours").innerText = hours;
+      document.getElementById("valSyncCost").innerText = `$${syncCost.toFixed(2)} USD`;
+      document.getElementById("valSyncHours").innerText = `${syncHours.toFixed(1)} horas-hombre en sala`;
+      document.getElementById("valAsyncCost").innerText = `$${asyncCost.toFixed(2)} USD`;
+      document.getElementById("valSavings").innerText = `Ahorras $${saveAsync.toFixed(2)} USD (${saveAsyncPct}%)`;
+      document.getElementById("valSurgCost").innerText = `$${surgCost.toFixed(2)} USD`;
+      document.getElementById("valSurgSavings").innerText = `Ahorras $${saveSurg.toFixed(2)} USD (${saveSurgPct}%)`;
+    }
+
+    function castApproval() {
+      if (consumedSeconds < 36) {
+        consumedSeconds = 45;
+        updateTelemetry();
+      }
+      const box = document.getElementById("threadBox");
+      box.innerHTML += `
+        <div class="msg via1">
+          <b>✅ Tu voto fue registrado (consumption_ratio = ${(consumedSeconds/120).toFixed(2)}):</b> Quórum alcanzado (87,5%).<br/>
+          🎉 <b>Reunión de 2 h cancelada.</b> Se creó en tu calendario: <code>🛡️ Bloque de Foco Recuperado (1h 55m)</code> y la decisión pasó a <code>fdekit.decide</code>.
+        </div>`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function preloadDoubt(via) {
+      const box = document.getElementById("threadBox");
+      if (via === 1) {
+        box.innerHTML += `
+          <div class="msg via1">
+            <b>🧑‍💻 Camila (Operaciones):</b> "¿Qué porcentaje exacto de SKUs tiene error dimensional y cuál es el intervalo de confianza?"<br/>
+            <b>🤖 Bot (Vía 1 — Cita directa del reporte A3, 0 min de reunión):</b> Según <code>out/A3.md §2</code>: <i>«Datos maestros: 25.2% de SKUs con defecto (IC95 20.8-30.3%). Donde hay error dimensional, el volumen calculado se desvía 150.7% (mediana).»</i>
+          </div>`;
+      } else if (via === 2) {
+        box.innerHTML += `
+          <div class="msg via2">
+            <b>🧑‍💻 Rodrigo (Turno Noche):</b> "El video no aclara si la auditoría de SKUs Clase A se hará con el almacén operando o en turno domingo."<br/>
+            <b>🤖 Bot (Vía 2 — Abstención por laguna en el A3, 0 min de reunión):</b> Ese dato no figura en <code>out/A3.md</code>. Etiquetando a <b>@FDE (DRI)</b> para precisarlo en 3 líneas aquí mismo sin convocar reunión.
+          </div>`;
+      } else if (via === 3) {
+        box.innerHTML += `
+          <div class="msg via3">
+            <b>🧑‍💻 Andrés (Jefe Operaciones):</b> "No estoy de acuerdo con mover dotación en la semana 4 antes de limpiar el maestro; prefiero secuenciarlo."<br/>
+            <b>🤖 Bot (Vía 3 — Conflicto de Trade-off → Llamada Quirúrgica 15 min):</b> Agendada llamada de <b>15 min</b> SOLO entre <b>Andrés</b> y <b>FDE</b>. Los otros 6 invitados quedan liberados con su bloque de foco intacto.
+          </div>`;
+        document.getElementById("granolaOutput").innerText =
+`# RECONCILIACION ESTILO GRANOLA -> fdekit.decide (meeting_id: "quirurgica-pudahuel-01")
+# Consentimiento verificado: recording_allowed = True | Retencion Ley 21.719: 90 dias
+
+[ESQUELETO DE DUDAS PRECARGADO DESDE SLACK]
+1. Duda D-01 (Andres): "¿Movemos dotacion en semana 4 en paralelo o esperamos a limpiar el maestro en semana 3?"
+2. Duda D-02 (Rodrigo): "¿En que ventana horaria se mide la muestra fisica de SKUs Clase A?"
+
+[TRANSCRIPTO CAPTURADO SIN BOT INTRUSO (canal HABLADA, sha256: 9f8a...c41e)]
+03:12 FDE: "Decidimos correr la auditoria de SKUs Clase A en semana 3 antes de tocar el turno porque elimina 13.8% de reproceso."
+07:45 Andres: "Andres se compromete a reasignar 4 operarios al pico de 08:00 a 10:00 antes del 2026-10-30."
+
+[SALIDA ESTRUCTURADA -> DecisionDraft (cobertura: resueltas=1, compromisos=1, preguntas_abiertas=1, cuadra=True)]
+- DecisionDraft(kind="decision", owner="FDE", start_s=192.0,
+    statement="correr la auditoria de SKUs Clase A en semana 3 antes de tocar el turno",
+    rationale="elimina 13.8% de reproceso", resolves_doubt_id="D-01")
+- DecisionDraft(kind="commitment", owner="Andres", due="2026-10-30", start_s=465.0,
+    what="reasignar 4 operarios al pico de 08:00 a 10:00")
+- DecisionDraft(kind="question", resolver="Rodrigo", start_s=None,
+    question="En que ventana horaria se mide la muestra fisica de SKUs Clase A?",
+    notes=("duda de agenda D-02 sin respuesta en el audio: promovida a OpenQuestion para no perderla en silencio",))`;
+      }
+      box.scrollTop = box.scrollHeight;
+    }
+  </script>
+</body>
+</html>

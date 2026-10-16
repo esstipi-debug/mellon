@@ -896,6 +896,16 @@ El checklist no es un formulario de compliance: es un **dispositivo de fricción
 
 **Regla de UX crítica:** el botón de *override* ("Insisto, agendar de todas formas") está **siempre visible** y no requiere justificación. Un sistema sin salida de emergencia se rodea; un sistema con salida de emergencia genera datos sobre por qué la gente la usa. La fricción debe ser *social y visible*, no *técnica y opaca*.
 
+#### 4.3.1 El "Bloque de Foco Recuperado": Por qué NO se deja el calendario en blanco al cancelar
+
+**El modo de falla invisible de cancelar reuniones:** Si se intercepta una reunión de 2 horas para 8 personas y simplemente se elimina del calendario, el hueco queda marcado como "Disponible". En menos de 30 minutos, otro organizador ocupa ese espacio con otra reunión. El colaborador siente que el sistema le quitó una reunión solo para que le agendaran otra peor.
+
+**Mecanismo de defensa activa (`PROTECTED_FOCUS_BLOCK`):**
+1. **Slot de consumo asíncrono (primeros 5 min):** Los primeros 5 minutos del bloque original se mantienen con el enlace directo al **Video Simple de 2 minutos** y al botón de votación en Slack.
+2. **Conversión automática a Foco Protegido (el tiempo restante, ej. 1 h 55 min):** El resto del bloque original no se libera al azar; se transforma automáticamente en el calendario de cada invitado en un evento privado y opaco (`transparency: "opaque"`, `visibility: "private"`):
+   - **Título:** `🛡️ Bloque de Foco Recuperado (vía Meeting-Killer — ex "[Título original]")`
+   - **Efecto psicológico y político:** Convierte al sistema de un "policía de calendario" en el **defensor personal del tiempo de cada ingeniero/operador**, haciéndole tangible cada semana cuántas horas limpias recuperó gracias al video de 2 minutos.
+
 ### 4.4 Confiabilidad: reconciliación, idempotencia y modos de falla
 
 Un sistema construido sobre webhooks de terceros **pierde eventos**. Los canales push expiran, las entregas fallan, los procesos se reinician en medio de un workflow. Sin un mecanismo explícito de reparación, el modo de falla más común no será un crash visible sino algo mucho peor: **reuniones atascadas en `held` que nadie entiende por qué no ocurren**. Eso destruye la confianza más rápido que un error ruidoso.
