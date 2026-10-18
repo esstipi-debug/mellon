@@ -1,0 +1,37 @@
+{
+  "nodes": [
+    {
+      "id": "cdh_five_assumptions",
+      "label": "Five Assumption Types (D-V-F-U-E)",
+      "type": "Concept",
+      "book": "cdh",
+      "description": "Categorizing risks into Desirability, Viability, Feasibility, Usability, and Ethical assumptions prior to running experiments."
+    },
+    {
+      "id": "cdh_leading_indicator",
+      "label": "Leading Product Outcomes",
+      "type": "Concept",
+      "book": "cdh",
+      "description": "Short-term observable user behaviors that act as leading indicators for lagging enterprise financial metrics."
+    }
+  ],
+  "edges": [
+    { "source": "cdh_five_assumptions", "target": "cdh_assumption_mapping", "relation": "STRUCTURES" },
+    { "source": "cdh_leading_indicator", "target": "cdh_outcomes", "relation": "OPERATIONALIZES" },
+    { "source": "fde_deployment_ost", "target": "cdh_five_assumptions", "relation": "USES" }
+  ],
+  "resources": [
+    {
+      "node_id": "cdh_ost",
+      "title": "Product Talk Official Opportunity Solution Tree Guide & Canvas",
+      "url": "https://www.producttalk.org",
+      "kind": "tool"
+    },
+    {
+      "node_id": "cdh_snapshots",
+      "title": "Product Talk Interview Snapshot Template",
+      "url": "https://www.producttalk.org",
+      "kind": "tool"
+    }
+  ]
+}

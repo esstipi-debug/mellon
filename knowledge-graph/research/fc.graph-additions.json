@@ -1,0 +1,37 @@
+{
+  "nodes": [
+    {
+      "id": "fc_instant_compliance",
+      "label": "Instant Passive Compliance",
+      "type": "Pitfall",
+      "book": "fc",
+      "description": "A subtle form of client resistance where immediate agreement masks an unwillingness to execute or allocate resources."
+    },
+    {
+      "id": "fc_naming_protocol",
+      "label": "Neutral Naming Protocol",
+      "type": "Technique",
+      "book": "fc",
+      "description": "The exact 3-step sequence: (1) Identify the resistance form, (2) name it without judgment, (3) remain completely silent."
+    }
+  ],
+  "edges": [
+    { "source": "fc_instant_compliance", "target": "fc_resistance_forms", "relation": "INCLUDES" },
+    { "source": "fc_naming_protocol", "target": "fc_handle_resistance", "relation": "EMBODIES" },
+    { "source": "fde_resistance_playbook", "target": "fc_naming_protocol", "relation": "USES" }
+  ],
+  "resources": [
+    {
+      "node_id": "fc_contracting",
+      "title": "Designed Learning Contracting Checklists & Guides",
+      "url": "https://designedlearning.com",
+      "kind": "tool"
+    },
+    {
+      "node_id": "fc_handle_resistance",
+      "title": "Designed Learning: How to Handle Resistance in Client Engagements",
+      "url": "https://designedlearning.com",
+      "kind": "article"
+    }
+  ]
+}

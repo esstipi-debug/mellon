@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "mom_deflecting_compliments",
+      "label": "Deflecting Compliments",
+      "type": "Technique",
+      "book": "mom",
+      "description": "Tactical pivot away from positive praise back to historical facts, budgets, and current operational workarounds."
+    },
+    {
+      "id": "mom_advancement_test",
+      "label": "Advancement Test",
+      "type": "Technique",
+      "book": "mom",
+      "description": "Checking whether a customer meeting advances to a clear next commitment or terminates in pleasant, non-committal chatter."
+    }
+  ],
+  "edges": [
+    { "source": "mom_deflecting_compliments", "target": "mom_compliments", "relation": "MITIGATES" },
+    { "source": "mom_advancement_test", "target": "mom_commitment", "relation": "OPERATIONALIZES" },
+    { "source": "fde_discovery_interview", "target": "mom_deflecting_compliments", "relation": "USES" }
+  ],
+  "resources": [
+    {
+      "node_id": "mom_rules",
+      "title": "The Mom Test Official Site & Downloads",
+      "url": "https://www.momtestbook.com",
+      "kind": "official"
+    }
+  ]
+}

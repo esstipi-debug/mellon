@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "sw_action_triggers",
+      "label": "Action Triggers (Implementation Intentions)",
+      "type": "Technique",
+      "book": "sw",
+      "description": "Pre-deciding the specific time and location to execute a behavior ('When X happens, I do Y') to bypass Rider cognitive exhaustion."
+    },
+    {
+      "id": "sw_endowed_progress",
+      "label": "Endowed Progress Effect",
+      "type": "Principle",
+      "book": "sw",
+      "description": "People are far more motivated to complete a goal when they feel they have already made progress rather than starting from zero."
+    }
+  ],
+  "edges": [
+    { "source": "sw_action_triggers", "target": "sw_build_habits", "relation": "IMPLEMENTS" },
+    { "source": "sw_endowed_progress", "target": "sw_shrink_change", "relation": "SUPPORTS" },
+    { "source": "fde_adoption_plan", "target": "sw_action_triggers", "relation": "USES" }
+  ],
+  "resources": [
+    {
+      "node_id": "sw_rider_elephant_path",
+      "title": "Heath Brothers Official Switch Framework & Workbook Downloads",
+      "url": "https://heathbrothers.com/resources/",
+      "kind": "tool"
+    }
+  ]
+}

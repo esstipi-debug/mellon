@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FDE Knowledge Graph — Measurement, Trust & Discovery</title>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+  :root { --bg:#0f1117; --panel:#171a23; --text:#e6e6e6; --muted:#9aa0aa; --border:#2a2f3a; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--text); display:flex; height:100vh; }
+  #sidebar { width:340px; background:var(--panel); border-right:1px solid var(--border); padding:16px; overflow-y:auto; }
+  #graph { flex:1; }
+  h1 { font-size:16px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:12px; margin-bottom:14px; }
+  input[type=search] { width:100%; padding:8px; background:#0f1117; border:1px solid var(--border); color:var(--text); border-radius:6px; }
+  fieldset { border:1px solid var(--border); border-radius:6px; margin:12px 0; padding:8px 10px; }
+  legend { color:var(--muted); font-size:12px; padding:0 4px; }
+  label { display:flex; align-items:center; gap:6px; font-size:13px; margin:3px 0; cursor:pointer; }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  #details { margin-top:14px; border-top:1px solid var(--border); padding-top:12px; }
+  #details h2 { font-size:15px; margin:0 0 4px; }
+  .badge { font-size:11px; padding:2px 6px; border-radius:4px; background:#262b36; color:var(--muted); margin-right:4px; }
+  #details p { font-size:13px; line-height:1.45; }
+  #details ul { padding-left:16px; font-size:12.5px; }
+  #details li { margin:3px 0; }
+  #details a { color:#8ab4f8; cursor:pointer; text-decoration:none; }
+  .rel { color:var(--muted); font-family:monospace; font-size:11px; }
+  button { background:#262b36; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; cursor:pointer; font-size:12px; }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <h1>FDE Knowledge Graph</h1>
+  <div class="sub">8 books + FDE synthesis layer</div>
+  <input id="search" type="search" placeholder="Search concepts…">
+  <fieldset id="books"><legend>Books / layers</legend></fieldset>
+  <fieldset id="types"><legend>Node types</legend></fieldset>
+  <label><input type="checkbox" id="hideFromBook"> Hide FROM_BOOK / AUTHORED edges</label>
+  <div style="margin-top:8px"><button id="fit">Fit view</button> <button id="reset">Reset</button></div>
+  <div id="details"><p class="sub">Click a node to see details and connections. Double-click to focus its neighborhood.</p></div>
+</div>
+<div id="graph"></div>
+<script>
+const DATA = __GRAPH_DATA__;
+const BOOK_COLORS = { htma:"#4f9dff", ta:"#f5a623", mom:"#e5487a", pp:"#a78bfa", bps:"#22d3ee",
+                      sw:"#facc15", fc:"#fb7185", cdh:"#a3e635", fde:"#3ecf8e" };
+const TYPE_SHAPES = { Book:"box", Author:"ellipse", Concept:"dot", Framework:"diamond", Principle:"triangle",
+                      Technique:"square", Pitfall:"triangleDown", CrossInsight:"star", FDEPractice:"hexagon" };
+const TYPE_SIZES  = { Book:30, Framework:22, CrossInsight:24, FDEPractice:22 };
+
+const byId = Object.fromEntries(DATA.nodes.map(n => [n.id, n]));
+const degree = {};
+DATA.edges.forEach(e => { degree[e.source]=(degree[e.source]||0)+1; degree[e.target]=(degree[e.target]||0)+1; });
+
+const nodes = new vis.DataSet(DATA.nodes.map(n => ({
+  id:n.id, label:n.label, title:n.description, group:n.book,
+  shape:TYPE_SHAPES[n.type]||"dot",
+  size:(TYPE_SIZES[n.type]||12) + Math.min(degree[n.id]||0, 12),
+  color:{ background:BOOK_COLORS[n.book], border:BOOK_COLORS[n.book], highlight:{background:"#fff",border:BOOK_COLORS[n.book]} },
+  font:{ color:n.type==="Book" ? "#111" : "#e6e6e6", size:n.type==="Book"?16:13 },
+})));
+const edges = new vis.DataSet(DATA.edges.map((e,i) => ({
+  id:i, from:e.source, to:e.target, label:e.relation, relation:e.relation, arrows:"to",
+  dashes: e.relation==="SYNTHESIZES" || e.relation==="ANALOGOUS_TO",
+  color:{ color: (byId[e.source].book!==byId[e.target].book && !["FROM_BOOK","AUTHORED"].includes(e.relation)) ? "#c792ea" : "#465063", highlight:"#fff" },
+  font:{ size:9, color:"#8a909c", strokeWidth:0, align:"middle" },
+})));
+
+const state = { books:new Set(Object.keys(BOOK_COLORS)), types:new Set(Object.keys(TYPE_SHAPES)), hideStructural:false, focus:null };
+
+function nodeVisible(n){ return state.books.has(n.book) && state.types.has(n.type); }
+const nodeView = new vis.DataView(nodes, { filter: n => {
+  const d = byId[n.id]; if (!nodeVisible(d)) return false;
+  if (state.focus) return state.focus.has(n.id);
+  return true;
+}});
+const edgeView = new vis.DataView(edges, { filter: e => !(state.hideStructural && ["FROM_BOOK","AUTHORED"].includes(e.relation)) });
+
+const network = new vis.Network(document.getElementById("graph"), { nodes:nodeView, edges:edgeView }, {
+  physics:{ solver:"forceAtlas2Based", forceAtlas2Based:{ gravitationalConstant:-60, springLength:120, avoidOverlap:0.4 }, stabilization:{ iterations:300 } },
+  interaction:{ hover:true, tooltipDelay:150 },
+  edges:{ smooth:{ type:"continuous" } },
+});
+
+function refresh(){ nodeView.refresh(); edgeView.refresh(); }
+
+function mkCheck(container, key, set, text, color){
+  const l = document.createElement("label");
+  l.innerHTML = `<input type="checkbox" checked> ${color?`<span class="dot" style="background:${color}"></span>`:""} ${text}`;
+  l.querySelector("input").onchange = ev => { ev.target.checked ? set.add(key) : set.delete(key); refresh(); };
+  container.appendChild(l);
+}
+Object.entries(DATA.meta.books).forEach(([k,v]) => mkCheck(document.getElementById("books"), k, state.books, v, BOOK_COLORS[k]));
+Object.keys(TYPE_SHAPES).forEach(t => mkCheck(document.getElementById("types"), t, state.types, t));
+document.getElementById("hideFromBook").onchange = ev => { state.hideStructural = ev.target.checked; refresh(); };
+document.getElementById("fit").onclick = () => network.fit({ animation:true });
+document.getElementById("reset").onclick = () => { state.focus=null; refresh(); network.fit({animation:true}); };
+
+function showDetails(id){
+  const n = byId[id];
+  const out = DATA.edges.filter(e => e.source===id), inc = DATA.edges.filter(e => e.target===id);
+  const link = x => `<a data-id="${x}">${byId[x].label}</a>`;
+  document.getElementById("details").innerHTML = `
+    <h2>${n.label}</h2>
+    <span class="badge">${n.type}</span><span class="badge" style="color:${BOOK_COLORS[n.book]}">${DATA.meta.books[n.book]}</span>
+    <p>${n.description}</p>
+    ${out.length?`<b style="font-size:12px">Outgoing</b><ul>${out.map(e=>`<li><span class="rel">${e.relation}</span> → ${link(e.target)}</li>`).join("")}</ul>`:""}
+    ${inc.length?`<b style="font-size:12px">Incoming</b><ul>${inc.map(e=>`<li>${link(e.source)} <span class="rel">${e.relation}</span></li>`).join("")}</ul>`:""}`;
+  document.querySelectorAll("#details a").forEach(a => a.onclick = () => select(a.dataset.id));
+}
+function select(id){
+  if (state.focus && !state.focus.has(id)) { state.focus=null; refresh(); }
+  network.selectNodes([id]); network.focus(id, { scale:1.1, animation:true }); showDetails(id);
+}
+network.on("click", p => { if (p.nodes.length) showDetails(p.nodes[0]); });
+network.on("doubleClick", p => {
+  if (!p.nodes.length) return;
+  const id = p.nodes[0]; const s = new Set([id]);
+  DATA.edges.forEach(e => { if (e.source===id) s.add(e.target); if (e.target===id) s.add(e.source); });
+  state.focus = s; refresh(); setTimeout(() => network.fit({ animation:true }), 50);
+});
+document.getElementById("search").addEventListener("input", ev => {
+  const q = ev.target.value.trim().toLowerCase(); if (q.length < 2) return;
+  const hit = DATA.nodes.find(n => n.label.toLowerCase().includes(q) || n.description.toLowerCase().includes(q));
+  if (hit) select(hit.id);
+});
+</script>
+</body>
+</html>

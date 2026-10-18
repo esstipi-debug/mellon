@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "pp_action_titles",
+      "label": "Action Titles (Slide Discipline)",
+      "type": "Technique",
+      "book": "pp",
+      "description": "Formulating every slide title as a complete, assertive takeaway sentence rather than a passive topic label."
+    },
+    {
+      "id": "pp_three_orders",
+      "label": "Three Logical Orders (Time, Structure, Degree)",
+      "type": "Principle",
+      "book": "pp",
+      "description": "Rules for organizing horizontal thoughts: chronological sequence (time), structural partition (space/organization), or ranked importance (degree)."
+    }
+  ],
+  "edges": [
+    { "source": "pp_action_titles", "target": "pp_pyramid", "relation": "EMBODIES" },
+    { "source": "pp_three_orders", "target": "pp_grouping_rules", "relation": "OPERATIONALIZES" },
+    { "source": "fde_exec_recommendation", "target": "pp_action_titles", "relation": "USES" }
+  ],
+  "resources": [
+    {
+      "node_id": "pp_pyramid",
+      "title": "Barbara Minto Official Pyramid Principle Platform",
+      "url": "https://barbaraminto.com",
+      "kind": "official"
+    }
+  ]
+}

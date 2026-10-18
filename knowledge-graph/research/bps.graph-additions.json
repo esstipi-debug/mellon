@@ -1,0 +1,38 @@
+{
+  "nodes": [
+    {
+      "id": "bps_porpoising",
+      "label": "Porpoising (Zoom-in / Zoom-out)",
+      "type": "Technique",
+      "book": "bps",
+      "description": "Iteratively switching between the high-level strategic system view (macro) and granular operational data (micro) during problem definition."
+    },
+    {
+      "id": "bps_red_teaming",
+      "label": "Red Team & Obligation to Dissent",
+      "type": "Technique",
+      "book": "bps",
+      "description": "Institutionalizing contrary perspectives to stress-test the governing hypothesis before presenting findings to executives."
+    }
+  ],
+  "edges": [
+    { "source": "bps_porpoising", "target": "bps_define", "relation": "SUPPORTS" },
+    { "source": "bps_red_teaming", "target": "bps_team_bias", "relation": "EMBODIES" },
+    { "source": "fde_problem_framing", "target": "bps_define", "relation": "USES" },
+    { "source": "fde_issue_tree", "target": "bps_porpoising", "relation": "USES" }
+  ],
+  "resources": [
+    {
+      "node_id": "bps_seven_steps",
+      "title": "McKinsey Quarterly: Six problem-solving mindsets for very uncertain times",
+      "url": "https://www.mckinsey.com",
+      "kind": "article"
+    },
+    {
+      "node_id": "bps_define",
+      "title": "Wiley Bulletproof Problem Solving Companion Site & Templates",
+      "url": "https://www.wiley.com",
+      "kind": "official"
+    }
+  ]
+}

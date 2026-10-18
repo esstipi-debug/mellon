@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "ta_trust_quotient",
+      "label": "Trust Quotient (TQ) Assessment",
+      "type": "Technique",
+      "book": "ta",
+      "description": "A 20-question psychometric instrument measuring individual scores across Credibility, Reliability, Intimacy, and Self-Orientation."
+    },
+    {
+      "id": "ta_trust_temperaments",
+      "label": "Trust Temperaments",
+      "type": "Concept",
+      "book": "ta",
+      "description": "Behavioral profiles (Expert, Steward, Connector, Catalyst) that describe how consultants default to building trust with clients."
+    }
+  ],
+  "edges": [
+    { "source": "ta_trust_quotient", "target": "ta_trust_equation", "relation": "MEASURES" },
+    { "source": "ta_trust_temperaments", "target": "ta_trust_quotient", "relation": "PRODUCED_BY" },
+    { "source": "fde_stakeholder_trust", "target": "ta_trust_quotient", "relation": "USES" }
+  ],
+  "resources": [
+    {
+      "node_id": "ta_trust_equation",
+      "title": "Trusted Advisor Associates Official Resources & TQ Assessment",
+      "url": "https://trustedadvisor.com",
+      "kind": "tool"
+    }
+  ]
+}

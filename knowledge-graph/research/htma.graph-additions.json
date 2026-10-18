@@ -1,0 +1,46 @@
+{
+  "nodes": [
+    {
+      "id": "htma_evsi",
+      "label": "Expected Value of Sample Information (EVSI)",
+      "type": "Concept",
+      "book": "htma",
+      "description": "The expected value of imperfect or noisy sample data. Always bounded above by EVPI and used to cap real-world experimentation costs."
+    },
+    {
+      "id": "htma_lens_model",
+      "label": "Brunswik Lens Model for Expert Judgment",
+      "type": "Technique",
+      "book": "htma",
+      "description": "Deconstructing expert decisions into statistical cues to remove human inconsistency, cognitive fatigue, and noise."
+    },
+    {
+      "id": "htma_calibrated_meeting",
+      "label": "Calibrated Estimation Workshop",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "A pre-modeling workshop where operational leaders and engineers undergo the Equivalent Bet drill to calibrate 90% CIs on baseline failure rates."
+    }
+  ],
+  "edges": [
+    { "source": "htma_evsi", "target": "htma_evi", "relation": "EXTENDS" },
+    { "source": "htma_lens_model", "target": "htma_calibration", "relation": "SUPPORTS" },
+    { "source": "htma_calibrated_meeting", "target": "htma_calibration", "relation": "APPLIES" },
+    { "source": "htma_calibrated_meeting", "target": "htma_equivalent_bet", "relation": "APPLIES" },
+    { "source": "fde_value_case", "target": "htma_evsi", "relation": "USES" }
+  ],
+  "resources": [
+    {
+      "node_id": "htma_aie",
+      "title": "Hubbard Decision Research Official AIE Library & Spreadsheets",
+      "url": "https://hubbardresearch.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "htma_calibration",
+      "title": "AIE Calibration Training Aids & Spreadsheet Drills",
+      "url": "https://hubbardresearch.com",
+      "kind": "tool"
+    }
+  ]
+}

@@ -1,0 +1,3452 @@
+{
+  "meta": {
+    "title": "FDE Knowledge Graph: Measurement, Trust, Discovery, Structure & Change",
+    "language": "en",
+    "source": "Synthesized from general knowledge of the books (no book text ingested). Descriptions are paraphrases, not quotes.",
+    "books": {
+      "htma": "How to Measure Anything (Douglas W. Hubbard)",
+      "ta": "The Trusted Advisor (David H. Maister, Charles H. Green, Robert M. Galford)",
+      "mom": "The Mom Test (Rob Fitzpatrick)",
+      "pp": "The Pyramid Principle (Barbara Minto)",
+      "bps": "Bulletproof Problem Solving (Charles Conn, Robert McLean)",
+      "sw": "Switch (Chip Heath, Dan Heath)",
+      "fc": "Flawless Consulting (Peter Block)",
+      "cdh": "Continuous Discovery Habits (Teresa Torres)",
+      "fde": "Synthesis layer: Forward Deployed Engineering practice"
+    }
+  },
+  "nodes": [
+    {
+      "id": "book_htma",
+      "label": "How to Measure Anything",
+      "type": "Book",
+      "book": "htma",
+      "description": "Argues that anything that matters to a decision can be measured, where measurement means reducing uncertainty, not achieving certainty. Introduces Applied Information Economics (AIE)."
+    },
+    {
+      "id": "book_ta",
+      "label": "The Trusted Advisor",
+      "type": "Book",
+      "book": "ta",
+      "description": "How professional advisors earn and keep client trust. Introduces the Trust Equation and a five-step trust-building process."
+    },
+    {
+      "id": "book_mom",
+      "label": "The Mom Test",
+      "type": "Book",
+      "book": "mom",
+      "description": "How to talk to customers and learn whether a business is a good idea when everyone is lying to you (politely). Conversations should produce facts about the customer's life, not opinions about your idea."
+    },
+    {
+      "id": "author_hubbard",
+      "label": "Douglas W. Hubbard",
+      "type": "Author",
+      "book": "htma",
+      "description": "Management consultant, creator of Applied Information Economics (AIE)."
+    },
+    {
+      "id": "author_maister",
+      "label": "David H. Maister",
+      "type": "Author",
+      "book": "ta",
+      "description": "Authority on professional services firm management."
+    },
+    {
+      "id": "author_green",
+      "label": "Charles H. Green",
+      "type": "Author",
+      "book": "ta",
+      "description": "Co-author; later developed the Trust Equation work further (Trusted Advisor Associates)."
+    },
+    {
+      "id": "author_galford",
+      "label": "Robert M. Galford",
+      "type": "Author",
+      "book": "ta",
+      "description": "Co-author; advisor and educator on leadership and trust."
+    },
+    {
+      "id": "author_fitzpatrick",
+      "label": "Rob Fitzpatrick",
+      "type": "Author",
+      "book": "mom",
+      "description": "Founder and author; wrote The Mom Test from his own failed customer-discovery experiences."
+    },
+    {
+      "id": "htma_measurement_def",
+      "label": "Measurement = Uncertainty Reduction",
+      "type": "Concept",
+      "book": "htma",
+      "description": "A measurement is a quantitatively expressed reduction of uncertainty based on one or more observations. It does not need to eliminate uncertainty to be valuable."
+    },
+    {
+      "id": "htma_clarification_chain",
+      "label": "Clarification Chain",
+      "type": "Framework",
+      "book": "htma",
+      "description": "If something matters, it is detectable/observable; if it is detectable, it can be detected as an amount (or range); if it can be detected as a range, it can be measured. Used to turn 'intangibles' into observables."
+    },
+    {
+      "id": "htma_illusions",
+      "label": "Illusions of Intangibility",
+      "type": "Concept",
+      "book": "htma",
+      "description": "Three reasons people believe something can't be measured: misunderstanding the Concept of measurement, the Object of measurement (it's ill-defined), and the Methods of measurement (unaware of sampling, Bayes, etc.)."
+    },
+    {
+      "id": "htma_four_assumptions",
+      "label": "Four Useful Measurement Assumptions",
+      "type": "Principle",
+      "book": "htma",
+      "description": "(1) Your problem is not as unique as you think. (2) You have more data than you think. (3) You need less data than you think. (4) Useful new data is more accessible than you think."
+    },
+    {
+      "id": "htma_aie",
+      "label": "Applied Information Economics (AIE)",
+      "type": "Framework",
+      "book": "htma",
+      "description": "Hubbard's method: (1) define the decision, (2) model current uncertainty with calibrated estimates, (3) compute the value of additional information, (4) measure only where information value is high, (5) decide and act."
+    },
+    {
+      "id": "htma_define_decision",
+      "label": "Define the Decision First",
+      "type": "Principle",
+      "book": "htma",
+      "description": "Measurement only has value if it can change a decision. Start by stating the decision, the alternatives, and what 'the thing' you want to measure actually means in observable terms."
+    },
+    {
+      "id": "htma_calibration",
+      "label": "Calibrated Estimation",
+      "type": "Technique",
+      "book": "htma",
+      "description": "Training people so that their stated confidence matches their actual hit rate (e.g., 90% of their 90% intervals contain the truth). Most untrained experts are overconfident."
+    },
+    {
+      "id": "htma_ci90",
+      "label": "90% Confidence Interval",
+      "type": "Technique",
+      "book": "htma",
+      "description": "Express current knowledge as a range you are 90% sure contains the true value, instead of a single point or 'we don't know'."
+    },
+    {
+      "id": "htma_equivalent_bet",
+      "label": "Equivalent Bet Test",
+      "type": "Technique",
+      "book": "htma",
+      "description": "Calibration aid: would you rather bet on your range containing the answer or on a spin with a 90% chance of winning? Adjust the range until you are indifferent."
+    },
+    {
+      "id": "htma_overconfidence",
+      "label": "Overconfidence Bias",
+      "type": "Pitfall",
+      "book": "htma",
+      "description": "Experts systematically give ranges that are too narrow. Calibration training corrects it."
+    },
+    {
+      "id": "htma_decomposition",
+      "label": "Decomposition (Fermi)",
+      "type": "Technique",
+      "book": "htma",
+      "description": "Break an uncertain quantity into components that are easier to estimate. Often decomposition alone reduces uncertainty enough that no further measurement is needed."
+    },
+    {
+      "id": "htma_evi",
+      "label": "Expected Value of Information (EVI)",
+      "type": "Concept",
+      "book": "htma",
+      "description": "The expected reduction in opportunity loss from gaining more information. The value of perfect information (EVPI) equals the expected opportunity loss of the current best choice."
+    },
+    {
+      "id": "htma_eol",
+      "label": "Expected Opportunity Loss (EOL)",
+      "type": "Concept",
+      "book": "htma",
+      "description": "Chance of being wrong times the cost of being wrong. Information is valuable to the extent it reduces EOL."
+    },
+    {
+      "id": "htma_measurement_inversion",
+      "label": "Measurement Inversion",
+      "type": "Pitfall",
+      "book": "htma",
+      "description": "Organizations tend to measure what is easy and low-value and ignore the high-uncertainty, high-value variables that would actually change decisions."
+    },
+    {
+      "id": "htma_monte_carlo",
+      "label": "Monte Carlo Simulation",
+      "type": "Technique",
+      "book": "htma",
+      "description": "Propagate calibrated ranges through a model to get a distribution of outcomes (e.g., ROI, risk of loss) instead of a single point estimate."
+    },
+    {
+      "id": "htma_rule_of_five",
+      "label": "Rule of Five",
+      "type": "Technique",
+      "book": "htma",
+      "description": "With a random sample of 5, there is a 93.75% chance the population median lies between the smallest and largest value. Small samples reduce uncertainty a lot when you know little."
+    },
+    {
+      "id": "htma_single_sample",
+      "label": "Single Sample Majority Rule",
+      "type": "Technique",
+      "book": "htma",
+      "description": "('Urn of Mystery') With total uncertainty about a proportion, one random sample gives a 75% chance of identifying the majority. The first observations are the most informative."
+    },
+    {
+      "id": "htma_bayes",
+      "label": "Bayesian Updating",
+      "type": "Technique",
+      "book": "htma",
+      "description": "Start from calibrated priors and update with each new observation, rather than demanding large samples before saying anything."
+    },
+    {
+      "id": "htma_preferences",
+      "label": "Stated vs. Revealed Preferences",
+      "type": "Concept",
+      "book": "htma",
+      "description": "Measure values and preferences by what people actually do or pay (revealed) rather than only by what they say (stated). Includes willingness-to-pay methods."
+    },
+    {
+      "id": "htma_risk_matrix_critique",
+      "label": "Critique of Scoring / Risk Matrices",
+      "type": "Pitfall",
+      "book": "htma",
+      "description": "Ordinal scores (high/medium/low, 1-5) add ambiguity and can make decisions worse than unaided intuition. Prefer probabilistic, quantitative models."
+    },
+    {
+      "id": "htma_small_data",
+      "label": "You Need Less Data Than You Think",
+      "type": "Principle",
+      "book": "htma",
+      "description": "When uncertainty is high, a little data goes a long way. Marginal value of each extra observation drops quickly."
+    },
+    {
+      "id": "ta_trust_equation",
+      "label": "Trust Equation",
+      "type": "Framework",
+      "book": "ta",
+      "description": "Trustworthiness = (Credibility + Reliability + Intimacy) / Self-Orientation."
+    },
+    {
+      "id": "ta_credibility",
+      "label": "Credibility",
+      "type": "Concept",
+      "book": "ta",
+      "description": "Words: expertise, accuracy, honesty about what you know and don't know. 'I can trust what they say.'"
+    },
+    {
+      "id": "ta_reliability",
+      "label": "Reliability",
+      "type": "Concept",
+      "book": "ta",
+      "description": "Actions: repeated experience of doing what you said, when you said. 'I can trust them to do it.'"
+    },
+    {
+      "id": "ta_intimacy",
+      "label": "Intimacy",
+      "type": "Concept",
+      "book": "ta",
+      "description": "Emotions: safety the client feels in sharing difficult or sensitive things. 'I can talk to them about this.'"
+    },
+    {
+      "id": "ta_self_orientation",
+      "label": "Self-Orientation",
+      "type": "Concept",
+      "book": "ta",
+      "description": "The denominator: focus on yourself (appearing smart, winning the sale, being right) rather than on the client. The largest lever on trust."
+    },
+    {
+      "id": "ta_five_steps",
+      "label": "Five-Step Trust Process",
+      "type": "Framework",
+      "book": "ta",
+      "description": "Engage → Listen → Frame → Envision → Commit. The sequence through which trust is built in an advisory interaction."
+    },
+    {
+      "id": "ta_engage",
+      "label": "Engage",
+      "type": "Technique",
+      "book": "ta",
+      "description": "Get the client's attention on an issue that matters to them, showing you've done your homework on their world."
+    },
+    {
+      "id": "ta_listen",
+      "label": "Listen",
+      "type": "Technique",
+      "book": "ta",
+      "description": "Understand both the rational content and the emotional reality. Listening earns the right to offer a perspective."
+    },
+    {
+      "id": "ta_frame",
+      "label": "Frame",
+      "type": "Technique",
+      "book": "ta",
+      "description": "Articulate the real problem, often reframing the presenting issue. Includes 'naming and claiming' difficult topics."
+    },
+    {
+      "id": "ta_envision",
+      "label": "Envision",
+      "type": "Technique",
+      "book": "ta",
+      "description": "Jointly describe an alternative future: what would be different, concretely, if the problem were solved."
+    },
+    {
+      "id": "ta_commit",
+      "label": "Commit",
+      "type": "Technique",
+      "book": "ta",
+      "description": "Agree on concrete next steps and mutual obligations; the client takes ownership of the path forward."
+    },
+    {
+      "id": "ta_earn_right",
+      "label": "Earning the Right",
+      "type": "Principle",
+      "book": "ta",
+      "description": "Advisors must earn the right to give advice, typically through demonstrated listening and understanding, before offering solutions."
+    },
+    {
+      "id": "ta_name_it",
+      "label": "Name It and Claim It",
+      "type": "Technique",
+      "book": "ta",
+      "description": "Openly naming the awkward, risky, or emotional issue ('this may be uncomfortable, but...') and taking responsibility for raising it."
+    },
+    {
+      "id": "ta_advisor_evolution",
+      "label": "Advisor Evolution",
+      "type": "Concept",
+      "book": "ta",
+      "description": "Progression from subject-matter/service provider → needs-based problem solver → relationship-based → trust-based advisor consulted on broad, strategic issues."
+    },
+    {
+      "id": "ta_client_owns_decision",
+      "label": "Client Owns the Decision",
+      "type": "Principle",
+      "book": "ta",
+      "description": "Good advice gives options and reasoning; the client makes the choice. Imposing answers erodes trust."
+    },
+    {
+      "id": "ta_relationship_vs_transaction",
+      "label": "Relationship over Transaction",
+      "type": "Principle",
+      "book": "ta",
+      "description": "Trust is built over repeated interactions; optimize for the long-term relationship, not the current deal."
+    },
+    {
+      "id": "ta_emotional_reality",
+      "label": "Emotional Reality of Clients",
+      "type": "Concept",
+      "book": "ta",
+      "description": "Clients often feel insecure, exposed, or anxious when they need help. Recognizing these emotions is part of professional skill."
+    },
+    {
+      "id": "ta_need_to_be_right",
+      "label": "Need to Be Right / Appear Smart",
+      "type": "Pitfall",
+      "book": "ta",
+      "description": "A common driver of high self-orientation: jumping to answers, showing off expertise, or arguing instead of understanding."
+    },
+    {
+      "id": "mom_rules",
+      "label": "The Mom Test Rules",
+      "type": "Framework",
+      "book": "mom",
+      "description": "(1) Talk about their life instead of your idea. (2) Ask about specifics in the past instead of generics or opinions about the future. (3) Talk less and listen more."
+    },
+    {
+      "id": "mom_their_life",
+      "label": "Talk About Their Life, Not Your Idea",
+      "type": "Principle",
+      "book": "mom",
+      "description": "Once you mention your idea, people start being nice to you. Ask about their problems, workflows, and goals instead."
+    },
+    {
+      "id": "mom_past_specifics",
+      "label": "Past Specifics over Future Generics",
+      "type": "Principle",
+      "book": "mom",
+      "description": "'Talk me through the last time that happened' beats 'Would you ever...?'. Past behavior is data; predictions about the future are optimistic fiction."
+    },
+    {
+      "id": "mom_talk_less",
+      "label": "Talk Less, Listen More",
+      "type": "Principle",
+      "book": "mom",
+      "description": "The more you talk, the less you learn. Avoid pitching during discovery."
+    },
+    {
+      "id": "mom_bad_data",
+      "label": "Bad Data",
+      "type": "Concept",
+      "book": "mom",
+      "description": "Three types of misleading signal: compliments, fluff (generic claims, hypotheticals, future promises), and ideas (feature requests)."
+    },
+    {
+      "id": "mom_compliments",
+      "label": "Compliments",
+      "type": "Pitfall",
+      "book": "mom",
+      "description": "'That sounds great!' is worthless data and a sign you're pitching. Deflect them and return to facts."
+    },
+    {
+      "id": "mom_fluff",
+      "label": "Fluff",
+      "type": "Pitfall",
+      "book": "mom",
+      "description": "Generic ('I usually...'), future-tense ('I would...'), and hypothetical statements. Anchor them to specific past examples."
+    },
+    {
+      "id": "mom_feature_requests",
+      "label": "Ideas & Feature Requests",
+      "type": "Pitfall",
+      "book": "mom",
+      "description": "Requests should not be taken at face value. Dig into the motivation: why do you want that? What would it let you do?"
+    },
+    {
+      "id": "mom_dig",
+      "label": "Dig Beneath Requests & Emotions",
+      "type": "Technique",
+      "book": "mom",
+      "description": "Ask 'Why do you bother?', 'What are the implications of that?', 'What else have you tried?' to uncover the real problem and its severity."
+    },
+    {
+      "id": "mom_commitment",
+      "label": "Commitment & Advancement",
+      "type": "Framework",
+      "book": "mom",
+      "description": "A meeting succeeds only if it ends with commitment (they give up something of value) and advancement (move to the next step in the buying/learning process)."
+    },
+    {
+      "id": "mom_currencies",
+      "label": "Currencies of Commitment",
+      "type": "Concept",
+      "book": "mom",
+      "description": "Time (follow-up meetings, trials), reputation risk (intros to boss/peers), and money (pre-orders, deposits, LOIs)."
+    },
+    {
+      "id": "mom_zombie_leads",
+      "label": "Zombie Leads / False Positives",
+      "type": "Pitfall",
+      "book": "mom",
+      "description": "Meetings that 'went well' with no commitment. Lukewarm interest that never converts; better to get a clear no."
+    },
+    {
+      "id": "mom_scary_questions",
+      "label": "Ask the Scary Questions",
+      "type": "Technique",
+      "book": "mom",
+      "description": "The important questions are the ones that could kill your idea. Founders avoid them; you should seek them out."
+    },
+    {
+      "id": "mom_big_three",
+      "label": "Prepare Your Big 3 Questions",
+      "type": "Technique",
+      "book": "mom",
+      "description": "Before each conversation, decide the three most important things you want to learn."
+    },
+    {
+      "id": "mom_keep_casual",
+      "label": "Keep It Casual",
+      "type": "Technique",
+      "book": "mom",
+      "description": "Strip away the formality of 'meetings'; casual conversations produce more honest information and are cheaper to run."
+    },
+    {
+      "id": "mom_look_before_zoom",
+      "label": "Look Before You Zoom",
+      "type": "Principle",
+      "book": "mom",
+      "description": "Confirm a problem is a real priority for them before diving into its details; avoid fixating on a 'problem' they don't actually care about."
+    },
+    {
+      "id": "mom_segmentation",
+      "label": "Customer Slicing (Who-Where)",
+      "type": "Technique",
+      "book": "mom",
+      "description": "Keep slicing a broad segment into a specific who you can find (where). Too broad a segment produces contradictory, mushy data."
+    },
+    {
+      "id": "mom_vfwpa",
+      "label": "Vision-Framing-Weakness-Pedestal-Ask",
+      "type": "Technique",
+      "book": "mom",
+      "description": "Structure for requesting a learning meeting: share the vision, frame the stage you're in, show weakness (you need help), put them on a pedestal (they can help), and ask."
+    },
+    {
+      "id": "mom_notes",
+      "label": "Take Good Notes & Share Learnings",
+      "type": "Technique",
+      "book": "mom",
+      "description": "Record exact quotes and signals (pain, goals, obstacles, workarounds, money) and review them with the team so learning isn't trapped in one head."
+    },
+    {
+      "id": "mom_pitching",
+      "label": "Pitching During Discovery",
+      "type": "Pitfall",
+      "book": "mom",
+      "description": "Slipping into pitch mode turns a learning conversation into a sales one and triggers polite lies."
+    },
+    {
+      "id": "mom_workarounds",
+      "label": "Existing Workarounds & Spend",
+      "type": "Concept",
+      "book": "mom",
+      "description": "What they already do, use, or pay to solve the problem is the strongest evidence of a real problem."
+    },
+    {
+      "id": "x_behavior_over_opinion",
+      "label": "Behavior over Opinion",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "All three books converge: trust evidence of what people did/paid/committed (revealed) over what they say they think or will do (stated)."
+    },
+    {
+      "id": "x_conversation_as_measurement",
+      "label": "Customer Conversation as Measurement",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "A Mom Test interview is a measurement instrument in Hubbard's sense: each observation reduces uncertainty about a decision-relevant variable (pain, frequency, willingness to pay)."
+    },
+    {
+      "id": "x_information_value_of_scary",
+      "label": "Scary Questions Have the Highest Information Value",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "The questions people avoid (Mom Test) are exactly the high-uncertainty, high-EOL variables that Measurement Inversion warns we neglect. Naming them (Trusted Advisor) builds trust rather than destroying it."
+    },
+    {
+      "id": "x_self_orientation_kills_data",
+      "label": "Self-Orientation Corrupts Data",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Pitching, needing to be right, and seeking compliments both lower trust (TA denominator) and bias the evidence you gather (Mom Test bad data)."
+    },
+    {
+      "id": "x_frame_is_define_decision",
+      "label": "Framing = Defining the Decision",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "TA's Frame step and HTMA's 'define the decision' are the same move: make explicit what problem is being solved and what choice depends on it."
+    },
+    {
+      "id": "x_envision_observable",
+      "label": "Envision in Observable Terms",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Use the Clarification Chain during TA's Envision step: 'If this were solved, what would you see that you don't see now?' yields measurable success criteria."
+    },
+    {
+      "id": "x_honest_uncertainty",
+      "label": "Honest Uncertainty Builds Credibility",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Giving calibrated ranges instead of false precision or evasive 'it depends' raises Credibility; overconfidence destroys it when reality diverges."
+    },
+    {
+      "id": "x_commitment_as_signal",
+      "label": "Commitment Is the Real Signal",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Mom Test commitment currencies, TA's Commit step, and HTMA's revealed preferences all treat a costly action as the trustworthy measurement of value."
+    },
+    {
+      "id": "x_small_samples_discovery",
+      "label": "Small Samples Are Enough to Start",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Rule of Five and Single Sample Majority justify acting on a handful of well-run interviews when uncertainty is high; keep going until you stop hearing new things."
+    },
+    {
+      "id": "fde_discovery_interview",
+      "label": "Discovery Interview",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "First on-site conversations with users/operators: Big 3 questions, past-specific questions, listen for emotional reality, note workarounds, end with a commitment."
+    },
+    {
+      "id": "fde_problem_framing",
+      "label": "Problem Framing Doc",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "One page: the decision at stake, alternatives, key uncertain variables (with 90% CIs), and what would change the decision."
+    },
+    {
+      "id": "fde_value_case",
+      "label": "Quantified Value Case",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Decompose the business value, attach calibrated ranges sourced from interviews and data, run Monte Carlo, and present a distribution rather than a single ROI number."
+    },
+    {
+      "id": "fde_pilot_criteria",
+      "label": "Pilot Success Criteria",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Observable, measurable criteria agreed with the client up front (Envision + Clarification Chain), plus explicit commitments if criteria are met."
+    },
+    {
+      "id": "fde_measure_next",
+      "label": "What to Measure Next",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Prioritize data collection and instrumentation by information value, not by ease. Fight Measurement Inversion in the deployment backlog."
+    },
+    {
+      "id": "fde_stakeholder_trust",
+      "label": "Stakeholder Trust Map",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "For each stakeholder, assess C/R/I/S, track promises made and kept, and plan which difficult topics need to be named."
+    },
+    {
+      "id": "fde_go_no_go",
+      "label": "Evidence-Based Go/No-Go",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Decide expansion or exit based on commitment signals and reduced uncertainty in key variables, not on how well meetings 'felt'."
+    },
+    {
+      "id": "book_pp",
+      "label": "The Pyramid Principle",
+      "type": "Book",
+      "book": "pp",
+      "description": "How to structure thinking and writing so that busy executives get the answer first, supported by a logically grouped hierarchy of ideas."
+    },
+    {
+      "id": "author_minto",
+      "label": "Barbara Minto",
+      "type": "Author",
+      "book": "pp",
+      "description": "Former McKinsey consultant who developed the Pyramid Principle for business writing and presentation."
+    },
+    {
+      "id": "pp_pyramid",
+      "label": "Pyramid Structure",
+      "type": "Framework",
+      "book": "pp",
+      "description": "A single governing thought at the top, supported by key-line ideas, each supported by further ideas. Ideas at any level summarize the ideas grouped below them."
+    },
+    {
+      "id": "pp_answer_first",
+      "label": "Answer First (Top-Down)",
+      "type": "Principle",
+      "book": "pp",
+      "description": "Present the conclusion/recommendation first, then the supporting arguments. Readers process ideas more easily when they know where they are going."
+    },
+    {
+      "id": "pp_governing_thought",
+      "label": "Governing Thought",
+      "type": "Concept",
+      "book": "pp",
+      "description": "The single top-level message — the answer to the reader's question."
+    },
+    {
+      "id": "pp_scq",
+      "label": "Situation-Complication-Question (SCQ)",
+      "type": "Technique",
+      "book": "pp",
+      "description": "Introduction structure: a familiar Situation, a Complication that changes it, the Question that arises — answered by the governing thought."
+    },
+    {
+      "id": "pp_qa_dialogue",
+      "label": "Vertical Q&A Dialogue",
+      "type": "Concept",
+      "book": "pp",
+      "description": "Each statement raises a question in the reader's mind (why? how?) which the level below answers."
+    },
+    {
+      "id": "pp_grouping_rules",
+      "label": "Grouping Rules",
+      "type": "Principle",
+      "book": "pp",
+      "description": "Ideas in each grouping must be the same kind of idea and logically ordered (time, structure, or degree of importance)."
+    },
+    {
+      "id": "pp_mece",
+      "label": "MECE",
+      "type": "Principle",
+      "book": "pp",
+      "description": "Mutually Exclusive, Collectively Exhaustive: groupings with no overlaps and no gaps."
+    },
+    {
+      "id": "pp_deductive_inductive",
+      "label": "Deductive vs. Inductive Logic",
+      "type": "Concept",
+      "book": "pp",
+      "description": "Horizontal relationships between ideas: deductive chains (premise → premise → therefore) or inductive groupings (similar ideas pointing to one inference). Minto favors inductive groupings at the key line."
+    },
+    {
+      "id": "pp_key_line",
+      "label": "Key Line",
+      "type": "Concept",
+      "book": "pp",
+      "description": "The level of ideas directly below the governing thought; the main supporting arguments."
+    },
+    {
+      "id": "pp_bottom_up",
+      "label": "Think Bottom-Up, Present Top-Down",
+      "type": "Technique",
+      "book": "pp",
+      "description": "Build the pyramid by grouping detailed findings into summaries, then communicate from the top."
+    },
+    {
+      "id": "pp_chronological_dump",
+      "label": "Chronological Analysis Dump",
+      "type": "Pitfall",
+      "book": "pp",
+      "description": "Presenting work in the order it was done ('first we looked at...') instead of leading with the answer; buries the message."
+    },
+    {
+      "id": "book_bps",
+      "label": "Bulletproof Problem Solving",
+      "type": "Book",
+      "book": "bps",
+      "description": "A seven-step, hypothesis-driven problem-solving method rooted in McKinsey practice, built around logic trees and disciplined prioritization."
+    },
+    {
+      "id": "author_conn",
+      "label": "Charles Conn",
+      "type": "Author",
+      "book": "bps",
+      "description": "Co-author; former McKinsey partner and CEO of the Rhodes Trust."
+    },
+    {
+      "id": "author_mclean",
+      "label": "Robert McLean",
+      "type": "Author",
+      "book": "bps",
+      "description": "Co-author; former McKinsey director."
+    },
+    {
+      "id": "bps_seven_steps",
+      "label": "Seven-Step Problem Solving",
+      "type": "Framework",
+      "book": "bps",
+      "description": "(1) Define the problem, (2) Disaggregate it, (3) Prioritize, (4) Build a workplan, (5) Conduct analyses, (6) Synthesize findings, (7) Communicate. An iterative loop, not a waterfall."
+    },
+    {
+      "id": "bps_define",
+      "label": "Problem Definition Worksheet",
+      "type": "Technique",
+      "book": "bps",
+      "description": "A precise problem statement: specific, measurable, action-oriented; decision-maker, success criteria, scope, constraints, timeframe."
+    },
+    {
+      "id": "bps_issue_tree",
+      "label": "Logic / Issue Trees",
+      "type": "Framework",
+      "book": "bps",
+      "description": "Disaggregate a problem into components. Types: component (factor) trees, hypothesis trees, and decision trees."
+    },
+    {
+      "id": "bps_hypothesis_tree",
+      "label": "Hypothesis Tree",
+      "type": "Technique",
+      "book": "bps",
+      "description": "Tree that states a hypothesized answer and the conditions that must be true for it to hold; each branch becomes a test."
+    },
+    {
+      "id": "bps_hypothesis_driven",
+      "label": "Hypothesis-Driven Approach",
+      "type": "Principle",
+      "book": "bps",
+      "description": "Start with a best-guess answer early and work to prove or disprove it, instead of boiling the ocean."
+    },
+    {
+      "id": "bps_prioritize_2x2",
+      "label": "Prioritization 2x2 (Impact × Influence)",
+      "type": "Technique",
+      "book": "bps",
+      "description": "Prune tree branches by size of impact and ability to influence; focus analysis on the critical few."
+    },
+    {
+      "id": "bps_workplan",
+      "label": "Workplan & Analysis Plan",
+      "type": "Technique",
+      "book": "bps",
+      "description": "For each prioritized branch: hypothesis, analysis needed, data sources, owner, deadline, expected end product."
+    },
+    {
+      "id": "bps_one_day_answer",
+      "label": "One-Day Answer",
+      "type": "Technique",
+      "book": "bps",
+      "description": "Write the best answer you could give today; refine it as analysis comes in. Keeps work focused on the synthesis."
+    },
+    {
+      "id": "bps_heuristics",
+      "label": "Heuristics Before Big Guns",
+      "type": "Principle",
+      "book": "bps",
+      "description": "Use rules of thumb, order-of-magnitude and back-of-envelope analysis before sophisticated tools (regression, simulation, game theory)."
+    },
+    {
+      "id": "bps_team_bias",
+      "label": "Team Processes Against Bias",
+      "type": "Technique",
+      "book": "bps",
+      "description": "Red teams, obligation to dissent, perspective-taking and diverse teams counter confirmation bias and anchoring."
+    },
+    {
+      "id": "bps_synthesize",
+      "label": "Synthesize & Tell the Story",
+      "type": "Technique",
+      "book": "bps",
+      "description": "Turn analyses into a 'so what' storyline, commonly structured as a pyramid, ending in a recommendation."
+    },
+    {
+      "id": "bps_confirmation_bias",
+      "label": "Confirmation Bias",
+      "type": "Pitfall",
+      "book": "bps",
+      "description": "Hypothesis-driven work's main risk: seeking only evidence that confirms the initial answer."
+    },
+    {
+      "id": "bps_wicked",
+      "label": "Wicked Problems",
+      "type": "Concept",
+      "book": "bps",
+      "description": "Problems with many interdependent causes and stakeholders and no clear stopping rule; require iteration and systems thinking."
+    },
+    {
+      "id": "book_sw",
+      "label": "Switch",
+      "type": "Book",
+      "book": "sw",
+      "description": "Why change is hard and how to make it happen: direct the rational side, motivate the emotional side, and shape the environment."
+    },
+    {
+      "id": "author_heath_chip",
+      "label": "Chip Heath",
+      "type": "Author",
+      "book": "sw",
+      "description": "Stanford professor; co-author with his brother Dan."
+    },
+    {
+      "id": "author_heath_dan",
+      "label": "Dan Heath",
+      "type": "Author",
+      "book": "sw",
+      "description": "Senior fellow at Duke's CASE center; co-author with his brother Chip."
+    },
+    {
+      "id": "sw_rider_elephant_path",
+      "label": "Rider, Elephant, Path",
+      "type": "Framework",
+      "book": "sw",
+      "description": "The Rider is the rational planner, the Elephant is emotion and habit, the Path is the situation. Change requires directing the Rider, motivating the Elephant, and shaping the Path."
+    },
+    {
+      "id": "sw_rider",
+      "label": "Direct the Rider",
+      "type": "Concept",
+      "book": "sw",
+      "description": "Give the rational side clarity: find the bright spots, script the critical moves, point to the destination."
+    },
+    {
+      "id": "sw_elephant",
+      "label": "Motivate the Elephant",
+      "type": "Concept",
+      "book": "sw",
+      "description": "Engage emotion: find the feeling, shrink the change, grow your people."
+    },
+    {
+      "id": "sw_path",
+      "label": "Shape the Path",
+      "type": "Concept",
+      "book": "sw",
+      "description": "Change the situation: tweak the environment, build habits, rally the herd."
+    },
+    {
+      "id": "sw_bright_spots",
+      "label": "Find the Bright Spots",
+      "type": "Technique",
+      "book": "sw",
+      "description": "Look for what is already working somewhere and clone it, instead of obsessing over what's broken."
+    },
+    {
+      "id": "sw_script_moves",
+      "label": "Script the Critical Moves",
+      "type": "Technique",
+      "book": "sw",
+      "description": "Translate goals into specific behaviors. Ambiguity exhausts the Rider."
+    },
+    {
+      "id": "sw_destination",
+      "label": "Point to the Destination",
+      "type": "Technique",
+      "book": "sw",
+      "description": "A vivid 'destination postcard' and black-and-white goals show where you're going and why it's worth it."
+    },
+    {
+      "id": "sw_find_feeling",
+      "label": "Find the Feeling",
+      "type": "Technique",
+      "book": "sw",
+      "description": "People change through see-feel-change more often than analyze-think-change."
+    },
+    {
+      "id": "sw_shrink_change",
+      "label": "Shrink the Change",
+      "type": "Technique",
+      "book": "sw",
+      "description": "Make the first step small enough that the Elephant isn't spooked; create early wins."
+    },
+    {
+      "id": "sw_grow_people",
+      "label": "Grow Your People",
+      "type": "Technique",
+      "book": "sw",
+      "description": "Cultivate an identity and growth mindset that make the change feel like 'who we are'."
+    },
+    {
+      "id": "sw_tweak_env",
+      "label": "Tweak the Environment",
+      "type": "Technique",
+      "book": "sw",
+      "description": "Small changes to the situation (defaults, friction, layout, tooling) can produce big behavior changes."
+    },
+    {
+      "id": "sw_build_habits",
+      "label": "Build Habits",
+      "type": "Technique",
+      "book": "sw",
+      "description": "Action triggers and checklists make new behavior automatic and cheap for the Rider."
+    },
+    {
+      "id": "sw_rally_herd",
+      "label": "Rally the Herd",
+      "type": "Technique",
+      "book": "sw",
+      "description": "Behavior is contagious; make the desired behavior visible and socially normal."
+    },
+    {
+      "id": "sw_resistance_clarity",
+      "label": "Resistance Is Often Lack of Clarity",
+      "type": "Principle",
+      "book": "sw",
+      "description": "What looks like resistance is often lack of clarity; what looks like laziness is often exhaustion; what looks like a people problem is often a situation problem."
+    },
+    {
+      "id": "sw_decision_paralysis",
+      "label": "Decision Paralysis",
+      "type": "Pitfall",
+      "book": "sw",
+      "description": "Too many options or ambiguity freeze the Rider and default people to the status quo."
+    },
+    {
+      "id": "book_fc",
+      "label": "Flawless Consulting",
+      "type": "Book",
+      "book": "fc",
+      "description": "A guide to consulting without direct authority: contracting, discovery, feedback, and above all dealing authentically with client resistance."
+    },
+    {
+      "id": "author_block",
+      "label": "Peter Block",
+      "type": "Author",
+      "book": "fc",
+      "description": "Organizational development consultant and author on consulting, stewardship and community."
+    },
+    {
+      "id": "fc_phases",
+      "label": "Five Phases of Consulting",
+      "type": "Framework",
+      "book": "fc",
+      "description": "Entry & Contracting → Discovery & Dialogue → Feedback & Decision to Act → Engagement & Implementation → Extension, Recycle or Termination."
+    },
+    {
+      "id": "fc_contracting",
+      "label": "Contracting",
+      "type": "Technique",
+      "book": "fc",
+      "description": "Explicit agreement on wants and offers from both client and consultant: what each needs, expects, and will provide, including the client's own involvement."
+    },
+    {
+      "id": "fc_discovery",
+      "label": "Discovery & Dialogue",
+      "type": "Technique",
+      "book": "fc",
+      "description": "Collecting data and building a shared picture of the problem, including how the problem is being managed, not just the technical problem."
+    },
+    {
+      "id": "fc_feedback_meeting",
+      "label": "Feedback Meeting",
+      "type": "Technique",
+      "book": "fc",
+      "description": "Present findings simply and descriptively, then focus on the client's reactions and the decision to act; expect resistance here."
+    },
+    {
+      "id": "fc_roles",
+      "label": "Consultant Roles",
+      "type": "Concept",
+      "book": "fc",
+      "description": "Expert (consultant decides), Pair-of-Hands (client decides, consultant executes), Collaborative (joint diagnosis and shared responsibility). Block advocates collaboration."
+    },
+    {
+      "id": "fc_fifty_fifty",
+      "label": "50/50 Responsibility",
+      "type": "Principle",
+      "book": "fc",
+      "description": "Responsibility for the project's success is shared; the consultant should not take on 100%."
+    },
+    {
+      "id": "fc_resistance",
+      "label": "Client Resistance",
+      "type": "Concept",
+      "book": "fc",
+      "description": "An emotional reaction to loss of control and vulnerability, not a rational objection. It is predictable and a sign that something important is being touched."
+    },
+    {
+      "id": "fc_resistance_forms",
+      "label": "Forms of Resistance",
+      "type": "Concept",
+      "book": "fc",
+      "description": "e.g., demanding more detail, flooding you with detail, 'no time', impracticality, attack, confusion, silence, intellectualizing, moralizing, premature compliance, methodology debates."
+    },
+    {
+      "id": "fc_handle_resistance",
+      "label": "Name the Resistance",
+      "type": "Technique",
+      "book": "fc",
+      "description": "(1) Identify the form it is taking, (2) name it in neutral, non-punishing language, (3) be quiet and let the client respond. Don't take it personally or fight it with more data."
+    },
+    {
+      "id": "fc_authenticity",
+      "label": "Authenticity",
+      "type": "Principle",
+      "book": "fc",
+      "description": "Put into words what you are experiencing with the client as you work. Authentic behavior is the most powerful consulting tool."
+    },
+    {
+      "id": "fc_two_dimensions",
+      "label": "Technical vs. Relationship Dimension",
+      "type": "Concept",
+      "book": "fc",
+      "description": "Every engagement has a business/technical problem and a relationship/how-it's-managed dimension; both must be attended to."
+    },
+    {
+      "id": "fc_fighting_resistance",
+      "label": "Fighting Resistance with Logic",
+      "type": "Pitfall",
+      "book": "fc",
+      "description": "Answering emotional resistance with more data and argument intensifies it."
+    },
+    {
+      "id": "book_cdh",
+      "label": "Continuous Discovery Habits",
+      "type": "Book",
+      "book": "cdh",
+      "description": "A structured, sustainable way for product teams to discover what to build: weekly customer touchpoints in pursuit of a desired outcome."
+    },
+    {
+      "id": "author_torres",
+      "label": "Teresa Torres",
+      "type": "Author",
+      "book": "cdh",
+      "description": "Product discovery coach (Product Talk)."
+    },
+    {
+      "id": "cdh_definition",
+      "label": "Continuous Discovery",
+      "type": "Concept",
+      "book": "cdh",
+      "description": "At a minimum, weekly touchpoints with customers by the team building the product, where they conduct small research activities in pursuit of a desired outcome."
+    },
+    {
+      "id": "cdh_trio",
+      "label": "Product Trio",
+      "type": "Concept",
+      "book": "cdh",
+      "description": "Product manager, designer and engineer jointly owning discovery decisions."
+    },
+    {
+      "id": "cdh_outcomes",
+      "label": "Outcomes over Outputs",
+      "type": "Principle",
+      "book": "cdh",
+      "description": "Teams should be managed by measurable outcomes (business and product outcomes) rather than a roadmap of features (outputs)."
+    },
+    {
+      "id": "cdh_ost",
+      "label": "Opportunity Solution Tree",
+      "type": "Framework",
+      "book": "cdh",
+      "description": "Desired outcome → opportunities (customer needs, pain points, desires) → solutions → assumption tests. Makes the team's thinking visible."
+    },
+    {
+      "id": "cdh_opportunities",
+      "label": "Opportunity Space",
+      "type": "Concept",
+      "book": "cdh",
+      "description": "Customer needs, pain points and desires discovered through interviews, structured as a tree; prioritize opportunities before solutions."
+    },
+    {
+      "id": "cdh_story_interview",
+      "label": "Story-Based Interviewing",
+      "type": "Technique",
+      "book": "cdh",
+      "description": "Ask for specific stories about past behavior ('Tell me about the last time you...') to learn what actually happens."
+    },
+    {
+      "id": "cdh_snapshots",
+      "label": "Interview Snapshots",
+      "type": "Technique",
+      "book": "cdh",
+      "description": "One-page synthesis of each interview: memorable quote, quick facts, insights, opportunities, experience map."
+    },
+    {
+      "id": "cdh_recruiting",
+      "label": "Automate Interview Recruiting",
+      "type": "Technique",
+      "book": "cdh",
+      "description": "Make weekly interviews effortless by building a continuous recruiting pipeline (in-product prompts, support, sales)."
+    },
+    {
+      "id": "cdh_experience_map",
+      "label": "Experience Mapping",
+      "type": "Technique",
+      "book": "cdh",
+      "description": "Map the customer's current experience to frame the opportunity space and align the trio."
+    },
+    {
+      "id": "cdh_compare_contrast",
+      "label": "Compare and Contrast Decisions",
+      "type": "Principle",
+      "book": "cdh",
+      "description": "Consider multiple solutions for the same opportunity rather than 'whether or not' decisions about a single idea."
+    },
+    {
+      "id": "cdh_assumption_mapping",
+      "label": "Assumption Mapping",
+      "type": "Technique",
+      "book": "cdh",
+      "description": "Identify assumptions (desirability, viability, feasibility, usability, ethical) and plot by importance vs. evidence to find leap-of-faith assumptions."
+    },
+    {
+      "id": "cdh_assumption_tests",
+      "label": "Assumption Testing",
+      "type": "Technique",
+      "book": "cdh",
+      "description": "Test the riskiest assumptions with small, fast experiments rather than testing whole ideas."
+    },
+    {
+      "id": "cdh_whether_or_not",
+      "label": "Whether-or-Not Decisions / Solution Fixation",
+      "type": "Pitfall",
+      "book": "cdh",
+      "description": "Falling in love with a single solution and evaluating only whether to build it."
+    },
+    {
+      "id": "cdh_show_work",
+      "label": "Show Your Work to Stakeholders",
+      "type": "Technique",
+      "book": "cdh",
+      "description": "Share the OST and discovery artifacts so stakeholders see the reasoning, not just conclusions."
+    },
+    {
+      "id": "x_structured_decomposition",
+      "label": "Structured Decomposition (Trees Everywhere)",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Issue trees, OSTs, the Pyramid and Fermi decomposition are the same move: break a fuzzy whole into MECE, testable parts."
+    },
+    {
+      "id": "x_hypothesis_first",
+      "label": "Start with a Hypothesis, Then Measure",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Answer-first (Minto), hypothesis-driven work and the one-day answer (Conn & McLean), and calibrated priors updated by data (Hubbard) all start with a best guess and iterate."
+    },
+    {
+      "id": "x_riskiest_assumption_first",
+      "label": "Test the Riskiest Assumption First",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Assumption mapping (Torres), EVI (Hubbard), the impact × influence 2x2 (Conn & McLean) and scary questions (Fitzpatrick) prioritize what could most change the decision."
+    },
+    {
+      "id": "x_resistance_is_information",
+      "label": "Resistance Is Information, Not Opposition",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Block's emotional resistance, Switch's 'resistance is lack of clarity', and the Trusted Advisor's emotional reality all say: diagnose and name it; don't argue it away."
+    },
+    {
+      "id": "x_explicit_contracting",
+      "label": "Contract Commitments Explicitly",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Block's contracting, the Trusted Advisor's Commit step and the Mom Test's commitment currencies: make mutual obligations and next steps explicit."
+    },
+    {
+      "id": "x_outcomes_over_outputs",
+      "label": "Outcomes over Outputs",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Torres's outcomes, Switch's destination, a precise problem definition and fighting measurement inversion all anchor work on observable change, not activity."
+    },
+    {
+      "id": "x_small_bets",
+      "label": "Small Bets Reduce Risk and Resistance",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Shrinking the change (Heath), small assumption tests (Torres) and small samples (Hubbard) lower both uncertainty and emotional resistance."
+    },
+    {
+      "id": "x_recommendation_with_uncertainty",
+      "label": "Answer-First Recommendations with Honest Ranges",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Lead with the recommendation (Minto) but carry calibrated uncertainty (Hubbard) so credibility survives when reality diverges (Trusted Advisor)."
+    },
+    {
+      "id": "x_situation_not_people",
+      "label": "Fix the Situation, Not the People",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Adoption failures in deployments are usually path problems (workflow, defaults, tooling) — the same evidence Mom Test workarounds and bright spots reveal."
+    },
+    {
+      "id": "fde_contracting_meeting",
+      "label": "Engagement Contracting",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Kickoff where wants/offers, success criteria, client involvement and decision rights are made explicit (Block), framed as a problem definition (Conn & McLean)."
+    },
+    {
+      "id": "fde_issue_tree",
+      "label": "Issue Tree & Workplan",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Hypothesis tree for the deployment problem, pruned by impact × influence and information value, with a workplan per branch."
+    },
+    {
+      "id": "fde_exec_recommendation",
+      "label": "Executive Recommendation Memo",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "SCQ intro, answer first, MECE key line, quantified value with ranges, explicit ask."
+    },
+    {
+      "id": "fde_adoption_plan",
+      "label": "Adoption / Change Plan",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Rider-Elephant-Path plan for end users: bright-spot users, scripted critical moves, a small first step, and workflow/tooling tweaks."
+    },
+    {
+      "id": "fde_resistance_playbook",
+      "label": "Resistance Playbook",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Recognize the form of resistance in feedback meetings, name it neutrally, pause; diagnose clarity vs. emotion vs. situation."
+    },
+    {
+      "id": "fde_deployment_ost",
+      "label": "Deployment Opportunity Solution Tree",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Run the deployment like a product: target outcome, opportunities from weekly user touchpoints, multiple solutions, assumption tests."
+    },
+    {
+      "id": "bps_porpoising",
+      "label": "Porpoising (Zoom-in / Zoom-out)",
+      "type": "Technique",
+      "book": "bps",
+      "description": "Iteratively switching between the high-level strategic system view (macro) and granular operational data (micro) during problem definition."
+    },
+    {
+      "id": "bps_red_teaming",
+      "label": "Red Team & Obligation to Dissent",
+      "type": "Technique",
+      "book": "bps",
+      "description": "Institutionalizing contrary perspectives to stress-test the governing hypothesis before presenting findings to executives."
+    },
+    {
+      "id": "cdh_five_assumptions",
+      "label": "Five Assumption Types (D-V-F-U-E)",
+      "type": "Concept",
+      "book": "cdh",
+      "description": "Categorizing risks into Desirability, Viability, Feasibility, Usability, and Ethical assumptions prior to running experiments."
+    },
+    {
+      "id": "cdh_leading_indicator",
+      "label": "Leading Product Outcomes",
+      "type": "Concept",
+      "book": "cdh",
+      "description": "Short-term observable user behaviors that act as leading indicators for lagging enterprise financial metrics."
+    },
+    {
+      "id": "fc_instant_compliance",
+      "label": "Instant Passive Compliance",
+      "type": "Pitfall",
+      "book": "fc",
+      "description": "A subtle form of client resistance where immediate agreement masks an unwillingness to execute or allocate resources."
+    },
+    {
+      "id": "fc_naming_protocol",
+      "label": "Neutral Naming Protocol",
+      "type": "Technique",
+      "book": "fc",
+      "description": "The exact 3-step sequence: (1) Identify the resistance form, (2) name it without judgment, (3) remain completely silent."
+    },
+    {
+      "id": "htma_evsi",
+      "label": "Expected Value of Sample Information (EVSI)",
+      "type": "Concept",
+      "book": "htma",
+      "description": "The expected value of imperfect or noisy sample data. Always bounded above by EVPI and used to cap real-world experimentation costs."
+    },
+    {
+      "id": "htma_lens_model",
+      "label": "Brunswik Lens Model for Expert Judgment",
+      "type": "Technique",
+      "book": "htma",
+      "description": "Deconstructing expert decisions into statistical cues to remove human inconsistency, cognitive fatigue, and noise."
+    },
+    {
+      "id": "htma_calibrated_meeting",
+      "label": "Calibrated Estimation Workshop",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "A pre-modeling workshop where operational leaders and engineers undergo the Equivalent Bet drill to calibrate 90% CIs on baseline failure rates."
+    },
+    {
+      "id": "mom_deflecting_compliments",
+      "label": "Deflecting Compliments",
+      "type": "Technique",
+      "book": "mom",
+      "description": "Tactical pivot away from positive praise back to historical facts, budgets, and current operational workarounds."
+    },
+    {
+      "id": "mom_advancement_test",
+      "label": "Advancement Test",
+      "type": "Technique",
+      "book": "mom",
+      "description": "Checking whether a customer meeting advances to a clear next commitment or terminates in pleasant, non-committal chatter."
+    },
+    {
+      "id": "pp_action_titles",
+      "label": "Action Titles (Slide Discipline)",
+      "type": "Technique",
+      "book": "pp",
+      "description": "Formulating every slide title as a complete, assertive takeaway sentence rather than a passive topic label."
+    },
+    {
+      "id": "pp_three_orders",
+      "label": "Three Logical Orders (Time, Structure, Degree)",
+      "type": "Principle",
+      "book": "pp",
+      "description": "Rules for organizing horizontal thoughts: chronological sequence (time), structural partition (space/organization), or ranked importance (degree)."
+    },
+    {
+      "id": "sw_action_triggers",
+      "label": "Action Triggers (Implementation Intentions)",
+      "type": "Technique",
+      "book": "sw",
+      "description": "Pre-deciding the specific time and location to execute a behavior ('When X happens, I do Y') to bypass Rider cognitive exhaustion."
+    },
+    {
+      "id": "sw_endowed_progress",
+      "label": "Endowed Progress Effect",
+      "type": "Principle",
+      "book": "sw",
+      "description": "People are far more motivated to complete a goal when they feel they have already made progress rather than starting from zero."
+    },
+    {
+      "id": "ta_trust_quotient",
+      "label": "Trust Quotient (TQ) Assessment",
+      "type": "Technique",
+      "book": "ta",
+      "description": "A 20-question psychometric instrument measuring individual scores across Credibility, Reliability, Intimacy, and Self-Orientation."
+    },
+    {
+      "id": "ta_trust_temperaments",
+      "label": "Trust Temperaments",
+      "type": "Concept",
+      "book": "ta",
+      "description": "Behavioral profiles (Expert, Steward, Connector, Catalyst) that describe how consultants default to building trust with clients."
+    }
+  ],
+  "edges": [
+    {
+      "source": "author_hubbard",
+      "target": "book_htma",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "author_maister",
+      "target": "book_ta",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "author_green",
+      "target": "book_ta",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "author_galford",
+      "target": "book_ta",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "author_fitzpatrick",
+      "target": "book_mom",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "htma_measurement_def",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_clarification_chain",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_illusions",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_four_assumptions",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_aie",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_measurement_inversion",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_preferences",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_risk_matrix_critique",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_illusions",
+      "target": "htma_measurement_def",
+      "relation": "RESOLVED_BY"
+    },
+    {
+      "source": "htma_illusions",
+      "target": "htma_clarification_chain",
+      "relation": "RESOLVED_BY"
+    },
+    {
+      "source": "htma_aie",
+      "target": "htma_define_decision",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "htma_aie",
+      "target": "htma_calibration",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "htma_aie",
+      "target": "htma_evi",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "htma_aie",
+      "target": "htma_monte_carlo",
+      "relation": "USES"
+    },
+    {
+      "source": "htma_calibration",
+      "target": "htma_ci90",
+      "relation": "PRODUCES"
+    },
+    {
+      "source": "htma_equivalent_bet",
+      "target": "htma_calibration",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "htma_calibration",
+      "target": "htma_overconfidence",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "htma_ci90",
+      "target": "htma_monte_carlo",
+      "relation": "INPUT_TO"
+    },
+    {
+      "source": "htma_decomposition",
+      "target": "htma_ci90",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "htma_eol",
+      "target": "htma_evi",
+      "relation": "DETERMINES"
+    },
+    {
+      "source": "htma_evi",
+      "target": "htma_measurement_inversion",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "htma_four_assumptions",
+      "target": "htma_small_data",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "htma_rule_of_five",
+      "target": "htma_small_data",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "htma_single_sample",
+      "target": "htma_small_data",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "htma_bayes",
+      "target": "htma_small_data",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "htma_bayes",
+      "target": "htma_measurement_def",
+      "relation": "OPERATIONALIZES"
+    },
+    {
+      "source": "htma_risk_matrix_critique",
+      "target": "htma_monte_carlo",
+      "relation": "REPLACED_BY"
+    },
+    {
+      "source": "htma_define_decision",
+      "target": "htma_clarification_chain",
+      "relation": "USES"
+    },
+    {
+      "source": "ta_trust_equation",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_five_steps",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_earn_right",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_advisor_evolution",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_client_owns_decision",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_relationship_vs_transaction",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_emotional_reality",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_trust_equation",
+      "target": "ta_credibility",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "ta_trust_equation",
+      "target": "ta_reliability",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "ta_trust_equation",
+      "target": "ta_intimacy",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "ta_trust_equation",
+      "target": "ta_self_orientation",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "ta_need_to_be_right",
+      "target": "ta_self_orientation",
+      "relation": "INCREASES"
+    },
+    {
+      "source": "ta_five_steps",
+      "target": "ta_engage",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "ta_five_steps",
+      "target": "ta_listen",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "ta_five_steps",
+      "target": "ta_frame",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "ta_five_steps",
+      "target": "ta_envision",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "ta_five_steps",
+      "target": "ta_commit",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "ta_engage",
+      "target": "ta_listen",
+      "relation": "PRECEDES"
+    },
+    {
+      "source": "ta_listen",
+      "target": "ta_frame",
+      "relation": "PRECEDES"
+    },
+    {
+      "source": "ta_frame",
+      "target": "ta_envision",
+      "relation": "PRECEDES"
+    },
+    {
+      "source": "ta_envision",
+      "target": "ta_commit",
+      "relation": "PRECEDES"
+    },
+    {
+      "source": "ta_listen",
+      "target": "ta_earn_right",
+      "relation": "ENABLES"
+    },
+    {
+      "source": "ta_name_it",
+      "target": "ta_frame",
+      "relation": "PART_OF"
+    },
+    {
+      "source": "ta_name_it",
+      "target": "ta_intimacy",
+      "relation": "INCREASES"
+    },
+    {
+      "source": "ta_listen",
+      "target": "ta_emotional_reality",
+      "relation": "UNCOVERS"
+    },
+    {
+      "source": "ta_commit",
+      "target": "ta_client_owns_decision",
+      "relation": "EMBODIES"
+    },
+    {
+      "source": "ta_reliability",
+      "target": "ta_relationship_vs_transaction",
+      "relation": "BUILT_THROUGH"
+    },
+    {
+      "source": "ta_trust_equation",
+      "target": "ta_advisor_evolution",
+      "relation": "DRIVES"
+    },
+    {
+      "source": "mom_rules",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_bad_data",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_commitment",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_scary_questions",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_big_three",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_keep_casual",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_segmentation",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_vfwpa",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_notes",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_look_before_zoom",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_rules",
+      "target": "mom_their_life",
+      "relation": "HAS_RULE"
+    },
+    {
+      "source": "mom_rules",
+      "target": "mom_past_specifics",
+      "relation": "HAS_RULE"
+    },
+    {
+      "source": "mom_rules",
+      "target": "mom_talk_less",
+      "relation": "HAS_RULE"
+    },
+    {
+      "source": "mom_bad_data",
+      "target": "mom_compliments",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "mom_bad_data",
+      "target": "mom_fluff",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "mom_bad_data",
+      "target": "mom_feature_requests",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "mom_past_specifics",
+      "target": "mom_fluff",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "mom_dig",
+      "target": "mom_feature_requests",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "mom_their_life",
+      "target": "mom_compliments",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "mom_pitching",
+      "target": "mom_compliments",
+      "relation": "CAUSES"
+    },
+    {
+      "source": "mom_talk_less",
+      "target": "mom_pitching",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "mom_commitment",
+      "target": "mom_currencies",
+      "relation": "MEASURED_IN"
+    },
+    {
+      "source": "mom_commitment",
+      "target": "mom_zombie_leads",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "mom_compliments",
+      "target": "mom_zombie_leads",
+      "relation": "CAUSES"
+    },
+    {
+      "source": "mom_big_three",
+      "target": "mom_scary_questions",
+      "relation": "SHOULD_INCLUDE"
+    },
+    {
+      "source": "mom_dig",
+      "target": "mom_workarounds",
+      "relation": "UNCOVERS"
+    },
+    {
+      "source": "mom_look_before_zoom",
+      "target": "mom_dig",
+      "relation": "PRECEDES"
+    },
+    {
+      "source": "mom_segmentation",
+      "target": "mom_bad_data",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "mom_vfwpa",
+      "target": "mom_keep_casual",
+      "relation": "ALTERNATIVE_TO"
+    },
+    {
+      "source": "x_behavior_over_opinion",
+      "target": "htma_preferences",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_behavior_over_opinion",
+      "target": "mom_past_specifics",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_behavior_over_opinion",
+      "target": "mom_workarounds",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_behavior_over_opinion",
+      "target": "ta_reliability",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_conversation_as_measurement",
+      "target": "htma_measurement_def",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_conversation_as_measurement",
+      "target": "mom_rules",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_conversation_as_measurement",
+      "target": "htma_bayes",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_information_value_of_scary",
+      "target": "mom_scary_questions",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_information_value_of_scary",
+      "target": "htma_measurement_inversion",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_information_value_of_scary",
+      "target": "htma_evi",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_information_value_of_scary",
+      "target": "ta_name_it",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_self_orientation_kills_data",
+      "target": "ta_self_orientation",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_self_orientation_kills_data",
+      "target": "mom_pitching",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_self_orientation_kills_data",
+      "target": "ta_need_to_be_right",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_self_orientation_kills_data",
+      "target": "mom_bad_data",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_frame_is_define_decision",
+      "target": "ta_frame",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_frame_is_define_decision",
+      "target": "htma_define_decision",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_frame_is_define_decision",
+      "target": "mom_look_before_zoom",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_envision_observable",
+      "target": "ta_envision",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_envision_observable",
+      "target": "htma_clarification_chain",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_honest_uncertainty",
+      "target": "ta_credibility",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_honest_uncertainty",
+      "target": "htma_ci90",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_honest_uncertainty",
+      "target": "htma_overconfidence",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_commitment_as_signal",
+      "target": "mom_commitment",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_commitment_as_signal",
+      "target": "ta_commit",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_commitment_as_signal",
+      "target": "htma_preferences",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_small_samples_discovery",
+      "target": "htma_rule_of_five",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_small_samples_discovery",
+      "target": "htma_single_sample",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_small_samples_discovery",
+      "target": "mom_keep_casual",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "mom_talk_less",
+      "target": "ta_listen",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "mom_pitching",
+      "target": "ta_self_orientation",
+      "relation": "INCREASES"
+    },
+    {
+      "source": "mom_keep_casual",
+      "target": "ta_intimacy",
+      "relation": "INCREASES"
+    },
+    {
+      "source": "mom_commitment",
+      "target": "ta_reliability",
+      "relation": "TESTS"
+    },
+    {
+      "source": "mom_dig",
+      "target": "htma_decomposition",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "mom_fluff",
+      "target": "htma_clarification_chain",
+      "relation": "RESOLVED_BY"
+    },
+    {
+      "source": "mom_workarounds",
+      "target": "htma_four_assumptions",
+      "relation": "EXEMPLIFIES"
+    },
+    {
+      "source": "mom_compliments",
+      "target": "htma_overconfidence",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "ta_engage",
+      "target": "mom_their_life",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "fde_discovery_interview",
+      "target": "mom_rules",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_discovery_interview",
+      "target": "mom_big_three",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_discovery_interview",
+      "target": "ta_listen",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_discovery_interview",
+      "target": "mom_notes",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_discovery_interview",
+      "target": "x_conversation_as_measurement",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_problem_framing",
+      "target": "x_frame_is_define_decision",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_problem_framing",
+      "target": "htma_ci90",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_value_case",
+      "target": "htma_decomposition",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_value_case",
+      "target": "htma_monte_carlo",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_value_case",
+      "target": "x_honest_uncertainty",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_pilot_criteria",
+      "target": "x_envision_observable",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_pilot_criteria",
+      "target": "x_commitment_as_signal",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_measure_next",
+      "target": "htma_evi",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_measure_next",
+      "target": "x_information_value_of_scary",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_stakeholder_trust",
+      "target": "ta_trust_equation",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_stakeholder_trust",
+      "target": "ta_name_it",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_stakeholder_trust",
+      "target": "x_self_orientation_kills_data",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_go_no_go",
+      "target": "x_commitment_as_signal",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_go_no_go",
+      "target": "mom_zombie_leads",
+      "relation": "AVOIDS"
+    },
+    {
+      "source": "fde_go_no_go",
+      "target": "x_small_samples_discovery",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_discovery_interview",
+      "target": "fde_problem_framing",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_problem_framing",
+      "target": "fde_value_case",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_value_case",
+      "target": "fde_pilot_criteria",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_pilot_criteria",
+      "target": "fde_go_no_go",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_problem_framing",
+      "target": "fde_measure_next",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "author_minto",
+      "target": "book_pp",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "author_conn",
+      "target": "book_bps",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "author_mclean",
+      "target": "book_bps",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "author_heath_chip",
+      "target": "book_sw",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "author_heath_dan",
+      "target": "book_sw",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "author_block",
+      "target": "book_fc",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "author_torres",
+      "target": "book_cdh",
+      "relation": "AUTHORED"
+    },
+    {
+      "source": "pp_pyramid",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_answer_first",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_scq",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_mece",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_bottom_up",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_chronological_dump",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_deductive_inductive",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_seven_steps",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_issue_tree",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_hypothesis_driven",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_heuristics",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_team_bias",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_wicked",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_one_day_answer",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_rider_elephant_path",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_resistance_clarity",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_decision_paralysis",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_phases",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_roles",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_resistance",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_authenticity",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_fifty_fifty",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_two_dimensions",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_definition",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_trio",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_outcomes",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_ost",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_compare_contrast",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_assumption_mapping",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_pyramid",
+      "target": "pp_governing_thought",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "pp_pyramid",
+      "target": "pp_key_line",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "pp_pyramid",
+      "target": "pp_qa_dialogue",
+      "relation": "USES"
+    },
+    {
+      "source": "pp_pyramid",
+      "target": "pp_grouping_rules",
+      "relation": "REQUIRES"
+    },
+    {
+      "source": "pp_grouping_rules",
+      "target": "pp_mece",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "pp_answer_first",
+      "target": "pp_pyramid",
+      "relation": "EMBODIES"
+    },
+    {
+      "source": "pp_scq",
+      "target": "pp_governing_thought",
+      "relation": "LEADS_TO"
+    },
+    {
+      "source": "pp_bottom_up",
+      "target": "pp_pyramid",
+      "relation": "BUILDS"
+    },
+    {
+      "source": "pp_deductive_inductive",
+      "target": "pp_key_line",
+      "relation": "STRUCTURES"
+    },
+    {
+      "source": "pp_answer_first",
+      "target": "pp_chronological_dump",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "bps_seven_steps",
+      "target": "bps_define",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "bps_seven_steps",
+      "target": "bps_issue_tree",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "bps_seven_steps",
+      "target": "bps_prioritize_2x2",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "bps_seven_steps",
+      "target": "bps_workplan",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "bps_seven_steps",
+      "target": "bps_synthesize",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "bps_issue_tree",
+      "target": "bps_hypothesis_tree",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "bps_hypothesis_driven",
+      "target": "bps_hypothesis_tree",
+      "relation": "USES"
+    },
+    {
+      "source": "bps_hypothesis_driven",
+      "target": "bps_one_day_answer",
+      "relation": "USES"
+    },
+    {
+      "source": "bps_hypothesis_driven",
+      "target": "bps_confirmation_bias",
+      "relation": "RISKS"
+    },
+    {
+      "source": "bps_team_bias",
+      "target": "bps_confirmation_bias",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "bps_prioritize_2x2",
+      "target": "bps_issue_tree",
+      "relation": "PRUNES"
+    },
+    {
+      "source": "bps_workplan",
+      "target": "bps_prioritize_2x2",
+      "relation": "FOLLOWS"
+    },
+    {
+      "source": "bps_heuristics",
+      "target": "bps_workplan",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "bps_wicked",
+      "target": "bps_seven_steps",
+      "relation": "CHALLENGES"
+    },
+    {
+      "source": "sw_rider_elephant_path",
+      "target": "sw_rider",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "sw_rider_elephant_path",
+      "target": "sw_elephant",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "sw_rider_elephant_path",
+      "target": "sw_path",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "sw_rider",
+      "target": "sw_bright_spots",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "sw_rider",
+      "target": "sw_script_moves",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "sw_rider",
+      "target": "sw_destination",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "sw_elephant",
+      "target": "sw_find_feeling",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "sw_elephant",
+      "target": "sw_shrink_change",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "sw_elephant",
+      "target": "sw_grow_people",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "sw_path",
+      "target": "sw_tweak_env",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "sw_path",
+      "target": "sw_build_habits",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "sw_path",
+      "target": "sw_rally_herd",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "sw_script_moves",
+      "target": "sw_decision_paralysis",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "sw_resistance_clarity",
+      "target": "sw_script_moves",
+      "relation": "MOTIVATES"
+    },
+    {
+      "source": "sw_resistance_clarity",
+      "target": "sw_tweak_env",
+      "relation": "MOTIVATES"
+    },
+    {
+      "source": "fc_phases",
+      "target": "fc_contracting",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "fc_phases",
+      "target": "fc_discovery",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "fc_phases",
+      "target": "fc_feedback_meeting",
+      "relation": "HAS_STEP"
+    },
+    {
+      "source": "fc_contracting",
+      "target": "fc_discovery",
+      "relation": "PRECEDES"
+    },
+    {
+      "source": "fc_discovery",
+      "target": "fc_feedback_meeting",
+      "relation": "PRECEDES"
+    },
+    {
+      "source": "fc_resistance",
+      "target": "fc_resistance_forms",
+      "relation": "MANIFESTS_AS"
+    },
+    {
+      "source": "fc_handle_resistance",
+      "target": "fc_resistance",
+      "relation": "ADDRESSES"
+    },
+    {
+      "source": "fc_feedback_meeting",
+      "target": "fc_resistance",
+      "relation": "TRIGGERS"
+    },
+    {
+      "source": "fc_authenticity",
+      "target": "fc_handle_resistance",
+      "relation": "ENABLES"
+    },
+    {
+      "source": "fc_fighting_resistance",
+      "target": "fc_resistance",
+      "relation": "INCREASES"
+    },
+    {
+      "source": "fc_handle_resistance",
+      "target": "fc_fighting_resistance",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "fc_contracting",
+      "target": "fc_fifty_fifty",
+      "relation": "ESTABLISHES"
+    },
+    {
+      "source": "fc_roles",
+      "target": "fc_contracting",
+      "relation": "SHAPES"
+    },
+    {
+      "source": "fc_discovery",
+      "target": "fc_two_dimensions",
+      "relation": "COVERS"
+    },
+    {
+      "source": "cdh_definition",
+      "target": "cdh_trio",
+      "relation": "PERFORMED_BY"
+    },
+    {
+      "source": "cdh_ost",
+      "target": "cdh_outcomes",
+      "relation": "ROOTED_IN"
+    },
+    {
+      "source": "cdh_ost",
+      "target": "cdh_opportunities",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "cdh_ost",
+      "target": "cdh_assumption_tests",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "cdh_story_interview",
+      "target": "cdh_opportunities",
+      "relation": "DISCOVERS"
+    },
+    {
+      "source": "cdh_snapshots",
+      "target": "cdh_story_interview",
+      "relation": "SYNTHESIZES_FROM"
+    },
+    {
+      "source": "cdh_recruiting",
+      "target": "cdh_definition",
+      "relation": "ENABLES"
+    },
+    {
+      "source": "cdh_experience_map",
+      "target": "cdh_opportunities",
+      "relation": "FRAMES"
+    },
+    {
+      "source": "cdh_compare_contrast",
+      "target": "cdh_whether_or_not",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "cdh_assumption_mapping",
+      "target": "cdh_assumption_tests",
+      "relation": "PRIORITIZES"
+    },
+    {
+      "source": "cdh_show_work",
+      "target": "cdh_ost",
+      "relation": "USES"
+    },
+    {
+      "source": "cdh_definition",
+      "target": "cdh_story_interview",
+      "relation": "USES"
+    },
+    {
+      "source": "bps_synthesize",
+      "target": "pp_pyramid",
+      "relation": "USES"
+    },
+    {
+      "source": "bps_issue_tree",
+      "target": "pp_mece",
+      "relation": "REQUIRES"
+    },
+    {
+      "source": "bps_hypothesis_driven",
+      "target": "pp_answer_first",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "bps_define",
+      "target": "htma_define_decision",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "bps_heuristics",
+      "target": "htma_decomposition",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "bps_one_day_answer",
+      "target": "htma_ci90",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "bps_issue_tree",
+      "target": "cdh_ost",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "bps_issue_tree",
+      "target": "htma_decomposition",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "bps_team_bias",
+      "target": "htma_overconfidence",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "bps_define",
+      "target": "ta_frame",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "pp_answer_first",
+      "target": "ta_credibility",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "pp_scq",
+      "target": "ta_frame",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "cdh_story_interview",
+      "target": "mom_past_specifics",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "cdh_definition",
+      "target": "mom_keep_casual",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "cdh_assumption_tests",
+      "target": "htma_evi",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "cdh_outcomes",
+      "target": "htma_measurement_inversion",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "cdh_compare_contrast",
+      "target": "ta_client_owns_decision",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "cdh_snapshots",
+      "target": "mom_notes",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "cdh_opportunities",
+      "target": "mom_dig",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "fc_handle_resistance",
+      "target": "ta_name_it",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "fc_resistance",
+      "target": "ta_emotional_reality",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "fc_contracting",
+      "target": "ta_commit",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "fc_contracting",
+      "target": "mom_commitment",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "fc_authenticity",
+      "target": "ta_self_orientation",
+      "relation": "DECREASES"
+    },
+    {
+      "source": "fc_authenticity",
+      "target": "ta_intimacy",
+      "relation": "INCREASES"
+    },
+    {
+      "source": "fc_roles",
+      "target": "ta_advisor_evolution",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "fc_fighting_resistance",
+      "target": "ta_need_to_be_right",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "fc_fifty_fifty",
+      "target": "ta_client_owns_decision",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "fc_discovery",
+      "target": "ta_listen",
+      "relation": "USES"
+    },
+    {
+      "source": "sw_resistance_clarity",
+      "target": "fc_resistance",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "sw_destination",
+      "target": "ta_envision",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "sw_destination",
+      "target": "cdh_outcomes",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "sw_bright_spots",
+      "target": "mom_workarounds",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "sw_bright_spots",
+      "target": "htma_four_assumptions",
+      "relation": "EXEMPLIFIES"
+    },
+    {
+      "source": "sw_shrink_change",
+      "target": "cdh_assumption_tests",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "sw_find_feeling",
+      "target": "ta_emotional_reality",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "sw_script_moves",
+      "target": "ta_commit",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "sw_script_moves",
+      "target": "pp_answer_first",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "x_structured_decomposition",
+      "target": "pp_mece",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_structured_decomposition",
+      "target": "bps_issue_tree",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_structured_decomposition",
+      "target": "cdh_ost",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_structured_decomposition",
+      "target": "htma_decomposition",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_structured_decomposition",
+      "target": "pp_pyramid",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_hypothesis_first",
+      "target": "pp_answer_first",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_hypothesis_first",
+      "target": "bps_hypothesis_driven",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_hypothesis_first",
+      "target": "bps_one_day_answer",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_hypothesis_first",
+      "target": "htma_bayes",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_hypothesis_first",
+      "target": "htma_calibration",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_riskiest_assumption_first",
+      "target": "cdh_assumption_mapping",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_riskiest_assumption_first",
+      "target": "htma_evi",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_riskiest_assumption_first",
+      "target": "bps_prioritize_2x2",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_riskiest_assumption_first",
+      "target": "mom_scary_questions",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_resistance_is_information",
+      "target": "fc_resistance",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_resistance_is_information",
+      "target": "fc_handle_resistance",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_resistance_is_information",
+      "target": "sw_resistance_clarity",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_resistance_is_information",
+      "target": "ta_emotional_reality",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_resistance_is_information",
+      "target": "ta_name_it",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_explicit_contracting",
+      "target": "fc_contracting",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_explicit_contracting",
+      "target": "ta_commit",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_explicit_contracting",
+      "target": "mom_commitment",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_explicit_contracting",
+      "target": "fc_fifty_fifty",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_outcomes_over_outputs",
+      "target": "cdh_outcomes",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_outcomes_over_outputs",
+      "target": "sw_destination",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_outcomes_over_outputs",
+      "target": "bps_define",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_outcomes_over_outputs",
+      "target": "htma_measurement_inversion",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_outcomes_over_outputs",
+      "target": "htma_clarification_chain",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_small_bets",
+      "target": "sw_shrink_change",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_small_bets",
+      "target": "cdh_assumption_tests",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_small_bets",
+      "target": "htma_small_data",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_small_bets",
+      "target": "x_small_samples_discovery",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_recommendation_with_uncertainty",
+      "target": "pp_answer_first",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_recommendation_with_uncertainty",
+      "target": "x_honest_uncertainty",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_recommendation_with_uncertainty",
+      "target": "htma_monte_carlo",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_recommendation_with_uncertainty",
+      "target": "ta_credibility",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_situation_not_people",
+      "target": "sw_tweak_env",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_situation_not_people",
+      "target": "sw_bright_spots",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_situation_not_people",
+      "target": "sw_resistance_clarity",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_situation_not_people",
+      "target": "mom_workarounds",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_situation_not_people",
+      "target": "fc_two_dimensions",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_hypothesis_first",
+      "target": "bps_confirmation_bias",
+      "relation": "RISKS"
+    },
+    {
+      "source": "x_self_orientation_kills_data",
+      "target": "fc_fighting_resistance",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_commitment_as_signal",
+      "target": "fc_contracting",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "x_conversation_as_measurement",
+      "target": "cdh_story_interview",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "fde_contracting_meeting",
+      "target": "fc_contracting",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_contracting_meeting",
+      "target": "bps_define",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_contracting_meeting",
+      "target": "x_explicit_contracting",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_contracting_meeting",
+      "target": "fc_roles",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_issue_tree",
+      "target": "bps_hypothesis_tree",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_issue_tree",
+      "target": "bps_workplan",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_issue_tree",
+      "target": "x_riskiest_assumption_first",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_issue_tree",
+      "target": "x_structured_decomposition",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_exec_recommendation",
+      "target": "pp_scq",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_exec_recommendation",
+      "target": "pp_pyramid",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_exec_recommendation",
+      "target": "x_recommendation_with_uncertainty",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_adoption_plan",
+      "target": "sw_rider_elephant_path",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_adoption_plan",
+      "target": "x_situation_not_people",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_adoption_plan",
+      "target": "x_small_bets",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_adoption_plan",
+      "target": "sw_bright_spots",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_resistance_playbook",
+      "target": "fc_handle_resistance",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_resistance_playbook",
+      "target": "x_resistance_is_information",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_resistance_playbook",
+      "target": "fc_feedback_meeting",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_deployment_ost",
+      "target": "cdh_ost",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_deployment_ost",
+      "target": "cdh_definition",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_deployment_ost",
+      "target": "x_outcomes_over_outputs",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_deployment_ost",
+      "target": "cdh_compare_contrast",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_discovery_interview",
+      "target": "cdh_story_interview",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_discovery_interview",
+      "target": "cdh_snapshots",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_stakeholder_trust",
+      "target": "fc_authenticity",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_pilot_criteria",
+      "target": "cdh_outcomes",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_measure_next",
+      "target": "x_riskiest_assumption_first",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_contracting_meeting",
+      "target": "fde_discovery_interview",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_contracting_meeting",
+      "target": "fde_problem_framing",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_problem_framing",
+      "target": "fde_issue_tree",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_issue_tree",
+      "target": "fde_measure_next",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_discovery_interview",
+      "target": "fde_deployment_ost",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_value_case",
+      "target": "fde_exec_recommendation",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_exec_recommendation",
+      "target": "fde_resistance_playbook",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_exec_recommendation",
+      "target": "fde_go_no_go",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_pilot_criteria",
+      "target": "fde_adoption_plan",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "fde_deployment_ost",
+      "target": "fde_pilot_criteria",
+      "relation": "FEEDS"
+    },
+    {
+      "source": "bps_porpoising",
+      "target": "bps_define",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "bps_red_teaming",
+      "target": "bps_team_bias",
+      "relation": "EMBODIES"
+    },
+    {
+      "source": "fde_problem_framing",
+      "target": "bps_define",
+      "relation": "USES"
+    },
+    {
+      "source": "fde_issue_tree",
+      "target": "bps_porpoising",
+      "relation": "USES"
+    },
+    {
+      "source": "cdh_five_assumptions",
+      "target": "cdh_assumption_mapping",
+      "relation": "STRUCTURES"
+    },
+    {
+      "source": "cdh_leading_indicator",
+      "target": "cdh_outcomes",
+      "relation": "OPERATIONALIZES"
+    },
+    {
+      "source": "fde_deployment_ost",
+      "target": "cdh_five_assumptions",
+      "relation": "USES"
+    },
+    {
+      "source": "fc_instant_compliance",
+      "target": "fc_resistance_forms",
+      "relation": "INCLUDES"
+    },
+    {
+      "source": "fc_naming_protocol",
+      "target": "fc_handle_resistance",
+      "relation": "EMBODIES"
+    },
+    {
+      "source": "fde_resistance_playbook",
+      "target": "fc_naming_protocol",
+      "relation": "USES"
+    },
+    {
+      "source": "htma_evsi",
+      "target": "htma_evi",
+      "relation": "EXTENDS"
+    },
+    {
+      "source": "htma_lens_model",
+      "target": "htma_calibration",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "htma_calibrated_meeting",
+      "target": "htma_calibration",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "htma_calibrated_meeting",
+      "target": "htma_equivalent_bet",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_value_case",
+      "target": "htma_evsi",
+      "relation": "USES"
+    },
+    {
+      "source": "mom_deflecting_compliments",
+      "target": "mom_compliments",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "mom_advancement_test",
+      "target": "mom_commitment",
+      "relation": "OPERATIONALIZES"
+    },
+    {
+      "source": "fde_discovery_interview",
+      "target": "mom_deflecting_compliments",
+      "relation": "USES"
+    },
+    {
+      "source": "pp_action_titles",
+      "target": "pp_pyramid",
+      "relation": "EMBODIES"
+    },
+    {
+      "source": "pp_three_orders",
+      "target": "pp_grouping_rules",
+      "relation": "OPERATIONALIZES"
+    },
+    {
+      "source": "fde_exec_recommendation",
+      "target": "pp_action_titles",
+      "relation": "USES"
+    },
+    {
+      "source": "sw_action_triggers",
+      "target": "sw_build_habits",
+      "relation": "IMPLEMENTS"
+    },
+    {
+      "source": "sw_endowed_progress",
+      "target": "sw_shrink_change",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "fde_adoption_plan",
+      "target": "sw_action_triggers",
+      "relation": "USES"
+    },
+    {
+      "source": "ta_trust_quotient",
+      "target": "ta_trust_equation",
+      "relation": "MEASURES"
+    },
+    {
+      "source": "ta_trust_temperaments",
+      "target": "ta_trust_quotient",
+      "relation": "PRODUCED_BY"
+    },
+    {
+      "source": "fde_stakeholder_trust",
+      "target": "ta_trust_quotient",
+      "relation": "USES"
+    }
+  ],
+  "resources": [
+    {
+      "node_id": "bps_seven_steps",
+      "title": "McKinsey Quarterly: Six problem-solving mindsets for very uncertain times",
+      "url": "https://www.mckinsey.com",
+      "kind": "article"
+    },
+    {
+      "node_id": "bps_define",
+      "title": "Wiley Bulletproof Problem Solving Companion Site & Templates",
+      "url": "https://www.wiley.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "cdh_ost",
+      "title": "Product Talk Official Opportunity Solution Tree Guide & Canvas",
+      "url": "https://www.producttalk.org",
+      "kind": "tool"
+    },
+    {
+      "node_id": "cdh_snapshots",
+      "title": "Product Talk Interview Snapshot Template",
+      "url": "https://www.producttalk.org",
+      "kind": "tool"
+    },
+    {
+      "node_id": "fc_contracting",
+      "title": "Designed Learning Contracting Checklists & Guides",
+      "url": "https://designedlearning.com",
+      "kind": "tool"
+    },
+    {
+      "node_id": "fc_handle_resistance",
+      "title": "Designed Learning: How to Handle Resistance in Client Engagements",
+      "url": "https://designedlearning.com",
+      "kind": "article"
+    },
+    {
+      "node_id": "htma_aie",
+      "title": "Hubbard Decision Research Official AIE Library & Spreadsheets",
+      "url": "https://hubbardresearch.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "htma_calibration",
+      "title": "AIE Calibration Training Aids & Spreadsheet Drills",
+      "url": "https://hubbardresearch.com",
+      "kind": "tool"
+    },
+    {
+      "node_id": "mom_rules",
+      "title": "The Mom Test Official Site & Downloads",
+      "url": "https://www.momtestbook.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "pp_pyramid",
+      "title": "Barbara Minto Official Pyramid Principle Platform",
+      "url": "https://barbaraminto.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "sw_rider_elephant_path",
+      "title": "Heath Brothers Official Switch Framework & Workbook Downloads",
+      "url": "https://heathbrothers.com/resources/",
+      "kind": "tool"
+    },
+    {
+      "node_id": "ta_trust_equation",
+      "title": "Trusted Advisor Associates Official Resources & TQ Assessment",
+      "url": "https://trustedadvisor.com",
+      "kind": "tool"
+    }
+  ]
+}
