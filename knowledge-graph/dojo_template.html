@@ -570,6 +570,15 @@
             <button id="downloadPrompt" class="btn">⬇ Descargar .md</button>
             <span id="copyNote" class="hint small"></span>
           </div>
+          <div class="paste-eval" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+            <h4 style="margin:0 0 4px;font-size:13px">📥 Pegar auditoría de Claude / ChatGPT / Gemini (sin API key)</h4>
+            <p class="hint small" style="margin:0 0 8px">Al terminar tu sesión externa con <code>/evaluar</code>, pega aquí la respuesta del modelo (o el bloque JSON) para renderizar la rúbrica de 5 dimensiones y actualizar tu HUD.</p>
+            <textarea id="pasteEvalInput" rows="3" placeholder='Pega aquí la respuesta de /evaluar o el JSON {"overall": 82, "dimensions": [...]}' style="width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:12px"></textarea>
+            <div class="row" style="margin-top:8px">
+              <button id="pasteEvalBtn" class="btn primary" type="button">⚖️ Procesar auditoría JSON</button>
+              <button id="openSelfEvalBtn" class="btn ghost" type="button">📝 Autoevaluación manual (0–20)</button>
+            </div>
+          </div>
         </div>
         <div id="tab-chat" class="tabpane" hidden>
           <div class="api-config">
@@ -599,8 +608,8 @@
             <button id="chatReset" class="btn ghost">Nueva sesión</button>
           </div>
           <div id="chatMeta" class="hint small" style="margin-top:8px"></div>
-          <div id="rubricResult"></div>
         </div>
+        <div id="rubricResult"></div>
       </div>
     </div>
   </section>
@@ -1093,11 +1102,42 @@ function openStats() {
 
     <div class="row" style="margin-top:18px">
       <button class="btn" id="exportState">⬇ Exportar progreso (.json)</button>
+      <button class="btn" id="importState">⬆ Importar progreso (.json)</button>
+      <input type="file" id="importStateFile" accept=".json,application/json" hidden>
       <button class="btn ghost" id="resetState">🗑 Reiniciar todo</button>
     </div>`;
 
   $("#exportState").onclick = () => {
     downloadFile("fde-dojo-progress.json", JSON.stringify(state, null, 2), "application/json");
+  };
+  $("#importState").onclick = () => {
+    const fileInput = $("#importStateFile");
+    if (fileInput) fileInput.click();
+  };
+  $("#importStateFile").onchange = (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || ""));
+        if (!parsed || typeof parsed !== "object" || (!parsed.metrics && !parsed.scenarios && !parsed.version)) {
+          toast("El archivo JSON no parece un respaldo válido del Dojo.", "error");
+          return;
+        }
+        const next = hydrate(parsed);
+        Object.keys(state).forEach((k) => { delete state[k]; });
+        Object.assign(state, next);
+        saveState();
+        renderHUD();
+        setMode(state.lastMode || "reflex", { silent: true });
+        openStats();
+        toast("Progreso importado correctamente.", "ok");
+      } catch (err) {
+        toast("Error al leer el archivo JSON: " + err.message, "error");
+      }
+    };
+    reader.readAsText(file);
   };
   $("#resetState").onclick = () => {
     if (confirm("Esto borra XP, métricas, repaso espaciado y calibración de este navegador. ¿Continuar?")) {
@@ -1615,14 +1655,30 @@ function initReflex() {
   $("#statsBtn2").onclick = openStats;
 
   document.addEventListener("keydown", (ev) => {
-    if (!/^[1-4]$/.test(ev.key)) return;
-    if ($("#mode-reflex").hidden) return;
     if ($$(".modal:not([hidden])").length) return;
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
-    const container = REFLEX.step === 1 ? "#diagOptions" : "#step2";
-    const btns = $$(`${container} .opt:not(:disabled)`);
-    const btn = btns[Number(ev.key) - 1];
-    if (btn) btn.click();
+    if (/^[1-4]$/.test(ev.key)) {
+      if (!$("#mode-reflex").hidden) {
+        const container = REFLEX.step === 1 ? "#diagOptions" : "#step2";
+        const btns = $$(`${container} .opt:not(:disabled)`);
+        const btn = btns[Number(ev.key) - 1];
+        if (btn) btn.click();
+      } else if (!$("#mode-bootcamp").hidden) {
+        const btns = $$("#bootOptions .opt:not(:disabled)");
+        const btn = btns[Number(ev.key) - 1];
+        if (btn) btn.click();
+      }
+      return;
+    }
+    if (ev.key === "Enter" || ev.key === "ArrowRight") {
+      if (!$("#mode-reflex").hidden && REFLEX.step === 3) {
+        const nextBtn = $("#nextScenario");
+        if (nextBtn) { ev.preventDefault(); nextBtn.click(); }
+      } else if (!$("#mode-bootcamp").hidden) {
+        const contBtn = $("#bootContinue");
+        if (contBtn) { ev.preventDefault(); contBtn.click(); }
+      }
+    }
   });
 }
 
@@ -1768,8 +1824,20 @@ function renderCalQuestion(q) {
       <span class="pill">objetivo 90%</span>
     </div>
     <h2 class="cal-prompt">${esc(q.prompt)}</h2>
-    <p class="muted">Unidad de respuesta: <b>${esc(q.unit)}</b>${q.magnitude_hint ? ' · <button class="linkbtn" id="hintToggle">ver pista de magnitud</button>' : ""}</p>
+    <p class="muted">Unidad de respuesta: <b>${esc(q.unit)}</b>${q.magnitude_hint ? ' · <button class="linkbtn" id="hintToggle">ver pista de magnitud</button>' : ""} · <button class="linkbtn" id="fermiToggle">🧮 descomponer (Fermi)</button></p>
     <div id="hintBox" class="hintbox" hidden>${esc(q.magnitude_hint || "")}</div>
+    <div id="fermiBox" class="hintbox" hidden style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <b>Scratchpad de Descomposición de Fermi</b>
+        ${nodePill("htma_decomposition")}
+      </div>
+      <p class="muted small" style="margin:0 0 8px">En vez de adivinar en frío, descompón la incógnita en factores que sí conoces (ej: <code>unidades × tasa × horas</code> o <code>450 * 0.15 * 12</code>).</p>
+      <div class="row" style="gap:8px;align-items:center">
+        <input id="fermiExpr" type="text" placeholder="Ej: 120 * 0.35 * 24" style="flex:1;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:var(--mono);font-size:12px">
+        <span id="fermiOut" class="pill" style="font-family:var(--mono)">= —</span>
+        <button class="btn ghost" type="button" id="fermiApply">Usar ancla (÷2 a ×2)</button>
+      </div>
+    </div>
     <div class="range-grid">
       <label>Límite inferior (min)
         <div class="inputwrap"><input id="calMin" type="number" step="any" inputmode="decimal" value="${esc(CAL.min)}" placeholder="0"><span>${esc(q.unit)}</span></div>
@@ -1785,6 +1853,45 @@ function renderCalQuestion(q) {
 
   const hintBtn = $("#hintToggle");
   if (hintBtn) hintBtn.onclick = () => { $("#hintBox").hidden = !$("#hintBox").hidden; };
+  const fermiBtn = $("#fermiToggle");
+  if (fermiBtn) fermiBtn.onclick = () => { $("#fermiBox").hidden = !$("#fermiBox").hidden; };
+  const fermiExpr = $("#fermiExpr");
+  const evalFermi = () => {
+    if (!fermiExpr) return null;
+    const raw = fermiExpr.value.replace(/,/g, ".").replace(/×/g, "*").replace(/÷/g, "/").trim();
+    if (!raw || !/^[0-9+\-*/().\s]+$/.test(raw)) return null;
+    try {
+      const val = Function(`"use strict"; return (${raw});`)();
+      return Number.isFinite(val) ? val : null;
+    } catch {
+      return null;
+    }
+  };
+  if (fermiExpr) {
+    fermiExpr.oninput = () => {
+      const v = evalFermi();
+      $("#fermiOut").textContent = v !== null ? `= ${fmtAnswer(round1(v))} ${q.unit}` : "= —";
+    };
+  }
+  const fermiApply = $("#fermiApply");
+  if (fermiApply) {
+    fermiApply.onclick = () => {
+      const v = evalFermi();
+      if (v === null || v <= 0) {
+        toast("Escribe una expresión numérica válida (ej: 250 * 0.2 * 12).", "warn");
+        return;
+      }
+      let lo = round1(v * 0.5);
+      let hi = round1(v * 2);
+      if (q.unit === "%") {
+        lo = clamp(round1(v * 0.6), 0, 99);
+        hi = clamp(round1(Math.max(lo + 1, v * 1.4)), 1, 100);
+      }
+      $("#calMin").value = String(lo);
+      $("#calMax").value = String(hi);
+      toast(`Ancla de Fermi aplicada: [${lo}, ${hi}] ${q.unit}. Ajusta si lo necesitas.`, "ok");
+    };
+  }
   $("#calSubmit").onclick = () => {
     const minRaw = $("#calMin").value.trim();
     const maxRaw = $("#calMax").value.trim();
@@ -2269,8 +2376,18 @@ function renderBootcampStage(campaign, stage) {
     ...(stage.supporting_nodes || []).map((id) => nodePill(id))
   ].join("");
 
+  const prevDay = b.history.find((h) => h.day === stage.day - 1);
+  let carryoverHtml = "";
+  if (prevDay) {
+    const lowest = METRICS.slice().sort((a, m) => state.metrics[a.key] - state.metrics[m.key])[0];
+    carryoverHtml = prevDay.best
+      ? `<div class="feedback ok" style="margin-bottom:12px"><b>✓ Eco del Día ${prevDay.day} (${BOOT_DAY_LABELS[prevDay.day]}):</b> Tu jugada anterior («${esc(prevDay.label)}») dejó capital político y evidencia clara para abrir la sesión de hoy.</div>`
+      : `<div class="feedback bad" style="margin-bottom:12px"><b>⚠️ Deuda táctica arrastrada del Día ${prevDay.day} (${BOOT_DAY_LABELS[prevDay.day]}):</b> Como ayer elegiste «${esc(prevDay.label)}», hoy entras con fricción acumulada y tu barra más vulnerable es <b>${lowest.key} (${Math.round(state.metrics[lowest.key])}/100)</b>.</div>`;
+  }
+
   $("#bootStageSlot").innerHTML = `
     <div class="boot-stage">
+      ${carryoverHtml}
       <div class="scenario-top">
         <span class="pill">Día ${stage.day} · ${BOOT_DAY_LABELS[stage.day]}</span>
         <span class="pill">${esc(stage.theme)}</span>
@@ -3162,6 +3279,36 @@ function initSparring() {
     const m = mission();
     downloadFile(`fde-sparring-${m.context.id}.md`, buildSparringPrompt(m), "text/markdown");
   };
+  const pasteBtn = $("#pasteEvalBtn");
+  if (pasteBtn) {
+    pasteBtn.onclick = () => {
+      const text = ($("#pasteEvalInput") ? $("#pasteEvalInput").value : "").trim();
+      if (!text) {
+        toast("Pega primero la respuesta de /evaluar o el bloque JSON del LLM.", "warn");
+        return;
+      }
+      const m = mission();
+      const raw = extractJson(text);
+      const ev = raw ? normalizeEvaluation(raw) : null;
+      if (ev) {
+        SPAR.chat.evaluated = true;
+        SPAR.chat.evaluation = ev;
+        applyEvaluation(ev, m);
+        renderEvaluation(ev);
+        $("#rubricResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } else {
+        renderSelfEval(m, "El texto pegado no contiene un bloque JSON de auditoría válido.");
+        toast("No se detectó un JSON válido; puedes usar la autoevaluación debajo.", "warn");
+      }
+    };
+  }
+  const openSelfBtn = $("#openSelfEvalBtn");
+  if (openSelfBtn) {
+    openSelfBtn.onclick = () => {
+      renderSelfEval(mission(), "Autoevaluación manual activada desde la Opción A.");
+      $("#rubricResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
+  }
 
   // API config
   const cfg = readApiConfig();

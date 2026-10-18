@@ -3350,6 +3350,716 @@
           "feedback": "Un número único sin rango es 'htma_overconfidence'. Si el ahorro real cae, el CFO quedará expuesto y la relación se romperá."
         }
       ]
+    },
+    {
+      "id": "scen_34_calibrated_workshop",
+      "title": "Taller de rangos con cinco líderes de planta",
+      "book": "htma",
+      "phase": "Diagnosis & Measurement",
+      "difficulty": "advanced",
+      "context": "Reúnes a cinco jefes de línea para estimar cuántas horas semanales se pierden por micro-paradas no registradas en el MES. El gerente técnico exige un número único de consenso hoy o propone suspender el piloto seis meses hasta instalar sensores en toda la línea.",
+      "stakeholder_role": "Gerente Técnico de Manufactura",
+      "stakeholder_quote": "\"O acordamos un único número exacto de horas perdidas ahora mismo, o detenemos el proyecto medio año hasta sensorizar cada máquina; no voy a llevar estimaciones subjetivas al directorio.\"",
+      "active_pitfalls": [
+        "htma_overconfidence",
+        "htma_measurement_inversion"
+      ],
+      "target_techniques": [
+        "htma_calibration",
+        "htma_single_sample"
+      ],
+      "supporting_nodes": [
+        "htma_equivalent_bet",
+        "htma_rule_of_five",
+        "x_small_samples_discovery",
+        "x_frame_is_define_decision"
+      ],
+      "target_practice": "fde_calibrated_meeting",
+      "diagnosis_question": "¿Qué error metodológico está bloqueando la sesión?",
+      "diagnosis_options": [
+        {
+          "id": "d1",
+          "text": "Se exige precisión puntual falsa o ceguera total, ignorando que rangos honestos y una muestra mínima bastan para decidir hoy.",
+          "is_correct": true,
+          "explanation": "Forzar un número único induce sobreconfianza y esperar seis meses de sensores cuando una muestra pequeña y rangos calibrados resuelven el umbral del piloto destruye valor."
+        },
+        {
+          "id": "d2",
+          "text": "Los cinco jefes de línea carecen de formación estadística avanzada para calcular la desviación estándar exacta del proceso.",
+          "is_correct": false,
+          "explanation": "No hace falta estadística compleja: pedir límites inferiores y superiores sometidos a una ruleta de indiferencia captura el conocimiento operativo real sin jerga."
+        },
+        {
+          "id": "d3",
+          "text": "El sistema MES actual está mal configurado y ningún proyecto debería avanzar sin antes auditar toda la base de datos histórica.",
+          "is_correct": false,
+          "explanation": "Esperar datos históricos perfectos cuando la incertidumbre se reduce observando unos pocos turnos en terreno es caer en la parálisis por análisis."
+        }
+      ],
+      "action_question": "¿Cómo conduces los siguientes veinte minutos de taller?",
+      "action_options": [
+        {
+          "id": "a1",
+          "label": "Capturar rangos anónimos con prueba de ruleta y muestrear un turno hoy",
+          "script": "\"Antes de decidir si sensorizamos seis meses, fijemos la cota mínima que justifica el piloto: bastan 12 horas semanales. Que cada jefe anote por separado su mínimo y máximo de modo que le dé igual elegir su rango o una ruleta con nueve de diez aciertos, y hoy mismo cronometramos un turno al azar para validar si superamos ese piso.\"",
+          "is_best": true,
+          "deltas": {
+            "TQ": 10,
+            "SIG": 12,
+            "EVI": 18,
+            "ADP": 10
+          },
+          "feedback": "Ejecutaste 'fde_calibrated_meeting' + 'htma_calibration' + 'htma_single_sample': desbloqueaste la decisión con rangos honestos y muestreo inmediato."
+        },
+        {
+          "id": "a2",
+          "label": "Promediar las opiniones en voz alta y firmar ese número como compromiso",
+          "script": "\"Digamos cada uno un número en voz alta, saquemos el promedio simple aquí mismo en la pizarra y comprometámonos todos con esa cifra exacta ante el directorio para no retrasar el cronograma ni gastar presupuesto adicional en sensores durante este trimestre.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -6,
+            "SIG": -10,
+            "EVI": -14,
+            "ADP": -6
+          },
+          "feedback": "Hablar en voz alta ancla al grupo en quien habla primero y un promedio puntual oculta el riesgo real ('htma_overconfidence')."
+        },
+        {
+          "id": "a3",
+          "label": "Aceptar la pausa de seis meses hasta tener telemetría completa en línea",
+          "script": "\"Tienes razón: llevar estimaciones humanas al directorio es arriesgado. Congelemos el piloto medio año, instalemos los sensores en las cuarenta máquinas y volvamos a reunirnos cuando tengamos seis meses limpios de lecturas automáticas en el servidor.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -8,
+            "SIG": -8,
+            "EVI": -18,
+            "ADP": -14
+          },
+          "feedback": "Caíste en 'htma_measurement_inversion' e ignoraste 'x_small_samples_discovery': pagaste seis meses de retraso por información cuyo costo supera su valor."
+        },
+        {
+          "id": "a4",
+          "label": "Defender que el software reducirá treinta por ciento las paradas seguro",
+          "script": "\"En otras plantas similares nuestra plataforma siempre recorta al menos un treinta por ciento de las detenciones, así que no necesitamos medir el piso actual ni esperar sensores; lancemos el despliegue completo mañana mismo con ese ahorro garantizado.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -14,
+            "SIG": -12,
+            "EVI": -15,
+            "ADP": -10
+          },
+          "feedback": "Prometer un porcentaje cerrado sin línea base local destruye credibilidad ('ta_self_orientation') y dispara la sobreconfianza."
+        }
+      ]
+    },
+    {
+      "id": "scen_35_lens_model_scoring",
+      "title": "El criterio tácito de los compradores senior",
+      "book": "htma",
+      "phase": "Diagnosis & Measurement",
+      "difficulty": "advanced",
+      "context": "Intentas automatizar la priorización de proveedores críticos en cadena de frío. Los tres compradores senior rechazan tu tabla de reglas porque dicen que su intuición tras veinte años no cabe en una fórmula, y cuando les pides ponderar variables te dan pesos contradictorios.",
+      "stakeholder_role": "Jefa de Abastecimiento Perecibles",
+      "stakeholder_quote": "\"Llevo veinte años detectando qué proveedor va a fallar antes del invierno; eso se siente al mirar el historial y no se puede encerrar en los porcentajes teóricos que me estás pidiendo.\"",
+      "active_pitfalls": [
+        "htma_overconfidence",
+        "htma_risk_matrix_critique"
+      ],
+      "target_techniques": [
+        "htma_lens_model",
+        "bps_synthesize"
+      ],
+      "supporting_nodes": [
+        "x_envision_observable",
+        "x_conversation_as_measurement",
+        "htma_preferences",
+        "bps_heuristics"
+      ],
+      "target_practice": "fde_value_case",
+      "diagnosis_question": "¿Por qué falla pedirles a los expertos que dicten los pesos de su fórmula?",
+      "diagnosis_options": [
+        {
+          "id": "d1",
+          "text": "Los expertos aplican bien su criterio frente a casos concretos, pero son malos introspectando sus propios pesos; hay que inferirlos desde sus juicios reales.",
+          "is_correct": true,
+          "explanation": "El juicio experto funciona reconociendo patrones observables, pero cuando el experto intenta verbalizar su fórmula o aplicar la misma regla sin ruido día tras día, introduce inconsistencia."
+        },
+        {
+          "id": "d2",
+          "text": "Los compradores senior ocultan información a propósito para sabotear el proyecto y proteger su puesto frente a la automatización del área.",
+          "is_correct": false,
+          "explanation": "Atribuir mala fe ignora que el conocimiento tácito rara vez está codificado en pesos explícitos; el problema es el método de extracción, no un sabotaje deliberado."
+        },
+        {
+          "id": "d3",
+          "text": "El riesgo de proveedores en cadena de frío depende del clima y es un fenómeno puramente aleatorio que ningún modelo lineal puede ordenar.",
+          "is_correct": false,
+          "explanation": "Si los expertos logran anticipar fallas mejor que el azar, entonces usan señales observables reales que pueden capturarse y estabilizarse."
+        }
+      ],
+      "action_question": "¿Qué ejercicio propones para capturar su criterio sin pelear por los pesos?",
+      "action_options": [
+        {
+          "id": "a1",
+          "label": "Calificar cuarenta fichas reales y destilar las señales que predicen su juicio",
+          "script": "\"No te pido encerrar tu experiencia en porcentajes en abstracto. Evaluemos juntos cuarenta fichas reales de proveedores pasados del uno al cinco; luego ajustamos una tabla simple sobre tus propias calificaciones para quitar el ruido de un día cansado y te muestro la historia en una sola vista.\"",
+          "is_best": true,
+          "deltas": {
+            "TQ": 14,
+            "SIG": 15,
+            "EVI": 16,
+            "ADP": 14
+          },
+          "feedback": "Aplicaste 'htma_lens_model' + 'x_envision_observable' + 'bps_synthesize': extrajiste los pesos reales desde casos concretos y eliminaste la inconsistencia."
+        },
+        {
+          "id": "a2",
+          "label": "Forzar una votación en pizarra hasta que acuerden los pesos exactos hoy",
+          "script": "\"No podemos salir de esta sala sin que los tres acuerden si el atraso histórico pesa cuarenta o cincuenta por ciento. Votemos variable por variable ahora mismo en la pizarra y dejemos congelada la fórmula que gane por mayoría simple para programarla esta tarde.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -10,
+            "SIG": -12,
+            "EVI": -10,
+            "ADP": -12
+          },
+          "feedback": "Obligar a inventar pesos introspectivos produce una regla artificial en la que nadie confía cuando aparece el primer caso borde."
+        },
+        {
+          "id": "a3",
+          "label": "Descartar a los compradores y entrenar una caja negra solo con facturas",
+          "script": "\"Si no pueden darme los pesos exactos, entrenaré una red neuronal profunda solo con las facturas de los últimos tres años sin usar sus reglas; el algoritmo encontrará correlaciones ocultas por su cuenta y reemplazará la revisión manual desde el próximo lunes.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -16,
+            "SIG": -8,
+            "EVI": -8,
+            "ADP": -18
+          },
+          "feedback": "Ignorar las señales que miran los expertos y lanzar una caja negra opaca destruye la confianza y garantiza el rechazo en producción."
+        },
+        {
+          "id": "a4",
+          "label": "Dejar solo un campo de texto libre para que sigan priorizando a mano",
+          "script": "\"Para no incomodarlos con fórmulas, quitaremos el cálculo automático y dejaremos únicamente una pantalla con un cuadro de texto libre donde cada comprador escriba su comentario manual proveedor por proveedor igual que como lo hacen hoy en su planilla.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": 2,
+            "SIG": -10,
+            "EVI": -14,
+            "ADP": -8
+          },
+          "feedback": "Caíste en 'fc_roles' (Pair-of-Hands): renunciaste a estructurar el criterio experto y entregaste una planilla disfrazada sin reducir el ruido operativo."
+        }
+      ]
+    },
+    {
+      "id": "scen_36_hallway_discovery_slicing",
+      "title": "El comité de veinte personas que pide todo",
+      "book": "mom",
+      "phase": "Discovery & Contracting",
+      "difficulty": "core",
+      "context": "El sponsor de logística te invita a una reunión formal de levantamiento con veinte supervisores de tres centros de distribución distintos. En los primeros diez minutos todos piden reportes contradictorios y nadie admite qué parte del despacho diario le duele de verdad.",
+      "stakeholder_role": "Gerente Corporativo de Logística",
+      "stakeholder_quote": "\"Aprovecha que junté a los veinte supervisores de todo el país en esta sala durante una hora para que te dicten la lista completa de reportes que debe tener la herramienta.\"",
+      "active_pitfalls": [
+        "mom_feature_requests",
+        "mom_fluff"
+      ],
+      "target_techniques": [
+        "mom_segmentation",
+        "mom_keep_casual",
+        "mom_notes"
+      ],
+      "supporting_nodes": [
+        "mom_rules",
+        "x_conversation_as_measurement",
+        "x_information_value_of_scary"
+      ],
+      "target_practice": "fde_discovery_interview",
+      "diagnosis_question": "¿Por qué esta reunión masiva produce ruido en lugar de evidencia útil?",
+      "diagnosis_options": [
+        {
+          "id": "d1",
+          "text": "Mezclar perfiles distintos en un salón formal convierte la charla en una lista de deseos políticos sin hechos pasados ni notas accionables.",
+          "is_correct": true,
+          "explanation": "Sin segmentar quién sufre el problema ni observar su trabajo en charlas breves e informales, el grupo cae en generalidades y pedidos de pantallas para quedar bien."
+        },
+        {
+          "id": "d2",
+          "text": "Una hora es poco tiempo para veinte personas; hace falta agendar un taller de día completo con un formulario previo de requerimientos.",
+          "is_correct": false,
+          "explanation": "Más horas en un salón masivo o más encuestas abstractas solo multiplican la lista de deseos sin revelar el flujo real de trabajo."
+        },
+        {
+          "id": "d3",
+          "text": "Los supervisores no conocen la arquitectura técnica del almacén y por eso piden reportes que aún no existen en el servidor central.",
+          "is_correct": false,
+          "explanation": "El trabajo de los supervisores no es diseñar reportes técnicos; el error es preguntarles qué pantallas quieren en vez de mirar cómo resuelven hoy sus quiebres."
+        }
+      ],
+      "action_question": "¿Cómo rediriges el levantamiento antes de que termine la hora?",
+      "action_options": [
+        {
+          "id": "a1",
+          "label": "Cortar por segmento crítico, bajar al andén diez minutos y anotar citas exactas",
+          "script": "\"Cuando mezclamos centros con flujos distintos terminamos diseñando un promedio que no le sirve a nadie. Acotemos hoy al segmento de despacho refrigerado nocturno: bajo quince minutos al andén con dos supervisores a ver el último turno difícil y registro sus frases textuales para todo el equipo.\"",
+          "is_best": true,
+          "deltas": {
+            "TQ": 12,
+            "SIG": 18,
+            "EVI": 14,
+            "ADP": 12
+          },
+          "feedback": "Aplicaste 'mom_segmentation' + 'mom_keep_casual' + 'mom_notes' + 'mom_rules': segmentaste el perfil, saliste del salón formal y capturaste hechos observables."
+        },
+        {
+          "id": "a2",
+          "label": "Anotar los cuarenta reportes pedidos en una planilla y prometerlos todos",
+          "script": "\"Perfecto, pasemos uno por uno por los veinte supervisores para que nadie se quede fuera; anoto los cuarenta reportes en esta matriz de alcance y mi equipo los irá construyendo en orden alfabético durante las próximas seis semanas de trabajo.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -4,
+            "SIG": -18,
+            "EVI": -14,
+            "ADP": -12
+          },
+          "feedback": "Caíste de lleno en 'mom_feature_requests' y 'fc_roles': coleccionaste deseos sin diagnosticar el cuello de botella real."
+        },
+        {
+          "id": "a3",
+          "label": "Hacer que voten a mano alzada qué pantalla les gustaría usar en el futuro",
+          "script": "\"Para priorizar rápido entre los veinte, levantemos la mano: ¿quiénes creen que usarían todos los días un tablero predictivo de andenes si lo tuviéramos listo el próximo mes? Construiremos el que saque más votos hoy mismo en esta sala.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -6,
+            "SIG": -16,
+            "EVI": -12,
+            "ADP": -8
+          },
+          "feedback": "Preguntar qué harían en un futuro hipotético a mano alzada genera 'mom_fluff' puro: todos levantan la mano gratis y luego nadie lo usa."
+        },
+        {
+          "id": "a4",
+          "label": "Proyectar una demo comercial de media hora para unificar la visión del grupo",
+          "script": "\"Como veo opiniones muy divididas entre los tres centros, voy a proyectar una demostración de media hora con todas las funciones avanzadas de nuestra plataforma para que vean hacia dónde va la industria y alineemos las expectativas de todos.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -12,
+            "SIG": -14,
+            "EVI": -10,
+            "ADP": -10
+          },
+          "feedback": "Pasar a modo demo frente a la confusión es 'mom_pitching': apagas la señal real del terreno y fuerzas cumplidos vacíos."
+        }
+      ]
+    },
+    {
+      "id": "scen_37_trust_quotient_Diagnostic",
+      "title": "El arquitecto brillante al que el cliente ya no invita",
+      "book": "ta",
+      "phase": "Discovery & Contracting",
+      "difficulty": "advanced",
+      "context": "Llegas a rescatar una cuenta bancaria donde tu ingeniero principal domina toda la documentación regulatoria y entrega cada parche a la hora exacta, pero el VP de Riesgo dejó de invitarlo a las reuniones de comité porque corrige a todos al segundo y jamás pregunta qué presión política enfrenta el área.",
+      "stakeholder_role": "VP de Riesgo Operacional",
+      "stakeholder_quote": "\"Tu ingeniero sabe muchísimo y cumple los plazos, pero cada vez que abre la boca en mi comité parece que viniera a ganar un debate académico en vez de ayudarnos a sobrevivir la auditoría.\"",
+      "active_pitfalls": [
+        "ta_need_to_be_right",
+        "mom_pitching"
+      ],
+      "target_techniques": [
+        "ta_trust_quotient",
+        "ta_engage"
+      ],
+      "supporting_nodes": [
+        "ta_five_steps",
+        "ta_trust_equation",
+        "ta_self_orientation",
+        "ta_intimacy",
+        "ta_trust_temperaments"
+      ],
+      "target_practice": "fde_stakeholder_trust",
+      "diagnosis_question": "¿Dónde está rota la relación según la anatomía de la confianza?",
+      "diagnosis_options": [
+        {
+          "id": "d1",
+          "text": "Sobra solvencia técnica y puntualidad en el numerador, pero la falta de cercanía humana y un denominador inflado por el ego hunden el cociente total.",
+          "is_correct": true,
+          "explanation": "Aunque la solvencia técnica y el cumplimiento sean altos, un denominador grande por querer lucirse y la ausencia de seguridad interpersonal reducen el resultado a casi cero."
+        },
+        {
+          "id": "d2",
+          "text": "El banco no valora el rigor técnico y prefiere consultores complacientes que digan que sí a cualquier capricho del regulador.",
+          "is_correct": false,
+          "explanation": "El VP reconoce explícitamente la capacidad técnica y la puntualidad; lo que rechaza es la agenda centrada en ganar discusiones en vez de proteger al cliente."
+        },
+        {
+          "id": "d3",
+          "text": "Faltan entregables formales que demuestren por escrito cuántas vulnerabilidades ha cerrado el ingeniero durante el último mes.",
+          "is_correct": false,
+          "explanation": "Agregar más reportes de logros técnicos solo aumenta la percepción de autobombo cuando el problema está en el denominador y en la empatía."
+        }
+      ],
+      "action_question": "¿Cómo reabres el vínculo con el VP de Riesgo en esta conversación?",
+      "action_options": [
+        {
+          "id": "a1",
+          "label": "Reconocer la fricción sin excusas y abrir diálogo sobre su exposición en la auditoría",
+          "script": "\"Tienes toda la razón: nos enfocamos tanto en tener la respuesta técnica exacta que dejamos de cuidar cómo te exponemos frente al comité. Quiero cambiar eso hoy mismo: antes de tocar una sola línea de código, ¿qué punto de la auditoría del viernes te quita el sueño a ti personalmente?\"",
+          "is_best": true,
+          "deltas": {
+            "TQ": 18,
+            "SIG": 12,
+            "EVI": 8,
+            "ADP": 14
+          },
+          "feedback": "Aplicaste 'ta_trust_quotient' + 'ta_engage' + 'ta_five_steps': bajaste la auto-orientación a cero, subiste la intimidad y abriste el proceso de cinco pasos."
+        },
+        {
+          "id": "a2",
+          "label": "Explicar que las correcciones técnicas del ingeniero evitaron tres multas graves",
+          "script": "\"Entiendo que su estilo sea directo, pero si revisas el registro del mes pasado verás que sus intervenciones en el comité evitaron tres observaciones graves del regulador; sin esa firmeza técnica hoy estarían enfrentando sanciones mucho peores.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -15,
+            "SIG": -6,
+            "EVI": -4,
+            "ADP": -12
+          },
+          "feedback": "Defenderte con logros técnicos repite 'ta_need_to_be_right' y agranda el denominador de 'ta_self_orientation'."
+        },
+        {
+          "id": "a3",
+          "label": "Retirar al ingeniero del comité y enviar únicamente minutas escritas por correo",
+          "script": "\"Para que no vuelva a incomodar a nadie en tu comité, a partir de hoy el ingeniero no asistirá a ninguna reunión; trabajará aislado desde su escritorio y yo te reenviaré un resumen semanal por correo con los avances del código.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -4,
+            "SIG": -12,
+            "EVI": -10,
+            "ADP": -10
+          },
+          "feedback": "Esconder al equipo destruye el contacto directo ('ta_engage') y te deja a ciegas respecto a las dinámicas reales del comité."
+        },
+        {
+          "id": "a4",
+          "label": "Proponer una encuesta trimestral de satisfacción del servicio al finalizar el hito",
+          "script": "\"Tomamos nota de tu comentario para nuestra mejora continua; al cierre del trimestre te enviaremos nuestro formulario estándar de evaluación de consultoría del uno al diez para medir formalmente la satisfacción del área con el equipo.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -12,
+            "SIG": -10,
+            "EVI": -8,
+            "ADP": -10
+          },
+          "feedback": "Burocratizar una queja interpersonal directa desploma la cercanía ('ta_intimacy') y demuestra que no escuchaste el riesgo inmediato."
+        }
+      ]
+    },
+    {
+      "id": "scen_38_consulting_discovery_dialogue",
+      "title": "El diagnóstico que el director quiere tercerizar",
+      "book": "fc",
+      "phase": "Discovery & Contracting",
+      "difficulty": "advanced",
+      "context": "El Director de Operaciones de una naviera te pide que audites en solitario por qué los buques tardan cuatro horas extra en puerto y que en tres semanas le entregues un informe cerrado con culpables y sanciones. Los jefes de muelle ya saben que vienes y cerraron filas para no darte ni un dato real.",
+      "stakeholder_role": "Director de Operaciones Portuarias",
+      "stakeholder_quote": "\"No pierdas tiempo consensuando con los jefes de muelle porque se tapan entre ellos; entra a las bases, arma tu informe en secreto y en tres semanas dime a quién tengo que cambiar.\"",
+      "active_pitfalls": [
+        "fc_fighting_resistance",
+        "bps_confirmation_bias"
+      ],
+      "target_techniques": [
+        "fc_discovery",
+        "fc_contracting"
+      ],
+      "supporting_nodes": [
+        "fc_phases",
+        "x_situation_not_people",
+        "fc_roles",
+        "fc_fifty_fifty",
+        "fc_two_dimensions"
+      ],
+      "target_practice": "fde_contracting_meeting",
+      "diagnosis_question": "¿Qué pasará si aceptas hacer el diagnóstico policial en secreto?",
+      "diagnosis_options": [
+        {
+          "id": "d1",
+          "text": "Un diagnóstico sin diálogo conjunto caza culpables en vez de arreglar el sistema, y los jefes de muelle boicotearán cualquier cambio el día uno.",
+          "is_correct": true,
+          "explanation": "La fase de descubrimiento no es solo recolectar datos técnicos: la forma en que indagas e involucras a quienes operan el muelle determina si habrá compromiso interno para cambiar el flujo."
+        },
+        {
+          "id": "d2",
+          "text": "Tres semanas es muy poco tiempo para cruzar los registros de grúas y aduanas sin contar con un analista de datos adicional.",
+          "is_correct": false,
+          "explanation": "El problema no es la capacidad de cómputo sino el rol policial: ni el mejor cruce de bases se implementa si el muelle lo percibe como una emboscada."
+        },
+        {
+          "id": "d3",
+          "text": "Los jefes de muelle no tienen acceso a las tablas crudas del sistema portuario y por eso es irrelevante entrevistarlos durante el estudio.",
+          "is_correct": false,
+          "explanation": "Ellos conocen las fricciones físicas y de coordinación que no quedan registradas en la base; excluirlos ciega el diagnóstico y mata la adopción."
+        }
+      ],
+      "action_question": "¿Cómo replanteas el encargo con el Director antes de bajar al puerto?",
+      "action_options": [
+        {
+          "id": "a1",
+          "label": "Negarse al rol policial y pactar un diagnóstico conjunto sobre el proceso del muelle",
+          "script": "\"Si bajo como inspector secreto a buscar culpables, el muelle me esconderá los datos reales y rechazará cualquier mejora cuando yo me vaya. Te propongo otro trato: que tú anuncies que no buscamos cabezas sino cuellos de botella del proceso, y yo hago el diagnóstico mano a mano con tus jefes de muelle.\"",
+          "is_best": true,
+          "deltas": {
+            "TQ": 15,
+            "SIG": 14,
+            "EVI": 12,
+            "ADP": 18
+          },
+          "feedback": "Aplicaste 'fc_discovery' + 'fc_phases' + 'x_situation_not_people': transformaste una cacería de brujas en un descubrimiento dialógico que repara el entorno."
+        },
+        {
+          "id": "a2",
+          "label": "Aceptar la auditoría secreta y entregar el ranking de jefes más lentos",
+          "script": "\"Entendido, nadie en el muelle sabrá qué estoy midiendo. Extraeré los registros de grúa por turno desde el servidor central y en tres semanas te entregaré en privado el listado ordenado de los supervisores con peor desempeño para que tomes las medidas disciplinarias que correspondan.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -10,
+            "SIG": -12,
+            "EVI": -8,
+            "ADP": -20
+          },
+          "feedback": "Aceptaste el rol 'fc_roles' (Pair-of-Hands) y violaste 'x_situation_not_people': confundiste problemas de diseño del flujo con culpa individual y destruiste la adopción."
+        },
+        {
+          "id": "a3",
+          "label": "Pedir que recursos humanos acompañe las entrevistas para levantar actas formales",
+          "script": "\"Para que los jefes de muelle no puedan ocultarnos información durante las entrevistas, pidamos que un representante de recursos humanos nos acompañe en cada sesión tomando acta firmada de las respuestas de cada supervisor de turno.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -14,
+            "SIG": -18,
+            "EVI": -10,
+            "ADP": -18
+          },
+          "feedback": "Judicializar el levantamiento multiplica la defensividad y garantiza que solo recibas respuestas evasivas."
+        },
+        {
+          "id": "a4",
+          "label": "Limitar el estudio al software de grúas sin pisar el muelle ni hablar con nadie",
+          "script": "\"Para evitar cualquier roce político con el sindicato o los jefes de turno, no pisaré el muelle en las tres semanas; me limitaré a revisar la configuración técnica del software de patio desde las oficinas corporativas y te enviaré recomendaciones puramente informáticas.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -6,
+            "SIG": -15,
+            "EVI": -14,
+            "ADP": -12
+          },
+          "feedback": "Renunciar a observar la operación real en terreno ('fc_discovery') produce recomendaciones teóricas desconectadas del cuello de botella físico."
+        }
+      ]
+    },
+    {
+      "id": "scen_39_automate_recruiting_triggers",
+      "title": "El piloto que todos aprueban en capacitación y nadie abre en el turno",
+      "book": "sw",
+      "phase": "Resistance & Change",
+      "difficulty": "advanced",
+      "context": "Lanzaste una alerta inteligente de reabastecimiento para cuarenta jefes de tienda. En el taller del lunes todos entendieron la pantalla y aplaudieron, pero al viernes el uso real es del ocho por ciento porque en medio del caos de apertura matinal siguen abriendo su planilla vieja por pura inercia. Además, cada vez que quieres entrevistar a tres usuarios tardas diez días pidiendo permiso a gerencia.",
+      "stakeholder_role": "Subgerente de Operaciones de Tienda",
+      "stakeholder_quote": "\"La gente no usa tu alerta porque les falta actitud; dales otra charla motivacional de dos horas el lunes y avísame con dos semanas de anticipación si quieres volver a entrevistar a algún jefe de local.\"",
+      "active_pitfalls": [
+        "sw_decision_paralysis",
+        "cdh_whether_or_not"
+      ],
+      "target_techniques": [
+        "sw_action_triggers",
+        "cdh_recruiting"
+      ],
+      "supporting_nodes": [
+        "x_situation_not_people",
+        "sw_path",
+        "sw_build_habits",
+        "sw_endowed_progress",
+        "cdh_definition"
+      ],
+      "target_practice": "fde_adoption_plan",
+      "diagnosis_question": "¿Qué dos fricciones estructurales están matando tanto el hábito diario como el aprendizaje continuo?",
+      "diagnosis_options": [
+        {
+          "id": "d1",
+          "text": "Falta un disparador concreto en el ritual matinal que dispare la acción sin pensar, y el reclutamiento manual de entrevistas frena el ciclo semanal.",
+          "is_correct": true,
+          "explanation": "No es falta de actitud sino un camino sin gatillo contextual en el momento exacto de abrir la tienda, sumado a la fricción burocrática para hablar cada semana con quienes operan."
+        },
+        {
+          "id": "d2",
+          "text": "Los cuarenta jefes de tienda son resistentes a la tecnología moderna y necesitan un bono salarial atado al número de clics diarios.",
+          "is_correct": false,
+          "explanation": "Culpar a la actitud de las personas cuando el entorno sigue premiando abrir la planilla vieja es caer en el error de atribución."
+        },
+        {
+          "id": "d3",
+          "text": "El algoritmo de reabastecimiento necesita duplicar su cantidad de variables antes de que valga la pena abrirlo por la mañana.",
+          "is_correct": false,
+          "explanation": "Si ni siquiera abren la pantalla durante la apertura matinal, agregar más variables al cálculo no cambiará el hábito en tienda."
+        }
+      ],
+      "action_question": "¿Qué dos cambios de arquitectura propones implementar hoy mismo?",
+      "action_options": [
+        {
+          "id": "a1",
+          "label": "Anclar la alerta al cierre de caja de las 8:00 AM y automatizar micro-entrevistas en la app",
+          "script": "\"No es falta de ganas, es diseño del flujo. Primero, reemplacemos el ícono de la planilla vieja y pongamos una regla clara: 'Al escanear la llave de apertura a las 8:00 AM, reviso las tres alertas rojas en dos minutos'. Segundo, dejemos un botón dentro de la misma pantalla que agende automáticamente quince minutos cada jueves con tres jefes de tienda sin trámites.\"",
+          "is_best": true,
+          "deltas": {
+            "TQ": 12,
+            "SIG": 16,
+            "EVI": 14,
+            "ADP": 18
+          },
+          "feedback": "Combinaste 'sw_action_triggers' + 'cdh_recruiting' + 'x_situation_not_people': creaste un gatillo cuando-entonces en el entorno y automatizaste el contacto semanal."
+        },
+        {
+          "id": "a2",
+          "label": "Dictar la charla motivacional de dos horas el lunes y pedir permisos mes a mes",
+          "script": "\"Hagamos la sesión de dos horas el lunes a primera hora para reforzar por qué la transformación digital es clave para la empresa, y te paso desde ya una solicitud formal por correo con las fechas de las entrevistas que necesitaremos hacer dentro de tres semanas.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -4,
+            "SIG": -14,
+            "EVI": -12,
+            "ADP": -14
+          },
+          "feedback": "Más discurso motivacional sin cambiar el entorno ni el gatillo matinal ('sw_people_problem_illusion') deja el uso exactamente igual."
+        },
+        {
+          "id": "a3",
+          "label": "Enviar un reporte semanal a gerencia acusando a los locales que no entraron",
+          "script": "\"Cada viernes a mediodía te enviaré un ranking con los nombres de los jefes de tienda que no iniciaron sesión en toda la semana para que les llames la atención directamente en la reunión zonal y así subamos la tasa de conexión por presión jerárquica.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -14,
+            "SIG": -12,
+            "EVI": -8,
+            "ADP": -16
+          },
+          "feedback": "Vigilar clics por castigo genera que abran y cierren la pestaña sin usar la recomendación real en el piso de venta."
+        },
+        {
+          "id": "a4",
+          "label": "Agregar diez gráficos nuevos a la pantalla de inicio para hacerla más atractiva",
+          "script": "\"Seguramente no entran porque la vista actual con tres alertas se ve demasiado simple; este fin de semana agregaremos diez gráficos de tendencias históricas y filtros avanzados en la portada para que sientan que tienen una herramienta mucho más potente.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -6,
+            "SIG": -10,
+            "EVI": -12,
+            "ADP": -15
+          },
+          "feedback": "Recargar la pantalla a las ocho de la mañana multiplica la fatiga cognitiva en lugar de facilitar el hábito."
+        }
+      ]
+    },
+    {
+      "id": "scen_40_scary_question_synthesis",
+      "title": "La pregunta incómoda antes de escalar a producción",
+      "book": "fde",
+      "phase": "Executive Synthesis",
+      "difficulty": "boss",
+      "context": "Llevas cuatro semanas afinando un optimizador de rutas para una flota de distribución farmacéutica. Todo el equipo celebra que el modelo ahorra un doce por ciento en simulación, pero nadie se ha atrevido a preguntar al Director Comercial si aceptará que el optimizador agrupe entregas y cambie la ventana horaria prometida a las cadenas de farmacias VIP.",
+      "stakeholder_role": "Director Comercial Farmacéutico",
+      "stakeholder_quote": "\"Me encanta que logística optimice sus camiones, siempre y cuando no me toquen ni un minuto el horario pactado con las veinte cadenas principales, que representan el setenta por ciento de la ruta.\"",
+      "active_pitfalls": [
+        "bps_confirmation_bias",
+        "pp_chronological_dump"
+      ],
+      "target_techniques": [
+        "bps_synthesize",
+        "pp_scq"
+      ],
+      "supporting_nodes": [
+        "x_information_value_of_scary",
+        "x_frame_is_define_decision",
+        "x_conversation_as_measurement",
+        "x_envision_observable"
+      ],
+      "target_practice": "fde_exec_recommendation",
+      "diagnosis_question": "¿Por qué el proyecto estuvo cuatro semanas optimizando una ilusión?",
+      "diagnosis_options": [
+        {
+          "id": "d1",
+          "text": "Se postergó la pregunta comercial más incómoda, que era justamente la que tenía mayor valor de información y definía la restricción real de la decisión.",
+          "is_correct": true,
+          "explanation": "La pregunta que da miedo hacer en descubrimiento suele ser el supuesto más riesgoso del proyecto; esquivarla por comodidad técnica hace que se optimice un escenario irreal."
+        },
+        {
+          "id": "d2",
+          "text": "El motor matemático de ruteo necesita una restricción adicional de ventanas duras y un servidor más rápido para recalcular las entregas.",
+          "is_correct": false,
+          "explanation": "Si el setenta por ciento de las paradas tiene horario fijo intocable, no es un ajuste menor de servidor: cambia por completo el ahorro potencial del caso de negocio."
+        },
+        {
+          "id": "d3",
+          "text": "El área de logística debió implementar el cambio de rutas en silencio sin consultar a comercial hasta tener un mes de operación en la calle.",
+          "is_correct": false,
+          "explanation": "Cambiar horarios a clientes críticos a espaldas del área comercial revienta la cuenta en la primera semana y cancela el despliegue de inmediato."
+        }
+      ],
+      "action_question": "¿Cómo sintetizas el hallazgo y reencuadras la decisión hoy mismo?",
+      "action_options": [
+        {
+          "id": "a1",
+          "label": "Poner la restricción sobre la mesa hoy y presentar dos opciones cuantificadas de decisión",
+          "script": "\"Hicimos la pregunta que faltaba y cambia el caso: si blindamos el horario exacto del setenta por ciento de paradas VIP, el ahorro real baja del doce al tres por ciento. Tenemos dos caminos claros: o mantenemos horarios fijos en toda la red por tres por ciento, o negociamos una ventana flexible de cuarenta minutos en cinco cadenas a cambio de prioridad de stock para capturar un nueve por ciento. ¿Probamos esa oferta con dos clientes esta semana?\"",
+          "is_best": true,
+          "deltas": {
+            "TQ": 16,
+            "SIG": 16,
+            "EVI": 18,
+            "ADP": 15
+          },
+          "feedback": "Aplicaste 'x_information_value_of_scary' + 'x_frame_is_define_decision' + 'bps_synthesize' + 'pp_scq': hiciste la pregunta crítica y sintetizaste una decisión accionable."
+        },
+        {
+          "id": "a2",
+          "label": "Presentar el doce por ciento teórico al comité y omitir la restricción de horarios VIP",
+          "script": "\"En la presentación de mañana al comité ejecutivo mostraremos el ahorro del doce por ciento que arroja la simulación actual y dejaremos el detalle de las ventanas horarias de las cadenas principales como un punto operativo a resolver durante la fase de despliegue en calle.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -18,
+            "SIG": -14,
+            "EVI": -18,
+            "ADP": -16
+          },
+          "feedback": "Ocultar la restricción que invalida tres cuartas partes del ahorro es 'bps_confirmation_bias' y destruye tu credibilidad cuando salga a la calle."
+        },
+        {
+          "id": "a3",
+          "label": "Explicar durante media hora cómo evolucionó el código del optimizador en cuatro semanas",
+          "script": "\"Déjame mostrarte primero las veinte láminas de cómo construimos el algoritmo semana por semana desde la ingesta de mapas hasta la heurística de turnos, para que valores todo el trabajo de ingeniería antes de discutir qué hacemos con las farmacias.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -10,
+            "SIG": -10,
+            "EVI": -12,
+            "ADP": -12
+          },
+          "feedback": "Caíste en 'pp_chronological_dump': narrar tu esfuerzo de cuatro semanas no resuelve el dilema comercial que bloquea el despliegue."
+        },
+        {
+          "id": "a4",
+          "label": "Pedir dos meses adicionales para encuestar por correo a las doscientas farmacias",
+          "script": "\"Para estar completamente seguros antes de tocar una sola ruta, detengamos el proyecto dos meses y enviemos una encuesta digital de diez preguntas a las doscientas farmacias preguntándoles qué opinarían de un sistema flexible de entregas en el futuro.\"",
+          "is_best": false,
+          "deltas": {
+            "TQ": -8,
+            "SIG": -16,
+            "EVI": -14,
+            "ADP": -12
+          },
+          "feedback": "Congelar dos meses para mandar encuestas hipotéticas viola 'x_conversation_as_measurement' y 'x_small_samples_discovery': basta probar la oferta real con cinco clientes."
+        }
+      ]
     }
   ],
   "calibration_questions": [
@@ -3517,6 +4227,61 @@
       "why": "Las magnitudes demográficas entrenan el anclaje en agregados grandes, donde la sobreconfianza suele ser mayor.",
       "plausible_ratio": 3,
       "magnitude_hint": "Decenas de millones"
+    },
+    {
+      "id": "cal_16_erp_false_stock",
+      "prompt": "En auditorías físicas de retail alimentario (supermercados), ¿qué porcentaje de los SKUs tiene un inventario registrado en el ERP que difiere del stock físico real en tienda (inventario fantasma o descuadre)?",
+      "unit": "%",
+      "answer": 65,
+      "category": "Operaciones Retail",
+      "source": "DeHoratius & Raman (Harvard / Wharton, Management Science): ~65% de los registros SKU-tienda tenían inexactitudes",
+      "why": "Un FDE que asume que la tabla de stock del ERP es exacta construye modelos de reposición ciegos; calibrar el ruido base de datos operativos evita promesas imposibles.",
+      "plausible_ratio": 4,
+      "magnitude_hint": "Decenas porcentuales (entre 20% y 90%)"
+    },
+    {
+      "id": "cal_17_alarm_fatigue_icu",
+      "prompt": "En entornos críticos (monitoreo clínico o salas de control industrial con umbrales estáticos), ¿qué porcentaje de las alertas sonoras o visuales disparadas resultan ser falsos positivos o clínicamente/operativamente irrelevantes (fatiga de alertas)?",
+      "unit": "%",
+      "answer": 85,
+      "category": "Sistemas & Adopción",
+      "source": "Joint Commission / ECRI Institute & estudios de fatiga de alarmas: entre 85% y 90% de las alertas no requieren acción",
+      "why": "Explica por qué los operadores ignoran un nuevo tablero si el FDE agrega más alertas sin podar el ruido existente (Switch: Shape the Path).",
+      "plausible_ratio": 3,
+      "magnitude_hint": "Mayoría alta (50%–98%)"
+    },
+    {
+      "id": "cal_18_pareto_rule_of_five_99",
+      "prompt": "Si tomas una muestra aleatoria independiente de 7 observaciones de una población cualquiera (por ejemplo, 7 órdenes de trabajo o 7 camiones), ¿cuál es la probabilidad porcentual de que la mediana real de toda la población quede comprendida entre el valor mínimo y el valor máximo de esas 7 muestras?",
+      "unit": "%",
+      "answer": 98.4,
+      "category": "Estadística Aplicada",
+      "source": "Fórmula binomial exacta: 1 - (0.5^7 + 0.5^7) = 1 - 2/128 = 98.4375% (extensión de la Regla del Cinco de Hubbard)",
+      "why": "Con solo 5 muestras tienes 93.75% de confianza en acotar la mediana; con 7 muestras llegas a 98.4%. Desarma la excusa de necesitar miles de datos antes de acotar una magnitud.",
+      "plausible_ratio": 2,
+      "magnitude_hint": "Porcentaje muy cercano a 100%"
+    },
+    {
+      "id": "cal_19_software_features_rarely_used",
+      "prompt": "Según los estudios de uso de telemetría de productos de software empresarial (Pendo / Standish Group), ¿qué porcentaje de las funcionalidades (features) construidas en aplicaciones corporativas se usan rara vez o nunca en producción?",
+      "unit": "%",
+      "answer": 80,
+      "category": "Producto & Despliegue",
+      "source": "Pendo Feature Adoption Report: ~80% de las features en software cloud se usan rara vez o nunca",
+      "why": "Justifica por qué un FDE nunca debe actuar como tomador de pedidos ('Pair-of-Hands' / 'Feature Requests') sino anclar cada desarrollo en un Opportunity Solution Tree.",
+      "plausible_ratio": 3,
+      "magnitude_hint": "Porcentaje alto (40%–95%)"
+    },
+    {
+      "id": "cal_20_unplanned_downtime_auto",
+      "prompt": "En una planta de ensamblaje automotriz moderna, ¿cuántos miles de dólares cuesta en promedio UN MINUTO de parada no planificada de la línea principal?",
+      "unit": "miles de USD por minuto",
+      "answer": 22,
+      "category": "Manufactura & EVPI",
+      "source": "Siemens / Senseye True Cost of Downtime & Nielsen Research en automotriz: ~$22.000 USD por minuto ($1,3M/hora)",
+      "why": "Permite hacer cálculos rápidos de Fermi y EVPI en reuniones de planta: evitar apenas 10 minutos de parada al mes vale más de $200.000 USD.",
+      "plausible_ratio": 8,
+      "magnitude_hint": "Decenas de miles de USD por minuto"
     }
   ],
   "sparring": {
