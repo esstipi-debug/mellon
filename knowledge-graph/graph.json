@@ -1305,7 +1305,7 @@
       "description": "Deconstructing expert decisions into statistical cues to remove human inconsistency, cognitive fatigue, and noise."
     },
     {
-      "id": "htma_calibrated_meeting",
+      "id": "fde_calibrated_meeting",
       "label": "Calibrated Estimation Workshop",
       "type": "FDEPractice",
       "book": "fde",
@@ -1435,14 +1435,14 @@
       "relation": "FROM_BOOK"
     },
     {
-      "source": "htma_illusions",
-      "target": "htma_measurement_def",
-      "relation": "RESOLVED_BY"
+      "source": "htma_measurement_def",
+      "target": "htma_illusions",
+      "relation": "MITIGATES"
     },
     {
-      "source": "htma_illusions",
-      "target": "htma_clarification_chain",
-      "relation": "RESOLVED_BY"
+      "source": "htma_clarification_chain",
+      "target": "htma_illusions",
+      "relation": "MITIGATES"
     },
     {
       "source": "htma_aie",
@@ -1467,12 +1467,12 @@
     {
       "source": "htma_calibration",
       "target": "htma_ci90",
-      "relation": "PRODUCES"
+      "relation": "FEEDS"
     },
     {
       "source": "htma_equivalent_bet",
       "target": "htma_calibration",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
       "source": "htma_calibration",
@@ -1482,17 +1482,17 @@
     {
       "source": "htma_ci90",
       "target": "htma_monte_carlo",
-      "relation": "INPUT_TO"
+      "relation": "FEEDS"
     },
     {
       "source": "htma_decomposition",
       "target": "htma_ci90",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
       "source": "htma_eol",
       "target": "htma_evi",
-      "relation": "DETERMINES"
+      "relation": "FEEDS"
     },
     {
       "source": "htma_evi",
@@ -1502,32 +1502,32 @@
     {
       "source": "htma_four_assumptions",
       "target": "htma_small_data",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "htma_rule_of_five",
       "target": "htma_small_data",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
       "source": "htma_single_sample",
       "target": "htma_small_data",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
       "source": "htma_bayes",
       "target": "htma_small_data",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
       "source": "htma_bayes",
       "target": "htma_measurement_def",
-      "relation": "OPERATIONALIZES"
+      "relation": "APPLIES"
     },
     {
-      "source": "htma_risk_matrix_critique",
-      "target": "htma_monte_carlo",
-      "relation": "REPLACED_BY"
+      "source": "htma_monte_carlo",
+      "target": "htma_risk_matrix_critique",
+      "relation": "MITIGATES"
     },
     {
       "source": "htma_define_decision",
@@ -1592,7 +1592,7 @@
     {
       "source": "ta_need_to_be_right",
       "target": "ta_self_orientation",
-      "relation": "INCREASES"
+      "relation": "CAUSES"
     },
     {
       "source": "ta_five_steps",
@@ -1622,57 +1622,57 @@
     {
       "source": "ta_engage",
       "target": "ta_listen",
-      "relation": "PRECEDES"
+      "relation": "FEEDS"
     },
     {
       "source": "ta_listen",
       "target": "ta_frame",
-      "relation": "PRECEDES"
+      "relation": "FEEDS"
     },
     {
       "source": "ta_frame",
       "target": "ta_envision",
-      "relation": "PRECEDES"
+      "relation": "FEEDS"
     },
     {
       "source": "ta_envision",
       "target": "ta_commit",
-      "relation": "PRECEDES"
+      "relation": "FEEDS"
     },
     {
       "source": "ta_listen",
       "target": "ta_earn_right",
-      "relation": "ENABLES"
+      "relation": "FEEDS"
     },
     {
-      "source": "ta_name_it",
-      "target": "ta_frame",
-      "relation": "PART_OF"
+      "source": "ta_frame",
+      "target": "ta_name_it",
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "ta_name_it",
       "target": "ta_intimacy",
-      "relation": "INCREASES"
+      "relation": "FEEDS"
     },
     {
       "source": "ta_listen",
       "target": "ta_emotional_reality",
-      "relation": "UNCOVERS"
+      "relation": "FEEDS"
     },
     {
       "source": "ta_commit",
       "target": "ta_client_owns_decision",
-      "relation": "EMBODIES"
+      "relation": "APPLIES"
     },
     {
-      "source": "ta_reliability",
-      "target": "ta_relationship_vs_transaction",
-      "relation": "BUILT_THROUGH"
+      "source": "ta_relationship_vs_transaction",
+      "target": "ta_reliability",
+      "relation": "FEEDS"
     },
     {
       "source": "ta_trust_equation",
       "target": "ta_advisor_evolution",
-      "relation": "DRIVES"
+      "relation": "FEEDS"
     },
     {
       "source": "mom_rules",
@@ -1727,32 +1727,32 @@
     {
       "source": "mom_rules",
       "target": "mom_their_life",
-      "relation": "HAS_RULE"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "mom_rules",
       "target": "mom_past_specifics",
-      "relation": "HAS_RULE"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "mom_rules",
       "target": "mom_talk_less",
-      "relation": "HAS_RULE"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "mom_bad_data",
       "target": "mom_compliments",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "mom_bad_data",
       "target": "mom_fluff",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "mom_bad_data",
       "target": "mom_feature_requests",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "mom_past_specifics",
@@ -1780,9 +1780,9 @@
       "relation": "MITIGATES"
     },
     {
-      "source": "mom_commitment",
-      "target": "mom_currencies",
-      "relation": "MEASURED_IN"
+      "source": "mom_currencies",
+      "target": "mom_commitment",
+      "relation": "MEASURES"
     },
     {
       "source": "mom_commitment",
@@ -1797,17 +1797,17 @@
     {
       "source": "mom_big_three",
       "target": "mom_scary_questions",
-      "relation": "SHOULD_INCLUDE"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "mom_dig",
       "target": "mom_workarounds",
-      "relation": "UNCOVERS"
+      "relation": "FEEDS"
     },
     {
       "source": "mom_look_before_zoom",
       "target": "mom_dig",
-      "relation": "PRECEDES"
+      "relation": "FEEDS"
     },
     {
       "source": "mom_segmentation",
@@ -1817,7 +1817,7 @@
     {
       "source": "mom_vfwpa",
       "target": "mom_keep_casual",
-      "relation": "ALTERNATIVE_TO"
+      "relation": "ANALOGOUS_TO"
     },
     {
       "source": "x_behavior_over_opinion",
@@ -1972,17 +1972,17 @@
     {
       "source": "mom_pitching",
       "target": "ta_self_orientation",
-      "relation": "INCREASES"
+      "relation": "CAUSES"
     },
     {
       "source": "mom_keep_casual",
       "target": "ta_intimacy",
-      "relation": "INCREASES"
+      "relation": "FEEDS"
     },
     {
       "source": "mom_commitment",
       "target": "ta_reliability",
-      "relation": "TESTS"
+      "relation": "MEASURES"
     },
     {
       "source": "mom_dig",
@@ -1990,14 +1990,14 @@
       "relation": "ANALOGOUS_TO"
     },
     {
-      "source": "mom_fluff",
-      "target": "htma_clarification_chain",
-      "relation": "RESOLVED_BY"
+      "source": "htma_clarification_chain",
+      "target": "mom_fluff",
+      "relation": "MITIGATES"
     },
     {
       "source": "mom_workarounds",
       "target": "htma_four_assumptions",
-      "relation": "EXEMPLIFIES"
+      "relation": "APPLIES"
     },
     {
       "source": "mom_compliments",
@@ -2102,7 +2102,7 @@
     {
       "source": "fde_go_no_go",
       "target": "mom_zombie_leads",
-      "relation": "AVOIDS"
+      "relation": "MITIGATES"
     },
     {
       "source": "fde_go_no_go",
@@ -2332,32 +2332,32 @@
     {
       "source": "pp_pyramid",
       "target": "pp_grouping_rules",
-      "relation": "REQUIRES"
+      "relation": "USES"
     },
     {
       "source": "pp_grouping_rules",
       "target": "pp_mece",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "pp_answer_first",
       "target": "pp_pyramid",
-      "relation": "EMBODIES"
+      "relation": "APPLIES"
     },
     {
       "source": "pp_scq",
       "target": "pp_governing_thought",
-      "relation": "LEADS_TO"
+      "relation": "FEEDS"
     },
     {
       "source": "pp_bottom_up",
       "target": "pp_pyramid",
-      "relation": "BUILDS"
+      "relation": "FEEDS"
     },
     {
       "source": "pp_deductive_inductive",
       "target": "pp_key_line",
-      "relation": "STRUCTURES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "pp_answer_first",
@@ -2392,7 +2392,7 @@
     {
       "source": "bps_issue_tree",
       "target": "bps_hypothesis_tree",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "bps_hypothesis_driven",
@@ -2407,7 +2407,7 @@
     {
       "source": "bps_hypothesis_driven",
       "target": "bps_confirmation_bias",
-      "relation": "RISKS"
+      "relation": "CAUSES"
     },
     {
       "source": "bps_team_bias",
@@ -2417,22 +2417,22 @@
     {
       "source": "bps_prioritize_2x2",
       "target": "bps_issue_tree",
-      "relation": "PRUNES"
+      "relation": "MITIGATES"
     },
     {
-      "source": "bps_workplan",
-      "target": "bps_prioritize_2x2",
-      "relation": "FOLLOWS"
+      "source": "bps_prioritize_2x2",
+      "target": "bps_workplan",
+      "relation": "FEEDS"
     },
     {
       "source": "bps_heuristics",
       "target": "bps_workplan",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
       "source": "bps_wicked",
       "target": "bps_seven_steps",
-      "relation": "CHALLENGES"
+      "relation": "CAUSES"
     },
     {
       "source": "sw_rider_elephant_path",
@@ -2452,47 +2452,47 @@
     {
       "source": "sw_rider",
       "target": "sw_bright_spots",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "sw_rider",
       "target": "sw_script_moves",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "sw_rider",
       "target": "sw_destination",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "sw_elephant",
       "target": "sw_find_feeling",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "sw_elephant",
       "target": "sw_shrink_change",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "sw_elephant",
       "target": "sw_grow_people",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "sw_path",
       "target": "sw_tweak_env",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "sw_path",
       "target": "sw_build_habits",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "sw_path",
       "target": "sw_rally_herd",
-      "relation": "INCLUDES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "sw_script_moves",
@@ -2502,12 +2502,12 @@
     {
       "source": "sw_resistance_clarity",
       "target": "sw_script_moves",
-      "relation": "MOTIVATES"
+      "relation": "FEEDS"
     },
     {
       "source": "sw_resistance_clarity",
       "target": "sw_tweak_env",
-      "relation": "MOTIVATES"
+      "relation": "FEEDS"
     },
     {
       "source": "fc_phases",
@@ -2527,37 +2527,37 @@
     {
       "source": "fc_contracting",
       "target": "fc_discovery",
-      "relation": "PRECEDES"
+      "relation": "FEEDS"
     },
     {
       "source": "fc_discovery",
       "target": "fc_feedback_meeting",
-      "relation": "PRECEDES"
+      "relation": "FEEDS"
     },
     {
       "source": "fc_resistance",
       "target": "fc_resistance_forms",
-      "relation": "MANIFESTS_AS"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "fc_handle_resistance",
       "target": "fc_resistance",
-      "relation": "ADDRESSES"
+      "relation": "MITIGATES"
     },
     {
       "source": "fc_feedback_meeting",
       "target": "fc_resistance",
-      "relation": "TRIGGERS"
+      "relation": "CAUSES"
     },
     {
       "source": "fc_authenticity",
       "target": "fc_handle_resistance",
-      "relation": "ENABLES"
+      "relation": "FEEDS"
     },
     {
       "source": "fc_fighting_resistance",
       "target": "fc_resistance",
-      "relation": "INCREASES"
+      "relation": "CAUSES"
     },
     {
       "source": "fc_handle_resistance",
@@ -2567,27 +2567,27 @@
     {
       "source": "fc_contracting",
       "target": "fc_fifty_fifty",
-      "relation": "ESTABLISHES"
+      "relation": "FEEDS"
     },
     {
       "source": "fc_roles",
       "target": "fc_contracting",
-      "relation": "SHAPES"
+      "relation": "FEEDS"
     },
     {
       "source": "fc_discovery",
       "target": "fc_two_dimensions",
-      "relation": "COVERS"
+      "relation": "HAS_COMPONENT"
     },
     {
-      "source": "cdh_definition",
-      "target": "cdh_trio",
-      "relation": "PERFORMED_BY"
+      "source": "cdh_trio",
+      "target": "cdh_definition",
+      "relation": "APPLIES"
     },
     {
       "source": "cdh_ost",
       "target": "cdh_outcomes",
-      "relation": "ROOTED_IN"
+      "relation": "USES"
     },
     {
       "source": "cdh_ost",
@@ -2602,22 +2602,22 @@
     {
       "source": "cdh_story_interview",
       "target": "cdh_opportunities",
-      "relation": "DISCOVERS"
+      "relation": "FEEDS"
     },
     {
-      "source": "cdh_snapshots",
-      "target": "cdh_story_interview",
-      "relation": "SYNTHESIZES_FROM"
+      "source": "cdh_story_interview",
+      "target": "cdh_snapshots",
+      "relation": "FEEDS"
     },
     {
       "source": "cdh_recruiting",
       "target": "cdh_definition",
-      "relation": "ENABLES"
+      "relation": "FEEDS"
     },
     {
       "source": "cdh_experience_map",
       "target": "cdh_opportunities",
-      "relation": "FRAMES"
+      "relation": "FEEDS"
     },
     {
       "source": "cdh_compare_contrast",
@@ -2627,7 +2627,7 @@
     {
       "source": "cdh_assumption_mapping",
       "target": "cdh_assumption_tests",
-      "relation": "PRIORITIZES"
+      "relation": "FEEDS"
     },
     {
       "source": "cdh_show_work",
@@ -2647,7 +2647,7 @@
     {
       "source": "bps_issue_tree",
       "target": "pp_mece",
-      "relation": "REQUIRES"
+      "relation": "USES"
     },
     {
       "source": "bps_hypothesis_driven",
@@ -2692,7 +2692,7 @@
     {
       "source": "pp_answer_first",
       "target": "ta_credibility",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
       "source": "pp_scq",
@@ -2757,12 +2757,12 @@
     {
       "source": "fc_authenticity",
       "target": "ta_self_orientation",
-      "relation": "DECREASES"
+      "relation": "MITIGATES"
     },
     {
       "source": "fc_authenticity",
       "target": "ta_intimacy",
-      "relation": "INCREASES"
+      "relation": "FEEDS"
     },
     {
       "source": "fc_roles",
@@ -2807,7 +2807,7 @@
     {
       "source": "sw_bright_spots",
       "target": "htma_four_assumptions",
-      "relation": "EXEMPLIFIES"
+      "relation": "APPLIES"
     },
     {
       "source": "sw_shrink_change",
@@ -2822,7 +2822,7 @@
     {
       "source": "sw_script_moves",
       "target": "ta_commit",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
       "source": "sw_script_moves",
@@ -3037,7 +3037,7 @@
     {
       "source": "x_hypothesis_first",
       "target": "bps_confirmation_bias",
-      "relation": "RISKS"
+      "relation": "CAUSES"
     },
     {
       "source": "x_self_orientation_kills_data",
@@ -3242,12 +3242,12 @@
     {
       "source": "bps_porpoising",
       "target": "bps_define",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
       "source": "bps_red_teaming",
       "target": "bps_team_bias",
-      "relation": "EMBODIES"
+      "relation": "APPLIES"
     },
     {
       "source": "fde_problem_framing",
@@ -3262,12 +3262,12 @@
     {
       "source": "cdh_five_assumptions",
       "target": "cdh_assumption_mapping",
-      "relation": "STRUCTURES"
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "cdh_leading_indicator",
       "target": "cdh_outcomes",
-      "relation": "OPERATIONALIZES"
+      "relation": "APPLIES"
     },
     {
       "source": "fde_deployment_ost",
@@ -3275,14 +3275,14 @@
       "relation": "USES"
     },
     {
-      "source": "fc_instant_compliance",
-      "target": "fc_resistance_forms",
-      "relation": "INCLUDES"
+      "source": "fc_resistance_forms",
+      "target": "fc_instant_compliance",
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "fc_naming_protocol",
       "target": "fc_handle_resistance",
-      "relation": "EMBODIES"
+      "relation": "APPLIES"
     },
     {
       "source": "fde_resistance_playbook",
@@ -3290,22 +3290,22 @@
       "relation": "USES"
     },
     {
-      "source": "htma_evsi",
-      "target": "htma_evi",
-      "relation": "EXTENDS"
+      "source": "htma_evi",
+      "target": "htma_evsi",
+      "relation": "HAS_COMPONENT"
     },
     {
       "source": "htma_lens_model",
       "target": "htma_calibration",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
-      "source": "htma_calibrated_meeting",
+      "source": "fde_calibrated_meeting",
       "target": "htma_calibration",
       "relation": "APPLIES"
     },
     {
-      "source": "htma_calibrated_meeting",
+      "source": "fde_calibrated_meeting",
       "target": "htma_equivalent_bet",
       "relation": "APPLIES"
     },
@@ -3322,7 +3322,7 @@
     {
       "source": "mom_advancement_test",
       "target": "mom_commitment",
-      "relation": "OPERATIONALIZES"
+      "relation": "APPLIES"
     },
     {
       "source": "fde_discovery_interview",
@@ -3332,12 +3332,12 @@
     {
       "source": "pp_action_titles",
       "target": "pp_pyramid",
-      "relation": "EMBODIES"
+      "relation": "APPLIES"
     },
     {
       "source": "pp_three_orders",
       "target": "pp_grouping_rules",
-      "relation": "OPERATIONALIZES"
+      "relation": "APPLIES"
     },
     {
       "source": "fde_exec_recommendation",
@@ -3347,12 +3347,12 @@
     {
       "source": "sw_action_triggers",
       "target": "sw_build_habits",
-      "relation": "IMPLEMENTS"
+      "relation": "APPLIES"
     },
     {
       "source": "sw_endowed_progress",
       "target": "sw_shrink_change",
-      "relation": "SUPPORTS"
+      "relation": "FEEDS"
     },
     {
       "source": "fde_adoption_plan",
@@ -3365,14 +3365,449 @@
       "relation": "MEASURES"
     },
     {
-      "source": "ta_trust_temperaments",
-      "target": "ta_trust_quotient",
-      "relation": "PRODUCED_BY"
+      "source": "ta_trust_quotient",
+      "target": "ta_trust_temperaments",
+      "relation": "FEEDS"
     },
     {
       "source": "fde_stakeholder_trust",
       "target": "ta_trust_quotient",
       "relation": "USES"
+    },
+    {
+      "source": "htma_define_decision",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_calibration",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_ci90",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_equivalent_bet",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_overconfidence",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_decomposition",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_evi",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_eol",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_monte_carlo",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_rule_of_five",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_single_sample",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_bayes",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_small_data",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_credibility",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_reliability",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_intimacy",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_self_orientation",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_engage",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_listen",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_frame",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_envision",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_commit",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_name_it",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_need_to_be_right",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_their_life",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_past_specifics",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_talk_less",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_compliments",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_fluff",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_feature_requests",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_dig",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_currencies",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_zombie_leads",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_pitching",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_workarounds",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_governing_thought",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_qa_dialogue",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_grouping_rules",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_key_line",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_define",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_hypothesis_tree",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_prioritize_2x2",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_workplan",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_synthesize",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_confirmation_bias",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_rider",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_elephant",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_path",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_bright_spots",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_script_moves",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_destination",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_find_feeling",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_shrink_change",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_grow_people",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_tweak_env",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_build_habits",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_rally_herd",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_contracting",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_discovery",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_feedback_meeting",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_resistance_forms",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_handle_resistance",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_fighting_resistance",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_opportunities",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_story_interview",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_snapshots",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_recruiting",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_experience_map",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_assumption_tests",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_whether_or_not",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_show_work",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_porpoising",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "bps_red_teaming",
+      "target": "book_bps",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_five_assumptions",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "cdh_leading_indicator",
+      "target": "book_cdh",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_instant_compliance",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fc_naming_protocol",
+      "target": "book_fc",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_evsi",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "htma_lens_model",
+      "target": "book_htma",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_deflecting_compliments",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "mom_advancement_test",
+      "target": "book_mom",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_action_titles",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "pp_three_orders",
+      "target": "book_pp",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_action_triggers",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "sw_endowed_progress",
+      "target": "book_sw",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_trust_quotient",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
+    },
+    {
+      "source": "ta_trust_temperaments",
+      "target": "book_ta",
+      "relation": "FROM_BOOK"
     }
   ],
   "resources": [
@@ -3447,6 +3882,54 @@
       "title": "Trusted Advisor Associates Official Resources & TQ Assessment",
       "url": "https://trustedadvisor.com",
       "kind": "tool"
+    },
+    {
+      "node_id": "book_htma",
+      "title": "How to Measure Anything Official Companion Spreadsheets (HDR)",
+      "url": "https://hubbardresearch.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "book_ta",
+      "title": "Trusted Advisor Associates — Trust Quotient (TQ) Diagnostic",
+      "url": "https://trustedadvisor.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "book_mom",
+      "title": "The Mom Test Official Website & Conversation Cheat Sheet",
+      "url": "https://www.momtestbook.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "book_pp",
+      "title": "Barbara Minto — The Minto Pyramid Principle Official Site",
+      "url": "https://barbaraminto.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "book_bps",
+      "title": "Wiley Bulletproof Problem Solving Companion Resources",
+      "url": "https://www.wiley.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "book_sw",
+      "title": "Heath Brothers Free Switch Framework & Organizational Workbook",
+      "url": "https://heathbrothers.com/resources/",
+      "kind": "official"
+    },
+    {
+      "node_id": "book_fc",
+      "title": "Designed Learning (Peter Block) Flawless Consulting Checklists",
+      "url": "https://designedlearning.com",
+      "kind": "official"
+    },
+    {
+      "node_id": "book_cdh",
+      "title": "Product Talk (Teresa Torres) OST & Interview Snapshot Templates",
+      "url": "https://www.producttalk.org",
+      "kind": "official"
     }
   ]
 }

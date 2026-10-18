@@ -2,42 +2,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>FDE Knowledge Graph — Measurement, Trust & Discovery</title>
+<title>FDE Knowledge Graph — Measurement, Trust, Discovery, Structure & Change</title>
 <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
 <style>
-  :root { --bg:#0f1117; --panel:#171a23; --text:#e6e6e6; --muted:#9aa0aa; --border:#2a2f3a; }
+  :root { --bg:#0f1117; --panel:#171a23; --text:#e6e6e6; --muted:#9aa0aa; --border:#2a2f3a; --accent:#8ab4f8; }
   * { box-sizing: border-box; }
   body { margin:0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--text); display:flex; height:100vh; }
-  #sidebar { width:340px; background:var(--panel); border-right:1px solid var(--border); padding:16px; overflow-y:auto; }
+  #sidebar { width:400px; background:var(--panel); border-right:1px solid var(--border); padding:16px; overflow-y:auto; }
   #graph { flex:1; }
   h1 { font-size:16px; margin:0 0 4px; }
   .sub { color:var(--muted); font-size:12px; margin-bottom:14px; }
   input[type=search] { width:100%; padding:8px; background:#0f1117; border:1px solid var(--border); color:var(--text); border-radius:6px; }
-  fieldset { border:1px solid var(--border); border-radius:6px; margin:12px 0; padding:8px 10px; }
+  fieldset { border:1px solid var(--border); border-radius:6px; margin:10px 0; padding:8px 10px; }
   legend { color:var(--muted); font-size:12px; padding:0 4px; }
-  label { display:flex; align-items:center; gap:6px; font-size:13px; margin:3px 0; cursor:pointer; }
-  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  label { display:flex; align-items:center; gap:6px; font-size:12.5px; margin:3px 0; cursor:pointer; }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; flex-shrink:0; }
   #details { margin-top:14px; border-top:1px solid var(--border); padding-top:12px; }
-  #details h2 { font-size:15px; margin:0 0 4px; }
-  .badge { font-size:11px; padding:2px 6px; border-radius:4px; background:#262b36; color:var(--muted); margin-right:4px; }
-  #details p { font-size:13px; line-height:1.45; }
-  #details ul { padding-left:16px; font-size:12.5px; }
-  #details li { margin:3px 0; }
-  #details a { color:#8ab4f8; cursor:pointer; text-decoration:none; }
+  #details h2 { font-size:15px; margin:0 0 6px; }
+  #details h3 { font-size:13px; margin:12px 0 6px; color:#c792ea; }
+  #details h4 { font-size:12.5px; margin:10px 0 4px; color:var(--accent); }
+  .badge { font-size:11px; padding:2px 6px; border-radius:4px; background:#262b36; color:var(--muted); margin-right:4px; display:inline-block; margin-bottom:4px; }
+  #details p { font-size:13px; line-height:1.45; margin:6px 0; }
+  #details ul { padding-left:16px; font-size:12.5px; margin:4px 0 10px; }
+  #details li { margin:3px 0; line-height:1.4; }
+  #details a { color:var(--accent); cursor:pointer; text-decoration:none; }
+  #details a:hover { text-decoration:underline; }
   .rel { color:var(--muted); font-family:monospace; font-size:11px; }
   button { background:#262b36; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; cursor:pointer; font-size:12px; }
+  button:hover { background:#323846; }
+  details.playbook { margin-top:12px; border:1px solid var(--border); border-radius:6px; padding:8px 10px; background:#12151e; }
+  details.playbook summary { cursor:pointer; font-size:12.5px; font-weight:600; color:#3ecf8e; }
+  .playbook-body { font-size:12px; line-height:1.45; margin-top:8px; color:#d4d8e2; }
+  .playbook-body table { width:100%; border-collapse:collapse; margin:8px 0; font-size:11.5px; }
+  .playbook-body th, .playbook-body td { border:1px solid var(--border); padding:5px 6px; text-align:left; vertical-align:top; }
+  .playbook-body th { background:#1e2230; color:var(--text); }
 </style>
 </head>
 <body>
 <div id="sidebar">
   <h1>FDE Knowledge Graph</h1>
-  <div class="sub">8 books + FDE synthesis layer</div>
-  <input id="search" type="search" placeholder="Search concepts…">
+  <div class="sub">8 books · 193 nodes · 12 canonical predicates · Field Playbooks</div>
+  <input id="search" type="search" placeholder="Search concepts, scripts, tools…">
   <fieldset id="books"><legend>Books / layers</legend></fieldset>
   <fieldset id="types"><legend>Node types</legend></fieldset>
-  <label><input type="checkbox" id="hideFromBook"> Hide FROM_BOOK / AUTHORED edges</label>
+  <label><input type="checkbox" id="hideFromBook" checked> Hide FROM_BOOK / AUTHORED edges</label>
   <div style="margin-top:8px"><button id="fit">Fit view</button> <button id="reset">Reset</button></div>
-  <div id="details"><p class="sub">Click a node to see details and connections. Double-click to focus its neighborhood.</p></div>
+  <div id="details"><p class="sub">Click any node to inspect its definition, external resources, connections, and tactical FDE playbook.</p></div>
 </div>
 <div id="graph"></div>
 <script>
@@ -50,7 +60,12 @@ const TYPE_SIZES  = { Book:30, Framework:22, CrossInsight:24, FDEPractice:22 };
 
 const byId = Object.fromEntries(DATA.nodes.map(n => [n.id, n]));
 const degree = {};
-DATA.edges.forEach(e => { degree[e.source]=(degree[e.source]||0)+1; degree[e.target]=(degree[e.target]||0)+1; });
+DATA.edges.forEach(e => {
+  if (!["FROM_BOOK","AUTHORED"].includes(e.relation)) {
+    degree[e.source]=(degree[e.source]||0)+1;
+    degree[e.target]=(degree[e.target]||0)+1;
+  }
+});
 
 const nodes = new vis.DataSet(DATA.nodes.map(n => ({
   id:n.id, label:n.label, title:n.description, group:n.book,
@@ -66,7 +81,7 @@ const edges = new vis.DataSet(DATA.edges.map((e,i) => ({
   font:{ size:9, color:"#8a909c", strokeWidth:0, align:"middle" },
 })));
 
-const state = { books:new Set(Object.keys(BOOK_COLORS)), types:new Set(Object.keys(TYPE_SHAPES)), hideStructural:false, focus:null };
+const state = { books:new Set(Object.keys(BOOK_COLORS)), types:new Set(Object.keys(TYPE_SHAPES)), hideStructural:true, focus:null };
 
 function nodeVisible(n){ return state.books.has(n.book) && state.types.has(n.type); }
 const nodeView = new vis.DataView(nodes, { filter: n => {
@@ -96,18 +111,94 @@ document.getElementById("hideFromBook").onchange = ev => { state.hideStructural 
 document.getElementById("fit").onclick = () => network.fit({ animation:true });
 document.getElementById("reset").onclick = () => { state.focus=null; refresh(); network.fit({animation:true}); };
 
+function renderMarkdown(md) {
+  if (!md) return "";
+  const lines = md.split(/\r?\n/);
+  let html = "";
+  let inList = false;
+  let inTable = false;
+  let isHeaderRow = false;
+
+  const fmt = s => s
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`(.+?)`/g, "<code>$1</code>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1 ↗</a>');
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i].trim();
+    if (!raw || raw === "---") {
+      if (inList) { html += "</ul>"; inList = false; }
+      if (inTable) { html += "</table>"; inTable = false; }
+      continue;
+    }
+    if (raw.startsWith("|") && raw.endsWith("|")) {
+      if (inList) { html += "</ul>"; inList = false; }
+      if (/^\|[\s\-:|]+\|$/.test(raw)) continue;
+      if (!inTable) { html += "<table>"; inTable = true; isHeaderRow = true; }
+      const cells = raw.slice(1, -1).split("|").map(c => fmt(c.trim()));
+      const tag = isHeaderRow ? "th" : "td";
+      html += "<tr>" + cells.map(c => `<${tag}>${c}</${tag}>`).join("") + "</tr>";
+      isHeaderRow = false;
+      continue;
+    }
+    if (inTable) { html += "</table>"; inTable = false; }
+    if (raw.startsWith("### ")) {
+      if (inList) { html += "</ul>"; inList = false; }
+      html += `<h4>${fmt(raw.slice(4))}</h4>`;
+    } else if (raw.startsWith("## ") || raw.startsWith("# ")) {
+      if (inList) { html += "</ul>"; inList = false; }
+      html += `<h3>${fmt(raw.replace(/^#+\s*/, ""))}</h3>`;
+    } else if (raw.startsWith("* ") || raw.startsWith("- ") || /^\d+\.\s/.test(raw)) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      html += `<li>${fmt(raw.replace(/^(\*|-|\d+\.)\s+/, ""))}</li>`;
+    } else {
+      if (inList) { html += "</ul>"; inList = false; }
+      html += `<p>${fmt(raw)}</p>`;
+    }
+  }
+  if (inList) html += "</ul>";
+  if (inTable) html += "</table>";
+  return html;
+}
+
+function getResourcesForNode(n) {
+  const all = DATA.resources || [];
+  const direct = all.filter(r => r.node_id === n.id);
+  if (n.type === "Book") {
+    const seen = new Set(direct.map(r => r.url));
+    all.forEach(r => {
+      const targetNode = byId[r.node_id];
+      if (targetNode && targetNode.book === n.book && !seen.has(r.url)) {
+        direct.push(r);
+        seen.add(r.url);
+      }
+    });
+  }
+  return direct;
+}
+
 function showDetails(id){
   const n = byId[id];
-  const out = DATA.edges.filter(e => e.source===id), inc = DATA.edges.filter(e => e.target===id);
+  const out = DATA.edges.filter(e => e.source===id && !(state.hideStructural && ["FROM_BOOK","AUTHORED"].includes(e.relation)));
+  const inc = DATA.edges.filter(e => e.target===id && !(state.hideStructural && ["FROM_BOOK","AUTHORED"].includes(e.relation)));
   const link = x => `<a data-id="${x}">${byId[x].label}</a>`;
+  const res = getResourcesForNode(n);
+  const dossier = DATA.dossiers && DATA.dossiers[n.book];
+  const playbookMd = dossier ? (n.type === "Book" ? dossier.full : dossier.tactical) : "";
+
   document.getElementById("details").innerHTML = `
     <h2>${n.label}</h2>
     <span class="badge">${n.type}</span><span class="badge" style="color:${BOOK_COLORS[n.book]}">${DATA.meta.books[n.book]}</span>
     <p>${n.description}</p>
-    ${out.length?`<b style="font-size:12px">Outgoing</b><ul>${out.map(e=>`<li><span class="rel">${e.relation}</span> → ${link(e.target)}</li>`).join("")}</ul>`:""}
-    ${inc.length?`<b style="font-size:12px">Incoming</b><ul>${inc.map(e=>`<li>${link(e.source)} <span class="rel">${e.relation}</span></li>`).join("")}</ul>`:""}`;
-  document.querySelectorAll("#details a").forEach(a => a.onclick = () => select(a.dataset.id));
+    ${res.length ? `<b style="font-size:12px">External Resources</b><ul>${res.map(r=>`<li><a href="${r.url}" target="_blank" rel="noopener">${r.title} ↗</a> <span class="rel">(${r.kind||"link"})</span></li>`).join("")}</ul>` : ""}
+    ${out.length ? `<b style="font-size:12px">Outgoing (${out.length})</b><ul>${out.map(e=>`<li><span class="rel">${e.relation}</span> → ${link(e.target)}</li>`).join("")}</ul>` : ""}
+    ${inc.length ? `<b style="font-size:12px">Incoming (${inc.length})</b><ul>${inc.map(e=>`<li>${link(e.source)} <span class="rel">${e.relation}</span></li>`).join("")}</ul>` : ""}
+    ${playbookMd ? `<details class="playbook" ${n.type==="Book"?"open":""}><summary>Field Playbook & Toolkits (${n.book.toUpperCase()})</summary><div class="playbook-body">${renderMarkdown(playbookMd)}</div></details>` : ""}
+  `;
+  document.querySelectorAll("#details a[data-id]").forEach(a => a.onclick = () => select(a.dataset.id));
 }
+
 function select(id){
   if (state.focus && !state.focus.has(id)) { state.focus=null; refresh(); }
   network.selectNodes([id]); network.focus(id, { scale:1.1, animation:true }); showDetails(id);
@@ -116,7 +207,11 @@ network.on("click", p => { if (p.nodes.length) showDetails(p.nodes[0]); });
 network.on("doubleClick", p => {
   if (!p.nodes.length) return;
   const id = p.nodes[0]; const s = new Set([id]);
-  DATA.edges.forEach(e => { if (e.source===id) s.add(e.target); if (e.target===id) s.add(e.source); });
+  DATA.edges.forEach(e => {
+    if (state.hideStructural && ["FROM_BOOK","AUTHORED"].includes(e.relation)) return;
+    if (e.source===id) s.add(e.target);
+    if (e.target===id) s.add(e.source);
+  });
   state.focus = s; refresh(); setTimeout(() => network.fit({ animation:true }), 50);
 });
 document.getElementById("search").addEventListener("input", ev => {

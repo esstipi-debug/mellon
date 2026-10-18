@@ -15,7 +15,7 @@
       "description": "Deconstructing expert decisions into statistical cues to remove human inconsistency, cognitive fatigue, and noise."
     },
     {
-      "id": "htma_calibrated_meeting",
+      "id": "fde_calibrated_meeting",
       "label": "Calibrated Estimation Workshop",
       "type": "FDEPractice",
       "book": "fde",
@@ -23,11 +23,31 @@
     }
   ],
   "edges": [
-    { "source": "htma_evsi", "target": "htma_evi", "relation": "EXTENDS" },
-    { "source": "htma_lens_model", "target": "htma_calibration", "relation": "SUPPORTS" },
-    { "source": "htma_calibrated_meeting", "target": "htma_calibration", "relation": "APPLIES" },
-    { "source": "htma_calibrated_meeting", "target": "htma_equivalent_bet", "relation": "APPLIES" },
-    { "source": "fde_value_case", "target": "htma_evsi", "relation": "USES" }
+    {
+      "source": "htma_evsi",
+      "target": "htma_evi",
+      "relation": "EXTENDS"
+    },
+    {
+      "source": "htma_lens_model",
+      "target": "htma_calibration",
+      "relation": "SUPPORTS"
+    },
+    {
+      "source": "fde_calibrated_meeting",
+      "target": "htma_calibration",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_calibrated_meeting",
+      "target": "htma_equivalent_bet",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_value_case",
+      "target": "htma_evsi",
+      "relation": "USES"
+    }
   ],
   "resources": [
     {
