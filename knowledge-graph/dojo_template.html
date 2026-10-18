@@ -443,6 +443,7 @@
     <button class="navbtn active" data-mode="reflex">⚡ Tactical Reflex</button>
     <button class="navbtn" data-mode="calibration">🎯 Calibración 90% CI</button>
     <button class="navbtn" data-mode="bootcamp">🏛️ 5-Day Bootcamp</button>
+    <button class="navbtn" data-mode="forge">🛠️ Artifact Forge</button>
     <button class="navbtn" data-mode="sparring">🥊 Sparring</button>
     <a class="navlink" href="index.html">🕸 Grafo</a>
   </nav>
@@ -613,6 +614,57 @@
       </div>
     </div>
   </section>
+
+  <!-- ================= MODE 5 · ARTIFACT FORGE & EVPI LAB ================= -->
+  <section id="mode-forge" class="mode" hidden>
+    <div class="mode-head">
+      <div>
+        <h2>🛠️ Artifact Forge &amp; EVPI Lab</h2>
+        <p class="lead">Entrenamiento de producción escrita sin API key: redacta memorandos SCQA Answer-First (Minto + Hubbard), guiones de descubrimiento y resistencia (Mom Test + Block) y hojas de problema SMART+ con árboles MECE (Conn &amp; McLean). El linter local evalúa tus reglas deterministas sobre 100 puntos y compara contra el Gold Standard.</p>
+      </div>
+      <div class="mode-stats" id="forgeStats"></div>
+    </div>
+
+    <div class="card filters">
+      <label style="flex:2 1 320px">Misión de Forja (6 retos en 3 arquetipos FDE)
+        <select id="forgeSelect"></select>
+      </label>
+      <button id="forgeRandomBtn" class="btn warn" type="button">🎲 Misión aleatoria</button>
+    </div>
+
+    <div class="reflex-layout">
+      <div id="forgeCard" class="card scenario"></div>
+      <aside class="card side">
+        <h3>🧮 Calculadora EVPI &amp; Regla del 5</h3>
+        <p class="muted small" style="margin-top:0">Douglas Hubbard (<em>How to Measure Anything</em>): calcula en vivo el techo de gasto de información (EOL/EVPI) y la confianza binomial de una muestra rápida antes de proponer sensores o estudios largos.</p>
+        <div style="display:grid;gap:8px;margin-top:8px">
+          <label class="small">Costo si la decisión falla (USD)
+            <input id="evpiCostWrong" type="number" step="1000" value="250000" style="width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:var(--mono)">
+          </label>
+          <div class="grid2">
+            <label class="small">Prob. de error hoy (%)
+              <input id="evpiProbWrong" type="number" min="1" max="99" value="35" style="width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:var(--mono)">
+            </label>
+            <label class="small">Reducción incert. (%)
+              <input id="evpiReduction" type="number" min="5" max="100" value="70" style="width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:var(--mono)">
+            </label>
+          </div>
+          <div class="grid2">
+            <label class="small">Costo de medir (USD)
+              <input id="evpiSampleCost" type="number" step="500" value="3500" style="width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:var(--mono)">
+            </label>
+            <label class="small">Muestra rápida (n)
+              <input id="evpiSampleN" type="number" min="3" max="15" value="5" style="width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:var(--mono)">
+            </label>
+          </div>
+        </div>
+        <div id="evpiOutput" style="margin-top:10px"></div>
+        <div class="pills" style="margin-top:8px" id="evpiNodes"></div>
+        <h4 style="margin-top:16px">📜 Artefactos forjados</h4>
+        <div id="forgeLog" class="log"></div>
+      </aside>
+    </div>
+  </section>
 </main>
 
 <!-- ================= MODALS ================= -->
@@ -759,6 +811,7 @@ function defaultState() {
     log: [],
     calibration: { history: [], rounds: [], round: null },
     sparring: [],
+    forge: [],
     bootcamp: null,
     lastMode: "reflex",
     updatedAt: null
@@ -774,6 +827,7 @@ function hydrate(raw) {
   s.scenarios = raw.scenarios && typeof raw.scenarios === "object" ? raw.scenarios : {};
   s.log = Array.isArray(raw.log) ? raw.log.slice(-40) : [];
   s.sparring = Array.isArray(raw.sparring) ? raw.sparring.slice(-20) : [];
+  s.forge = Array.isArray(raw.forge) ? raw.forge.slice(-30) : [];
   s.calibration = raw.calibration && typeof raw.calibration === "object" ? raw.calibration : base.calibration;
   s.calibration.history = Array.isArray(s.calibration.history) ? s.calibration.history : [];
   s.calibration.rounds = Array.isArray(s.calibration.rounds) ? s.calibration.rounds : [];
@@ -1099,6 +1153,9 @@ function openStats() {
 
     <h3>Sparring reciente</h3>
     ${state.sparring.length ? `<ul class="relations">${state.sparring.slice(-6).reverse().map((sp) => `<li><b>${sp.overall}/100</b> · ${esc(sp.contextLabel || "")} · ${fmtDate(sp.at)}</li>`).join("")}</ul>` : `<p class="muted small">Sin sesiones de sparring todavía.</p>`}
+
+    <h3>Artifact Forge reciente</h3>
+    ${(state.forge && state.forge.length) ? `<ul class="relations">${state.forge.slice(-6).reverse().map((fg) => `<li><b>${fg.score}/100</b> · [${esc((fg.archetype || "").toUpperCase())}] ${esc(fg.title || "")} · ${fmtDate(fg.at)}</li>`).join("")}</ul>` : `<p class="muted small">Sin artefactos forjados todavía.</p>`}
 
     <div class="row" style="margin-top:18px">
       <button class="btn" id="exportState">⬇ Exportar progreso (.json)</button>
@@ -3348,10 +3405,645 @@ function updateModelOptions() {
 }
 
 /* =====================================================================
+   5 · ARTIFACT FORGE & EVPI LAB (DETERMINISTIC LOCAL LINTER)
+   ===================================================================== */
+const FORGE_MISSIONS = [
+  {
+    id: "forge_scqa_nhs",
+    archetype: "scqa",
+    archetypeLabel: "Memorando SCQA + Answer-First (Minto + Hubbard)",
+    title: "NHS England: Despliegue de tablero de reasignación con 18% de ruido en tablas",
+    phase: "Executive Synthesis",
+    practice: "fde_exec_recommendation",
+    nodes: ["pp_answer_first", "pp_scq", "pp_mece", "pp_action_titles", "htma_ci90", "x_recommendation_with_uncertainty", "pp_chronological_dump"],
+    rawFacts: [
+      "Pasamos 3 semanas limpiando 14 tablas HL7 de 200 hospitales.",
+      "El 18% de los registros de stock tiene duplicados o un desfase de 48 horas.",
+      "A pesar de ese 18% de ruido, cuando el stock proyectado cae por debajo de 36 horas, la transferencia preventiva entre hospitales vecinos evita entre 11 y 19 cirugías canceladas por semana (IC 90%).",
+      "El comité clínico quiere congelar el lanzamiento 9 meses hasta limpiar el 100% de las tablas.",
+      "Si en el mes 1 las cirugías salvadas en la primera ola de 10 hospitales caen por debajo de 8 por semana, podemos revertir al proceso manual en 24 horas."
+    ],
+    trapWarning: "No narres las 3 semanas limpiando tablas HL7 ('pp_chronological_dump') ni prometas un número único sin incertidumbre ('htma_overconfidence'). Abre con la decisión Go/No-Go.",
+    fields: [
+      { id: "gov", label: "1 · Governing Thought / Título de Acción (Answer-First)", placeholder: "Ej: Recomiendo activar hoy la ola 1 en 10 hospitales bajo umbral de 36h en lugar de esperar 9 meses..." },
+      { id: "sit", label: "2 · S · Situación (Hecho base no controvertido)", placeholder: "Ej: Los 200 hospitales de la red gestionan transferencias críticas de insumos quirúrgicos..." },
+      { id: "com", label: "3 · C · Complicación (El quiebre cuantificado y el costo de esperar)", placeholder: "Ej: Aunque 18% de los registros tiene desfase de 48h, postergar 9 meses por limpieza total..." },
+      { id: "key", label: "4 · Key Line MECE + Rango Calibrado 90% + Gatillo de Reversa", placeholder: "Ej: Tres razones independientes: (1) Impacto: evitamos entre 11 y 19 cirugías canceladas/semana (90% CI); (2) Robustez: el umbral de 36h absorbe el 18% de ruido; (3) Riesgo acotado: si al mes 1 salvamos menos de 8 cirugías/semana, revertimos en 24h." }
+    ],
+    gold: {
+      gov: "Recomiendo aprobar hoy el despliegue en ola 1 (10 hospitales) con umbral de alerta de 36 horas, rechazando la pausa de 9 meses.",
+      sit: "La red de 200 hospitales necesita redistribuir insumos quirúrgicos a tiempo para evitar suspensiones de pabellón.",
+      com: "Aunque el 18% de los registros presenta desfase de 48h, esperar 9 meses por datos perfectos congela un flujo que ya supera el umbral de decisión.",
+      key: "Tres razones MECE sostienen el Go: (1) Impacto: evitamos entre 11 y 19 cirugías canceladas por semana (IC 90%); (2) Margen de seguridad: el gatillo de 36h absorbe el 18% de ruido; (3) Reversibilidad: si al mes 1 evitamos menos de 8 cancelaciones/semana, apagamos el piloto en 24 horas."
+    }
+  },
+  {
+    id: "forge_scqa_airbus",
+    archetype: "scqa",
+    archetypeLabel: "Memorando SCQA + Answer-First (Minto + Hubbard)",
+    title: "Airbus A350: Cuello de botella en Hangar 1 vs. Data Lake Global de 18 meses",
+    phase: "Executive Synthesis",
+    practice: "fde_go_no_go",
+    nodes: ["pp_answer_first", "pp_scq", "pp_mece", "htma_ci90", "fde_go_no_go", "pp_chronological_dump"],
+    rawFacts: [
+      "El VP de Ingeniería propone esperar 18 meses para unificar 15 sistemas SAP/MES en un Data Lake corporativo.",
+      "El 68% del atraso de entrega del A350 ocurre en 2 estaciones de cableado del Hangar 1.",
+      "Integrando solo 3 tablas operativas en 5 días, reducimos el tiempo de resolución de no-conformidades entre 4,2 y 6,8 horas por avión (IC 90%), equivalente a $1,4M–$2,3M USD por trimestre.",
+      "Si al cabo de 4 semanas el ahorro real medido en el Hangar 1 es menor a 3,0 horas por avión, cancelamos la expansión sin costo de infraestructura."
+    ],
+    trapWarning: "Evita empezar explicando cómo conectaste las 3 tablas SAP/MES. Abre con la recomendación ejecutiva, susténtala en 3 pilares MECE, incluye el rango 90% y fija el gatillo de salida.",
+    fields: [
+      { id: "gov", label: "1 · Governing Thought / Título de Acción (Answer-First)", placeholder: "Ej: Recomiendo desplegar esta semana el flujo de resolución en las 2 estaciones del Hangar 1..." },
+      { id: "sit", label: "2 · S · Situación (Hecho base)", placeholder: "Ej: El programa A350 requiere acelerar el cierre de no-conformidades en ensamblaje final..." },
+      { id: "com", label: "3 · C · Complicación (Tensión operativa y costo de oportunidad)", placeholder: "Ej: El 68% del atraso nace en 2 estaciones del Hangar 1, pero esperar 18 meses por el Data Lake global..." },
+      { id: "key", label: "4 · Key Line MECE + Rango Calibrado 90% + Gatillo de Reversa", placeholder: "Ej: (1) Valor cuantificado: ahorramos entre 4,2 y 6,8 horas/avión ($1,4M a $2,3M/trimestre con 90% CI); (2) Foco Pareto: 3 tablas cubren el 68% del cuello de botella; (3) Stop-loss: si en 4 semanas el ahorro baja de 3 horas/avión, paramos." }
+    ],
+    gold: {
+      gov: "Recomiendo desplegar hoy el flujo táctico en las 2 estaciones críticas del Hangar 1 en vez de esperar 18 meses por el Data Lake global.",
+      sit: "El ramp-up del A350 exige eliminar los atrasos por no-conformidades recurrentes de cableado en cabina.",
+      com: "El 68% del retraso se concentra en solo 2 estaciones del Hangar 1; postergar la acción 18 meses para integrar 15 sistemas sacrifica hasta $2,3M trimestrales.",
+      key: "Tres argumentos MECE: (1) Impacto calibrado: recortamos entre 4,2 y 6,8 horas por avión (90% CI, $1,4M–$2,3M/trimestre); (2) Simplicidad: 3 tablas bastan para atacar el 68% del atraso; (3) Gatillo de reversa: si en 4 semanas ahorramos menos de 3 horas por avión, abortamos el escalamiento."
+    }
+  },
+  {
+    id: "forge_mom_tyson",
+    archetype: "mom",
+    archetypeLabel: "Guion de Descubrimiento & Resistencia (Mom Test + Block)",
+    title: "Tyson Foods: Planificadores veteranos que apagan el optimizador y vuelven a Excel",
+    phase: "Resistance & Change",
+    practice: "fde_resistance_playbook",
+    nodes: ["fc_naming_protocol", "fc_handle_resistance", "mom_past_specifics", "mom_workarounds", "mom_commitment", "mom_fluff", "fc_fighting_resistance"],
+    rawFacts: [
+      "Los planificadores con 20 años de antigüedad desactivaron las recomendaciones automáticas al tercer día y volvieron a su planilla Excel.",
+      "Pregunta trampa que quiere hacer tu equipo: '¿Les gustaría que agreguemos un puntaje de confianza del 1 al 100 para que sí usen la herramienta en el futuro?'",
+      "Necesitas: (1) Nombrar de forma neutral la resistencia emocional (pérdida de control / desconfianza en caja negra), (2) Indagar un hecho pasado específico (la última orden donde el recomendador falló), y (3) Cerrar un compromiso concreto hoy (revisar 5 SKUs juntos en modo human-in-the-loop)."
+    ],
+    trapWarning: "Prohibido usar condicionales futuros ('¿usarías?', '¿te gustaría?', '¿crees que sería útil?') o defender el algoritmo con lógica ('nuestro modelo tiene 94% de precisión').",
+    fields: [
+      { id: "name", label: "1 · Nombramiento Neutral de la Resistencia (Peter Block · sin culpar ni defenderse)", placeholder: "Ej: Noto que al tercer día apagaron las sugerencias y volvieron a su planilla; parece que el sistema los obliga a firmar a ciegas..." },
+      { id: "past", label: "2 · Pregunta de Historia Pasada y Workaround (Mom Test + Torres · cero futuro hipotético)", placeholder: "Ej: Cuéntame del último turno en que descartaste una sugerencia: ¿qué lote específico era, qué viste mal y cómo lo corregiste en tu planilla?" },
+      { id: "comm", label: "3 · Moneda de Compromiso y Co-diseño (Avance concreto hoy en terreno)", placeholder: "Ej: Sentémonos 20 minutos hoy a las 15:00 con los 5 SKUs de mayor merma de ayer para configurar juntos la regla de aprobación." }
+    ],
+    gold: {
+      name: "Veo que apagaron las sugerencias el miércoles y volvieron a la planilla; siento que el sistema les pide poner la firma sobre órdenes sin dejarles ver ni ajustar el criterio.",
+      past: "Muéstrame la última orden de esta semana donde la sugerencia chocó con tu experiencia: ¿qué corte era, qué restricción del cliente omitió y cómo lo resolviste en tu Excel?",
+      comm: "Bloqueemos 20 minutos hoy después del cierre de turno para revisar juntos los 5 lotes más críticos de ayer y dejar que tu ajuste manual alimente la regla antes de despachar."
+    }
+  },
+  {
+    id: "forge_mom_pge",
+    archetype: "mom",
+    archetypeLabel: "Guion de Descubrimiento & Resistencia (Mom Test + Block)",
+    title: "PG&E: Capataces que dan cumplidos vacíos y piden 200 funciones móviles",
+    phase: "Discovery & Contracting",
+    practice: "fde_discovery_interview",
+    nodes: ["mom_past_specifics", "mom_compliments", "mom_feature_requests", "mom_workarounds", "mom_commitment", "cdh_story_interviews"],
+    rawFacts: [
+      "Los capataces de cuadrilla eléctrica te dicen: 'Se ve increíble tu plataforma de riesgo de incendio, avísanos cuando esté lista' y te entregan un listado de 200 botones para la app.",
+      "Pregunta trampa a evitar: '¿Cuál de estas 200 funciones usarían más si la programamos el próximo trimestre?'",
+      "Necesitas: (1) Desviar el cumplido y cavar debajo del pedido de features, (2) Anclar en la última alerta fallida del turno pasado y su costo/workaround real, (3) Pedir una moneda de compromiso (sombra en camioneta o datos del último despacho)."
+    ],
+    trapWarning: "No agradezcas el cumplido ni les pidas votar sobre el futuro. Usa la técnica 'Look Before You Zoom' y ancla en el último despacho real en terreno.",
+    fields: [
+      { id: "name", label: "1 · Desviar el Cumplido y Cavar Bajo el Feature Request (Mom Test)", placeholder: "Ej: Dejemos de lado nuestra demo y la lista de 200 botones por un segundo; antes de diseñar pantallas quiero entender qué les quema tiempo hoy..." },
+      { id: "past", label: "2 · Pregunta de Historia Pasada Específica y Costo Real (Último turno crítico)", placeholder: "Ej: En la última alerta de viento fuerte de la semana pasada, ¿cuántas horas perdieron verificando postes que no tenían falla y cómo decidieron a cuál ir primero?" },
+      { id: "comm", label: "3 · Moneda de Compromiso Real (Tiempo, acceso o datos reales hoy)", placeholder: "Ej: ¿Puedo subirme mañana a las 6:00 AM a la camioneta de tu cuadrilla durante dos horas y llevarme el registro de las últimas 10 salidas fallidas?" }
+    ],
+    gold: {
+      name: "Olvidemos la demo y dejemos en pausa la lista de 200 pantallas; si construimos todo eso a ciegas solo les vamos a estorbar en terreno.",
+      past: "Cuéntame de la última alerta roja de viento que atendiste la semana pasada: ¿qué tramo revisaron en vano, cuántas horas de cuadrilla costó ese falso positivo y cómo priorizaron a mano?",
+      comm: "¿Me dejas acompañarte mañana a las 06:30 en el despacho de turno durante 30 minutos y me pasas la planilla con las últimas 10 salidas en falso de este mes?"
+    }
+  },
+  {
+    id: "forge_bps_port",
+    archetype: "bps",
+    archetypeLabel: "Hoja de Problema SMART+ & Árbol MECE + EVPI (Conn & Hubbard)",
+    title: "Terminal Portuaria: Mandato vago de 'poner IA en las grúas' ante multas de demora",
+    phase: "Diagnosis & Measurement",
+    practice: "fde_problem_framing",
+    nodes: ["bps_problem_statement", "bps_issue_tree", "bps_2x2", "htma_define_decision", "htma_rule_of_five", "htma_evi", "cdh_whether_or_not"],
+    rawFacts: [
+      "Mandato vago del cliente: 'Queremos implementar IA en el patio porque los buques tardan 4 horas extra y pagamos $18.000 USD de multa por buque atrasado (30 buques atrasados/mes = $540.000/mes)'.",
+      "TI propone gastar $120.000 USD y 5 meses sensorizando todas las grúas antes de tomar cualquier decisión.",
+      "Necesitas: (1) Redactar la pregunta de decisión SMART+ con dueño, métrica, umbral y horizonte sin atarla a 'IA', (2) Descomponer el atraso de 4 horas en ramas MECE y podar con matriz 2×2, y (3) Aplicar EVPI y Regla del Cinco (5 buques esta semana) para frenar el gasto ciego de $120k."
+    ],
+    trapWarning: "No incluyas la solución ('implementar IA' o 'comprar sensores') dentro de la pregunta del problema ('cdh_whether_or_not'), ni aceptes 5 meses de sensores antes de muestrear 5 buques.",
+    fields: [
+      { id: "smart", label: "1 · Pregunta de Decisión SMART+ (Dueño + Métrica + Umbral + Plazo · sin fijar la tecnología)", placeholder: "Ej: ¿Cómo puede el Director de Operaciones Portuarias reducir el tiempo de estadía en muelle en al menos 2,5 horas por buque dentro de 90 días..." },
+      { id: "mece", label: "2 · Corte MECE de Primer Nivel + Poda 2×2 (Ramas sin traslape y cuál atacar primero)", placeholder: "Ej: Tiempo total en puerto = (1) Espera de atraque y aduana + (2) Ciclo de grúa muelle-patio + (3) Re-manejo en patio. Podamos (1) por baja influencia y atacamos primero (3) por alto impacto..." },
+      { id: "evpi", label: "3 · Frontera EVPI y Muestra Regla del Cinco (Por qué no gastar $120k hoy y qué medir en 48h)", placeholder: "Ej: Antes de gastar $120k y 5 meses en sensores, cronometramos una muestra aleatoria de 5 buques esta semana (93,75% de confianza en la mediana con costo <$2.000) para acotar cuánto pesa el re-manejo." }
+    ],
+    gold: {
+      smart: "¿Qué palancas operativas debe activar el Director de Operaciones para recortar al menos 2,5 de las 4,0 horas de sobretiempo por buque en los próximos 90 días, reduciendo las multas mensuales en más de $300.000 USD sin detener el muelle?",
+      mece: "Descomposición MECE de las 4 horas extra: (1) Demora documental/aduana antes de operar, (2) Tiempo productivo de grúa pórtico, (3) Espera de camión interno por re-manejos en patio. En la matriz 2×2 podamos aduana (fuera de control) y priorizamos la rama (3) por concentrar el mayor impacto accionar.",
+      evpi: "Frenamos los $120.000 USD y 5 meses de telemetría: aplicamos la Regla del Cinco midiendo en terreno 5 buques al azar esta semana (93,75% de confianza sobre la mediana por menos de $2.500 USD) para confirmar si el patio explica más de 2 horas del atraso."
+    }
+  },
+  {
+    id: "forge_bps_pharma",
+    archetype: "bps",
+    archetypeLabel: "Hoja de Problema SMART+ & Árbol MECE + EVPI (Conn & Hubbard)",
+    title: "Farma Cold-Chain: $400k/trimestre en mermas y pedido de 400 sensores satelitales",
+    phase: "Diagnosis & Measurement",
+    practice: "fde_issue_tree",
+    nodes: ["bps_problem_statement", "bps_issue_tree", "bps_heuristics", "htma_decomposition", "htma_rule_of_five", "htma_measurement_inversion"],
+    rawFacts: [
+      "El Director de Supply Chain pide comprar 400 sensores IoT satelitales ($180.000 USD) porque se pierden $400.000 USD por trimestre (6% de merma) en vacunas por ruptura de cadena de frío.",
+      "Nadie sabe qué fracción de la ruptura térmica ocurre en embalaje de bodega, en ruta de camión o en el andén de recepción de la clínica.",
+      "Necesitas: (1) Pregunta de problema SMART+ enfocada en reducir la merma del 6% al <2% en 60 días, (2) Árbol MECE por etapas del flujo físico + priorización 2×2, y (3) Muestreo rápido de 5 a 7 despachos con registradores descartables ($500 USD) antes de gastar $180.000."
+    ],
+    trapWarning: "Evita formular la pregunta como '¿Cómo instalamos 400 sensores satelitales?' y usa la Regla del Cinco para desarmar la compra a ciegas de $180k.",
+    fields: [
+      { id: "smart", label: "1 · Pregunta de Decisión SMART+ (Dueño + Reducción de merma + Plazo · sin prefijar sensores)", placeholder: "Ej: ¿Cómo puede la Dirección de Supply Chain reducir la merma térmica de vacunas del 6% a menos del 2% (ahorrando >$250k/trimestre) en 60 días..." },
+      { id: "mece", label: "2 · Corte MECE del Flujo + Poda 2×2 (Dónde ocurre la excursión térmica)", placeholder: "Ej: Excursión total = (1) Pre-enfriamiento y embalaje en CD + (2) Tránsito en camión + (3) Espera sin refrigeración en recepción de clínica. Priorizamos (1) y (3) en matriz 2×2..." },
+      { id: "evpi", label: "3 · Frontera EVPI y Muestra Regla del Cinco (Experimento de $500 vs. compra de $180k)", placeholder: "Ej: En lugar de gastar $180.000 hoy sin saber si el problema ocurre en el camión, metemos termógrafos de $500 en 7 envíos aleatorios esta semana (98,4% de confianza en la mediana) para aislar en qué eslabón se rompe el frío." }
+    ],
+    gold: {
+      smart: "¿Qué intervención debe ejecutar el Director de Supply Chain en los próximos 60 días para bajar la merma por ruptura de cadena de frío del 6% a menos del 2%, recuperando al menos $260.000 USD por trimestre?",
+      mece: "Corte MECE por etapa física: (1) Embalaje y carga en centro de distribución, (2) Excursión durante tránsito en ruta, (3) Demora en andén de recepción de la clínica. En matriz 2×2 atacamos primero recepción y embalaje antes de asumir que falla el furgón.",
+      evpi: "Congelamos la compra de $180.000 USD en sensores satelitales: con una muestra de 7 despachos esta semana usando registradores de $500 USD obtenemos 98,4% de confianza sobre la mediana del tramo donde sube la temperatura, pagando menos del 1% del EVPI."
+    }
+  }
+];
+
+const FORGE = {
+  missionId: FORGE_MISSIONS[0].id,
+  drafts: {},
+  lastAudit: null,
+  showGold: false
+};
+
+function currentForgeMission() {
+  return FORGE_MISSIONS.find((m) => m.id === FORGE.missionId) || FORGE_MISSIONS[0];
+}
+
+function getForgeDraft(m) {
+  if (!FORGE.drafts[m.id]) {
+    FORGE.drafts[m.id] = {};
+    m.fields.forEach((f) => { FORGE.drafts[m.id][f.id] = ""; });
+  }
+  return FORGE.drafts[m.id];
+}
+
+function evaluateForgeArtifact(m, draft) {
+  const fullText = m.fields.map((f) => draft[f.id] || "").join(" ").trim();
+  const checks = [];
+
+  if (m.archetype === "scqa") {
+    const gov = (draft.gov || "").trim();
+    const sit = (draft.sit || "").trim();
+    const com = (draft.com || "").trim();
+    const key = (draft.key || "").trim();
+
+    // Rule 1: Answer-First in Governing Thought (20 pts)
+    const startsWithAction = /^(recomiendo|aprobemos|aprobar|desplegar|despleguemos|activar|activemos|lanzar|lancemos|ejecutar|firmar|pausar|rechazar|proceder|propongo\s+aprobar|propongo\s+desplegar)/i.test(gov);
+    const hasDecisionVerb = /(recomiendo|aprobar|desplegar|activar|ola\s*1|hangar\s*1|rechazando|en\s+vez\s+de\s+esperar|en\s+lugar\s+de\s+esperar|no\s+esperar)/i.test(gov);
+    const r1Score = startsWithAction ? 20 : (hasDecisionVerb && gov.length >= 25 ? 12 : 0);
+    checks.push({
+      title: "1 · Answer-First en el Governing Thought (Minto)",
+      score: r1Score,
+      max: 20,
+      nodes: ["pp_answer_first", "pp_action_titles"],
+      feedback: r1Score === 20
+        ? "Excelente: abriste el primer renglón con un verbo ejecutivo de decisión ('Recomiendo / Aprobar / Desplegar') sin rodeos."
+        : r1Score > 0
+          ? "Incluiste acción, pero no abriste la primera palabra con la decisión ejecutiva ('Recomiendo aprobar/desplegar...')."
+          : "Empezaste con contexto o análisis en vez de abrir con la conclusión Go/No-Go."
+    });
+
+    // Rule 2: Zero Chronological / Pipeline Dump (20 pts)
+    const chronoDump = /(primero\s+limpiamos|durante\s+las\s+últimas\s+tres\s+semanas|pasamos\s+3\s+semanas|empezamos\s+conectando|luego\s+entrenamos|arquitectura\s+de\s+microservicios|historia\s+del\s+proyecto)/i.test(fullText);
+    const enoughContent = sit.length >= 20 && com.length >= 25 && key.length >= 35;
+    const r2Score = !chronoDump && enoughContent ? 20 : (!chronoDump && fullText.length >= 40 ? 10 : 0);
+    checks.push({
+      title: "2 · Cero volcado cronológico de ingeniería (Anti-Dump)",
+      score: r2Score,
+      max: 20,
+      nodes: ["pp_chronological_dump", "pp_pyramid"],
+      feedback: r2Score === 20
+        ? "Bien: evitaste narrar la bitácora de limpieza de tablas y mantuviste el foco en la decisión del comité."
+        : chronoDump
+          ? "Detectado 'pp_chronological_dump': narraste el esfuerzo cronológico del equipo ('pasamos 3 semanas limpiando...') en vez de estructurar por razones de negocio."
+          : "Completa las cuatro cajas con suficiente sustancia ejecutiva para evaluar la estructura piramidal."
+    });
+
+    // Rule 3: Complication Tension + Quantified Cost/Noise (20 pts)
+    const hasTensionWord = /(aunque|pero|sin\s+embargo|pese\s+a|mientras|postergar|esperar|congela|sacrifica|concentra|desfase|ruido|atraso)/i.test(com);
+    const hasComNumber = /\d+\s*(%|meses|horas|h\b|millones|m\b|hospitales|estaciones)/i.test(com);
+    const r3Score = hasTensionWord && hasComNumber ? 20 : (hasTensionWord || hasComNumber ? 10 : 0);
+    checks.push({
+      title: "3 · Tensión SCQ cuantificada en la Complicación",
+      score: r3Score,
+      max: 20,
+      nodes: ["pp_scq"],
+      feedback: r3Score === 20
+        ? "La Complicación contrasta con nitidez el ruido/plazo contra el costo real de seguir esperando."
+        : "Tu Complicación debe explicitar el quiebre cuantificado (ej. '18% de desfase vs 9 meses de espera' o '68% del atraso vs 18 meses') usando conectores de tensión ('aunque', 'pero', 'esperar...')."
+    });
+
+    // Rule 4: Calibrated 90% Range instead of Point Estimate (20 pts)
+    const hasRange = /(entre\s+\d+[.,]?\d*\s+y\s+\d+[.,]?\d*|\d+[.,]?\d*\s*(?:a|–|-|hasta)\s*\d+[.,]?\d*|\[\s*\d+[.,]?\d*\s*,\s*\d+[.,]?\d*\s*\])/i.test(fullText);
+    const hasCI = /(90\s*%|ic\s*90|confianza|calibrad|rango)/i.test(fullText);
+    const r4Score = hasRange && hasCI ? 20 : (hasRange ? 14 : 0);
+    checks.push({
+      title: "4 · Rango calibrado 90% CI (Hubbard + Minto)",
+      score: r4Score,
+      max: 20,
+      nodes: ["htma_ci90", "x_recommendation_with_uncertainty"],
+      feedback: r4Score === 20
+        ? "Incluiste un intervalo explícito ('entre X e Y') acompañado del nivel de confianza del 90%."
+        : r4Score > 0
+          ? "Incluiste un rango numérico, pero te faltó explicitar la confianza (90% CI) para blindar la credibilidad ante el comité."
+          : "No declaraste un rango ('entre X e Y'): dar un número único o ninguno expone el caso a 'htma_overconfidence'."
+    });
+
+    // Rule 5: MECE Key Line + Reversal / Stop Trigger (20 pts)
+    const hasMeceMarkers = /(\(1\)|1\.|1\)|primero|impacto.*riesgo|tres\s+razones|tres\s+argumentos|por\s+tres)/i.test(key);
+    const hasStopTrigger = /(si\s+al\s+mes|si\s+en\s+\d+|si\s+cae|si\s+baja|menos\s+de\s+\d+|reversa|revertimos|apagamos|abortamos|paramos|detenemos|gatillo)/i.test(key);
+    const r5Score = hasMeceMarkers && hasStopTrigger ? 20 : (hasMeceMarkers || hasStopTrigger ? 10 : 0);
+    checks.push({
+      title: "5 · Key Line MECE + Gatillo de Reversa (Go/No-Go)",
+      score: r5Score,
+      max: 20,
+      nodes: ["pp_mece", "fde_go_no_go"],
+      feedback: r5Score === 20
+        ? "Excelente: enumeraste razones MECE independientes e incluiste una cláusula explícita de stop-loss / reversa."
+        : !hasStopTrigger
+          ? "Te faltó el gatillo de reversa ('si en X semanas el ahorro baja de Y, apagamos/revertimos en 24h'), clave para que el ejecutivo firme sin miedo."
+          : "Enumera explícitamente tus 3 pilares MECE —ej. (1) Impacto, (2) Robustez/Foco, (3) Reversibilidad—."
+    });
+  } else if (m.archetype === "mom") {
+    const name = (draft.name || "").trim();
+    const past = (draft.past || "").trim();
+    const comm = (draft.comm || "").trim();
+
+    // Rule 1: Zero Future Hypotheticals / Conditional Trap (20 pts)
+    const futureFluff = /(usarías|usarían|comprarías|te\s+gustaría|les\s+gustaría|crees\s+que\s+sería|pagarías|qué\s+opinas\s+de\s+nuestro|si\s+agregamos.*usarían|votemos\s+qué\s+función)/i.test(fullText);
+    const r1Score = !futureFluff && past.length >= 25 ? 20 : (futureFluff ? 0 : 8);
+    checks.push({
+      title: "1 · Cero condicionales futuros ni encuestas de opinión (Anti-Fluff)",
+      score: r1Score,
+      max: 20,
+      nodes: ["mom_fluff", "mom_compliments"],
+      feedback: r1Score === 20
+        ? "Limpio: no caíste en verbos condicionales ('¿usarías?', '¿les gustaría?') ni pediste opiniones abstractas."
+        : futureFluff
+          ? "Alerta roja ('mom_fluff'): usaste condicionales futuros ('¿usarías / te gustaría / crees que sería...?'). Eso invita al stakeholder a mentirte por cortesía."
+          : "Escribe la pregunta de descubrimiento completa sin condicionales futuros."
+    });
+
+    // Rule 2: Neutral Naming of Resistance / Deflecting Compliments (20 pts)
+    const neutralObs = /(noto\s+que|veo\s+que|parece\s+que|siento\s+que|dejemos\s+de\s+lado|olvidemos\s+la\s+demo|pausa\s+la\s+lista|apagaron|volvieron\s+a)/i.test(name);
+    const defensiveLogic = /(nuestro\s+algoritmo\s+tiene\s+9\d%|están\s+equivocados|tienen\s+que\s+confiar|el\s+modelo\s+no\s+se\s+equivoca)/i.test(name);
+    const r2Score = neutralObs && !defensiveLogic ? 20 : (!defensiveLogic && name.length >= 25 ? 10 : 0);
+    checks.push({
+      title: "2 · Nombramiento neutral de resistencia / Corte del pitch (Block + Fitzpatrick)",
+      score: r2Score,
+      max: 20,
+      nodes: ["fc_naming_protocol", "fc_handle_resistance"],
+      feedback: r2Score === 20
+        ? "Nombraste la conducta observable y la emoción subyacente en tono neutral ('Veo que / Noto que...') sin defender tu ego."
+        : defensiveLogic
+          ? "Caíste en 'fc_fighting_resistance': intentaste vencer una resistencia emocional discutiendo la precisión técnica del modelo."
+          : "Usa una observación neutral en primera persona ('Veo que apagaron...', 'Olvidemos la demo y pongamos en pausa la lista...') para desactivar la defensividad."
+    });
+
+    // Rule 3: Past-Specific Story Anchor (20 pts)
+    const hasPastAnchor = /(última\s+vez|último\s+turno|última\s+orden|última\s+alerta|semana\s+pasada|ayer|muéstrame|cuéntame\s+de|qué\s+pasó\s+cuando)/i.test(past);
+    const r3Score = hasPastAnchor ? 20 : (past.length >= 25 ? 8 : 0);
+    checks.push({
+      title: "3 · Anclaje en historia pasada específica (Mom Test + Teresa Torres)",
+      score: r3Score,
+      max: 20,
+      nodes: ["mom_past_specifics", "cdh_story_interviews"],
+      feedback: r3Score === 20
+        ? "Excelente: anclaste la pregunta en un episodio real del pasado reciente ('la última orden / el último turno / la semana pasada')."
+        : "Tu pregunta no ancla en un episodio pasado específico: usa 'Cuéntame de la última vez que...', 'Muéstrame la última orden de esta semana...'."
+    });
+
+    // Rule 4: Workaround & Cost Probe (20 pts)
+    const hasWorkaroundProbe = /(cómo\s+lo\s+resolviste|cómo\s+lo\s+corregiste|cómo\s+priorizaron|excel|planilla|a\s+mano|cuántas\s+horas|qué\s+costo|en\s+vano|qué\s+viste\s+mal|qué\s+restricción)/i.test(past);
+    const r4Score = hasWorkaroundProbe ? 20 : (past.length >= 30 ? 8 : 0);
+    checks.push({
+      title: "4 · Indagación del workaround actual y costo del dolor",
+      score: r4Score,
+      max: 20,
+      nodes: ["mom_workarounds", "htma_preferences"],
+      feedback: r4Score === 20
+        ? "Indagaste cómo resuelven el problema hoy (planilla/a mano) y cuánto les cuesta en horas o merma."
+        : "Pregunta explícitamente qué hicieron para resolverlo ('¿cómo lo corregiste en tu planilla / cuántas horas perdieron?'): las preferencias reveladas valen más que las declaradas."
+    });
+
+    // Rule 5: Concrete Commitment Currency (20 pts)
+    const hasCurrency = /(\d+\s*minutos|hoy|mañana|6:00|06:30|15:00|cierre\s+de\s+turno|5\s*skus|5\s*lotes|10\s*salidas|acompañarte|camioneta|sentémonos|bloqueemos)/i.test(comm);
+    const r5Score = hasCurrency && comm.length >= 25 ? 20 : (comm.length >= 20 ? 8 : 0);
+    checks.push({
+      title: "5 · Moneda de compromiso real (Tiempo, datos o acceso hoy)",
+      score: r5Score,
+      max: 20,
+      nodes: ["mom_commitment"],
+      feedback: r5Score === 20
+        ? "Cerraste con un avance concreto en calendario, datos reales o sombra en terreno (no un 'nos vemos el próximo mes')."
+        : "Pide una moneda real de compromiso con hora/cantidad concreta ('20 minutos hoy con los 5 lotes de ayer' o 'subirme mañana a las 06:30 y llevarme las últimas 10 salidas')."
+    });
+  } else {
+    // Archetype: bps (SMART+ Problem Definition + MECE Tree + EVPI / Rule of 5)
+    const smart = (draft.smart || "").trim();
+    const mece = (draft.mece || "").trim();
+    const evpi = (draft.evpi || "").trim();
+
+    // Rule 1: Zero Solution Fixation in Problem Statement (20 pts)
+    const solutionFixated = /(cómo\s+implementamos\s+ia|cómo\s+instalamos.*sensores|comprar\s+los\s+400\s+sensores\s+para|entrenar\s+una\s+red\s+neuronal\s+para)/i.test(smart);
+    const hasOwnerAndAction = /(director|gerencia|operaciones|supply\s+chain|reducir|recortar|bajar|eliminar)/i.test(smart);
+    const r1Score = !solutionFixated && hasOwnerAndAction && smart.length >= 30 ? 20 : (!solutionFixated && smart.length >= 20 ? 10 : 0);
+    checks.push({
+      title: "1 · Pregunta de decisión con dueño y sin fijar la tecnología (Conn + Torres)",
+      score: r1Score,
+      max: 20,
+      nodes: ["bps_problem_statement", "cdh_whether_or_not"],
+      feedback: r1Score === 20
+        ? "Bien: definiste actor decisor y verbo de resultado sin encerrar la pregunta en 'cómo instalar IA/sensores'."
+        : solutionFixated
+          ? "Caíste en 'cdh_whether_or_not': metiste la solución tecnológica ('implementar IA / instalar sensores') dentro de la definición misma del problema."
+          : "Incluye explícitamente quién decide (ej. Director de Operaciones / Supply Chain) y qué verbo de impacto busca lograr."
+    });
+
+    // Rule 2: SMART+ Quantified Threshold & Time Horizon (20 pts)
+    const hasMetricDelta = /(\d+[.,]?\d*\s*(%|horas|h\b|usd|\$|mil|millones))/i.test(smart);
+    const hasHorizon = /(\d+\s*(días|semanas|meses|trimestre))/i.test(smart);
+    const r2Score = hasMetricDelta && hasHorizon ? 20 : (hasMetricDelta || hasHorizon ? 10 : 0);
+    checks.push({
+      title: "2 · Umbral cuantificado y horizonte temporal (SMART+)",
+      score: r2Score,
+      max: 20,
+      nodes: ["htma_define_decision", "bps_problem_statement"],
+      feedback: r2Score === 20
+        ? "Tu pregunta fija tanto la magnitud mínima de éxito (horas/%/$) como el plazo exacto en días/meses."
+        : "Falta cuantificar el umbral de éxito (ej. 'al menos 2,5 horas' o 'del 6% a <2%') o el plazo temporal ('en 60 / 90 días')."
+    });
+
+    // Rule 3: MECE Structural Cleaving (20 pts)
+    const hasBranches = /(\(1\)|1\.|1\)|rama\s*1|embalaje.*tránsito|aduana.*grúa|muelle.*patio)/i.test(mece);
+    const r3Score = hasBranches && mece.length >= 35 ? 20 : (mece.length >= 25 ? 10 : 0);
+    checks.push({
+      title: "3 · Descomposición en ramas MECE sin traslape",
+      score: r3Score,
+      max: 20,
+      nodes: ["bps_issue_tree", "pp_mece"],
+      feedback: r3Score === 20
+        ? "Descompusiste el problema en componentes mutuamente excluyentes y colectivamente exhaustivos (etapas del flujo o sumandos del tiempo)."
+        : "Enumera explícitamente las ramas MECE del árbol —ej. (1) Aduana/Embalaje, (2) Grúa/Tránsito, (3) Patio/Recepción—."
+    });
+
+    // Rule 4: 2x2 Pruning / Heuristics Before Big Guns (20 pts)
+    const hasPruning = /(2x2|2×2|podamos|priorizamos|atacamos\s+primero|alto\s+impacto|baja\s+influencia|fuera\s+de\s+control)/i.test(mece);
+    const r4Score = hasPruning ? 20 : (mece.length >= 40 ? 8 : 0);
+    checks.push({
+      title: "4 · Poda rápida con matriz 2×2 (Impacto × Influencia)",
+      score: r4Score,
+      max: 20,
+      nodes: ["bps_2x2", "bps_heuristics"],
+      feedback: r4Score === 20
+        ? "Indicaste qué rama podar por baja influencia y cuál atacar primero por alto impacto."
+        : "No basta listar las ramas: declara cuál podas y cuál priorizas primero usando el criterio de Impacto vs. Control del cliente ('bps_2x2')."
+    });
+
+    // Rule 5: EVPI Bound & Rule of Five Sample (20 pts)
+    const hasSmallSample = /(5\s+buques|7\s+despachos|7\s+envíos|5\s+envíos|muestra\s+de\s+[57]|regla\s+del\s+cinco|93[.,]75\s*%|98[.,]4\s*%)/i.test(evpi);
+    const stopsBigSpend = /(120\.?000|120k|180\.?000|180k|frenamos|congelamos|antes\s+de\s+gastar|en\s+lugar\s+de\s+gastar)/i.test(evpi);
+    const r5Score = hasSmallSample && stopsBigSpend ? 20 : (hasSmallSample || stopsBigSpend ? 10 : 0);
+    checks.push({
+      title: "5 · Frontera EVPI y muestreo Regla del Cinco (Hubbard)",
+      score: r5Score,
+      max: 20,
+      nodes: ["htma_rule_of_five", "htma_evi", "htma_measurement_inversion"],
+      feedback: r5Score === 20
+        ? "Excelente: frenaste el gasto ciego de seis cifras y propusiste una muestra de 5–7 observaciones esta semana (93,75%–98,4% de confianza en la mediana)."
+        : "Contrasta el gasto masivo ($120k/$180k) contra una muestra inmediata de 5 o 7 casos esta semana ('Regla del Cinco': 93,75% a 98,4% de confianza en la mediana)."
+    });
+  }
+
+  const total = checks.reduce((sum, c) => sum + c.score, 0);
+  return { total, checks };
+}
+
+function renderEvpiCalculator() {
+  const costWrong = Math.max(0, Number($("#evpiCostWrong")?.value) || 0);
+  const probWrong = clamp(Number($("#evpiProbWrong")?.value) || 0, 0, 100) / 100;
+  const reduction = clamp(Number($("#evpiReduction")?.value) || 0, 0, 100) / 100;
+  const sampleCost = Math.max(0, Number($("#evpiSampleCost")?.value) || 0);
+  const n = clamp(Math.round(Number($("#evpiSampleN")?.value) || 5), 1, 20);
+
+  const eol = Math.round(costWrong * probWrong);
+  const evsi = Math.round(eol * reduction);
+  const net = evsi - sampleCost;
+  const medianConf = n >= 1 ? Math.max(0, (1 - 2 * Math.pow(0.5, n)) * 100) : 0;
+  const ratio = sampleCost > 0 ? round1(evsi / sampleCost) : Infinity;
+  const shouldMeasure = net > 0 && sampleCost <= eol;
+
+  const box = $("#evpiOutput");
+  if (box) {
+    box.innerHTML = `
+      <div class="statgrid" style="grid-template-columns:1fr 1fr;gap:8px">
+        <div class="card" style="padding:8px"><div class="n" style="font-size:16px">$${fmtNum(eol)}</div><div class="l">EOL / Techo EVPI</div></div>
+        <div class="card" style="padding:8px"><div class="n" style="font-size:16px;color:var(--accent)">$${fmtNum(evsi)}</div><div class="l">EVSI de la muestra</div></div>
+        <div class="card" style="padding:8px"><div class="n" style="font-size:16px;color:${shouldMeasure ? "var(--ok)" : "var(--danger)"}">${net >= 0 ? "+$" + fmtNum(net) : "-$" + fmtNum(Math.abs(net))}</div><div class="l">Valor neto (${Number.isFinite(ratio) ? ratio + "×" : "∞"})</div></div>
+        <div class="card" style="padding:8px"><div class="n" style="font-size:16px;color:var(--warn)">${round1(medianConf)}%</div><div class="l">Confianza mediana (n=${n})</div></div>
+      </div>
+      <div class="feedback ${shouldMeasure ? "ok" : "bad"}" style="margin-top:8px;font-size:12px">
+        <b>${shouldMeasure ? "✓ Veredicto: MEDIR ESTA SEMANA" : "✗ Veredicto: INVERSIÓN DE MEDICIÓN (NO GASTAR)"}</b><br>
+        ${shouldMeasure
+          ? `La muestra cuesta $${fmtNum(sampleCost)} y reduce $${fmtNum(evsi)} de pérdida esperada. Con n=${n} observaciones tienes ${round1(medianConf)}% de certeza de encerrar la mediana real entre el mínimo y el máximo observados.`
+          : `El estudio ($${fmtNum(sampleCost)}) cuesta más que el valor de la información que aporta ($${fmtNum(evsi)}). Decide hoy o reduce el costo de muestreo a una Regla del Cinco (n=5).`}
+      </div>`;
+  }
+  const nodesBox = $("#evpiNodes");
+  if (nodesBox && !nodesBox.innerHTML) {
+    nodesBox.innerHTML = ["htma_evi", "htma_eol", "htma_evsi", "htma_rule_of_five", "htma_measurement_inversion"].map((id) => nodePill(id)).join("");
+  }
+}
+
+function renderForge() {
+  const m = currentForgeMission();
+  const draft = getForgeDraft(m);
+
+  $("#forgeStats").innerHTML = `
+    <span class="pill">${FORGE_MISSIONS.length} misiones</span>
+    <span class="pill" style="--c:var(--accent)">${esc(m.archetypeLabel)}</span>
+    <span class="pill">${(state.forge || []).length} forjados</span>`;
+
+  $("#forgeSelect").value = m.id;
+
+  const fieldsHtml = m.fields.map((f) => `
+    <div style="margin-top:12px">
+      <label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px">${esc(f.label)}</label>
+      <textarea data-forge-field="${esc(f.id)}" rows="3" placeholder="${esc(f.placeholder)}" style="width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;line-height:1.45">${esc(draft[f.id] || "")}</textarea>
+    </div>`).join("");
+
+  let auditHtml = "";
+  if (FORGE.lastAudit && FORGE.lastAudit.missionId === m.id) {
+    const a = FORGE.lastAudit;
+    const tone = a.total >= 80 ? "var(--ok)" : a.total >= 50 ? "var(--warn)" : "var(--danger)";
+    auditHtml = `
+      <div class="eval-card" style="margin-top:16px">
+        <div class="eval-head">
+          <div class="score-ring" style="--c:${tone}"><b>${a.total}</b><span>/100</span></div>
+          <div>
+            <h3>Auditoría Determinista del Artefacto</h3>
+            <p class="muted small" style="margin:2px 0 0">${a.total >= 80 ? "Estándar FDE listo para comité ejecutivo." : a.total >= 50 ? "Estructura aceptable, pero aún tiene fugas tácticas; corrige las reglas en amarillo/rojo." : "El artefacto cae en trampas clásicas de consultoría; revisa cada regla y vuelve a auditar."}</p>
+          </div>
+        </div>
+        <div class="dims">
+          ${a.checks.map((c) => `
+            <div class="dim">
+              <div class="dim-top"><span>${esc(c.title)}</span><b style="color:${c.score === c.max ? "var(--ok)" : c.score > 0 ? "var(--warn)" : "var(--danger)"}">${c.score}/${c.max}</b></div>
+              <div class="bar" style="--c:${c.score === c.max ? "var(--ok)" : c.score > 0 ? "var(--warn)" : "var(--danger)"}"><i style="width:${(c.score / c.max) * 100}%"></i></div>
+              <p class="evidence">${esc(c.feedback)}</p>
+              <div class="pills">${c.nodes.map((id) => nodePill(id)).join("")}</div>
+            </div>`).join("")}
+        </div>
+      </div>`;
+  }
+
+  let goldHtml = "";
+  if (FORGE.showGold || (FORGE.lastAudit && FORGE.lastAudit.missionId === m.id)) {
+    goldHtml = `
+      <div class="feedback info" style="margin-top:14px">
+        <h4 style="margin:0 0 8px">🏆 Artefacto Gold Standard FDE (Comparación lado a lado)</h4>
+        ${m.fields.map((f) => `
+          <div style="margin-bottom:8px">
+            <div class="small" style="font-weight:700;color:var(--accent)">${esc(f.label)}</div>
+            <div class="script" style="margin-top:3px">${esc(m.gold[f.id])}</div>
+          </div>`).join("")}
+      </div>`;
+  }
+
+  $("#forgeCard").innerHTML = `
+    <div class="scenario-top">
+      <span class="pill" style="--c:var(--accent)">${esc(m.archetypeLabel)}</span>
+      <span class="pill">${esc(m.phase)}</span>
+      ${nodePill(m.practice)}
+    </div>
+    <h3 style="margin-top:8px">${esc(m.title)}</h3>
+    <div class="card" style="background:rgba(255,255,255,0.02);margin:10px 0;padding:12px">
+      <h4 style="margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">📋 Hechos crudos del terreno (desordenados)</h4>
+      <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.5">
+        ${m.rawFacts.map((fact) => `<li>${esc(fact)}</li>`).join("")}
+      </ul>
+    </div>
+    <div class="feedback warn" style="font-size:12.5px"><b>⚠️ Trampa a evitar:</b> ${esc(m.trapWarning)}</div>
+    ${fieldsHtml}
+    <div class="row" style="margin-top:14px;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" id="forgeAuditBtn" type="button">⚖️ Auditar Artefacto (0–100)</button>
+      <button class="btn" id="forgeGoldBtn" type="button">${FORGE.showGold ? "🙈 Ocultar Gold Standard" : "👁️ Ver Gold Standard"}</button>
+      <button class="btn ghost" id="forgeFillGoldBtn" type="button">✨ Cargar ejemplo Gold para inspeccionar</button>
+      <button class="btn ghost" id="forgeClearBtn" type="button">🧹 Limpiar borrador</button>
+    </div>
+    <div id="forgeAuditSlot">${auditHtml}${goldHtml}</div>
+    <div class="nodes-ref" style="margin-top:14px">
+      <h4>Nodos del grafo que entrena esta forja</h4>
+      <div class="pills">${m.nodes.map((id) => nodePill(id)).join("")}</div>
+    </div>`;
+
+  $$("[data-forge-field]").forEach((ta) => {
+    ta.oninput = () => {
+      draft[ta.getAttribute("data-forge-field")] = ta.value;
+    };
+  });
+
+  $("#forgeAuditBtn").onclick = () => {
+    const res = evaluateForgeArtifact(m, draft);
+    FORGE.lastAudit = { missionId: m.id, ...res };
+    const deltaScale = Math.round((res.total - 55) * 0.18);
+    const deltas = m.archetype === "scqa"
+      ? { TQ: Math.round(deltaScale * 0.8), SIG: Math.round(deltaScale * 0.6), EVI: deltaScale, ADP: deltaScale }
+      : m.archetype === "mom"
+        ? { TQ: deltaScale, SIG: Math.round(deltaScale * 1.2), EVI: Math.round(deltaScale * 0.7), ADP: deltaScale }
+        : { TQ: Math.round(deltaScale * 0.6), SIG: Math.round(deltaScale * 0.8), EVI: Math.round(deltaScale * 1.3), ADP: Math.round(deltaScale * 0.7) };
+    applyDeltas(deltas, { silent: true });
+    addXP(Math.max(4, Math.round(res.total / 4)));
+    touchStudyDay();
+    state.forge = Array.isArray(state.forge) ? state.forge : [];
+    state.forge.push({
+      at: Date.now(),
+      missionId: m.id,
+      title: m.title,
+      archetype: m.archetype,
+      score: res.total
+    });
+    if (state.forge.length > 30) state.forge = state.forge.slice(-30);
+    saveState();
+    renderHUD();
+    renderForge();
+    renderForgeLog();
+    toast(`Artefacto auditado: ${res.total}/100 · +${Math.max(4, Math.round(res.total / 4))} XP`, res.total >= 80 ? "ok" : "warn");
+  };
+
+  $("#forgeGoldBtn").onclick = () => {
+    FORGE.showGold = !FORGE.showGold;
+    renderForge();
+  };
+
+  $("#forgeFillGoldBtn").onclick = () => {
+    m.fields.forEach((f) => { draft[f.id] = m.gold[f.id]; });
+    renderForge();
+    toast("Ejemplo Gold Standard cargado en las cajas. Audítalo para ver cómo puntúa cada regla.", "info");
+  };
+
+  $("#forgeClearBtn").onclick = () => {
+    m.fields.forEach((f) => { draft[f.id] = ""; });
+    FORGE.lastAudit = null;
+    FORGE.showGold = false;
+    renderForge();
+  };
+}
+
+function renderForgeLog() {
+  const box = $("#forgeLog");
+  if (!box) return;
+  const list = (state.forge || []).slice(-8).reverse();
+  box.innerHTML = list.length
+    ? list.map((item) => `<div class="logitem"><b>${item.score}/100</b> · ${esc(item.title)} <span class="muted small">(${fmtDate(item.at)})</span></div>`).join("")
+    : `<p class="muted small">Aún no has auditado ningún artefacto escrito.</p>`;
+}
+
+function initForge() {
+  const sel = $("#forgeSelect");
+  if (!sel) return;
+  sel.innerHTML = FORGE_MISSIONS.map((m) => `<option value="${esc(m.id)}">[${esc(m.archetype.toUpperCase())}] ${esc(m.title)}</option>`).join("");
+  sel.onchange = () => {
+    FORGE.missionId = sel.value;
+    FORGE.lastAudit = null;
+    FORGE.showGold = false;
+    renderForge();
+  };
+  const rndBtn = $("#forgeRandomBtn");
+  if (rndBtn) {
+    rndBtn.onclick = () => {
+      const others = FORGE_MISSIONS.filter((m) => m.id !== FORGE.missionId);
+      const pick = others[Math.floor(Math.random() * others.length)] || FORGE_MISSIONS[0];
+      FORGE.missionId = pick.id;
+      FORGE.lastAudit = null;
+      FORGE.showGold = false;
+      renderForge();
+      toast(`Misión seleccionada: ${pick.title}`, "info");
+    };
+  }
+  ["#evpiCostWrong", "#evpiProbWrong", "#evpiReduction", "#evpiSampleCost", "#evpiSampleN"].forEach((id) => {
+    const el = $(id);
+    if (el) el.oninput = renderEvpiCalculator;
+  });
+  renderEvpiCalculator();
+  renderForge();
+  renderForgeLog();
+}
+
+/* =====================================================================
    4 · MODE ROUTING & BOOT
    ===================================================================== */
 function setMode(mode, opts = {}) {
-  const valid = ["reflex", "calibration", "bootcamp", "sparring"].includes(mode) ? mode : "reflex";
+  const valid = ["reflex", "calibration", "bootcamp", "forge", "sparring"].includes(mode) ? mode : "reflex";
   $$(".mode").forEach((section) => { section.hidden = section.id !== "mode-" + valid; });
   $$(".navbtn").forEach((btn) => btn.classList.toggle("active", btn.getAttribute("data-mode") === valid));
   state.lastMode = valid;
@@ -3359,6 +4051,7 @@ function setMode(mode, opts = {}) {
   if (valid === "reflex") renderReflex();
   else if (valid === "calibration") renderCalibration();
   else if (valid === "bootcamp") renderBootcamp();
+  else if (valid === "forge") { renderEvpiCalculator(); renderForge(); renderForgeLog(); }
   else if (valid === "sparring") renderSparring();
   if (!opts.silent) {
     const hash = "#mode=" + valid;
@@ -3381,11 +4074,12 @@ function routeFromHash() {
   }
   if (raw === "calibration" || raw === "cal") { setMode("calibration", { silent: true }); return; }
   if (raw === "bootcamp" || raw === "mode=bootcamp") { setMode("bootcamp", { silent: true }); return; }
+  if (raw === "forge" || raw === "mode=forge") { setMode("forge", { silent: true }); return; }
   if (raw === "sparring") { setMode("sparring", { silent: true }); return; }
   if (raw === "reflex" || raw === "mode=reflex") { setMode("reflex", { silent: true }); return; }
   if (raw === "mode=calibration") { setMode("calibration", { silent: true }); return; }
   if (raw === "mode=sparring") { setMode("sparring", { silent: true }); return; }
-  setMode(["reflex", "calibration", "bootcamp", "sparring"].includes(state.lastMode) ? state.lastMode : "reflex", { silent: true });
+  setMode(["reflex", "calibration", "bootcamp", "forge", "sparring"].includes(state.lastMode) ? state.lastMode : "reflex", { silent: true });
 }
 
 function boot() {
@@ -3394,6 +4088,7 @@ function boot() {
   renderHUD();
   initReflex();
   initCalibration();
+  initForge();
   initSparring();
   $$(".navbtn").forEach((btn) => { btn.onclick = () => setMode(btn.getAttribute("data-mode")); });
   window.addEventListener("hashchange", routeFromHash);

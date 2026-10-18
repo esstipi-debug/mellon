@@ -174,7 +174,17 @@ Two chained campaigns model the Palantir AIP Bootcamp standard: go from zero to 
 - Every stage is validated against `graph.json` (`active_pitfalls`, `target_techniques`, `supporting_nodes`, `target_practice`) and options are shuffled with hidden scripts and `1–4` keyboard shortcuts, like Mode 1.
 - Progress is persisted in `localStorage["fde_dojo_state_v1"]` under `bootcamp`, so a reload resumes the same day and decision state.
 
-### 3.6 Deep links
+### 3.6 Mode 5 · 🛠️ Artifact Forge & EVPI Lab (Deterministic Local Linter)
+
+- **6 production-writing missions across 3 FDE Artifact Archetypes** (zero API key required):
+  1. **Memorando Ejecutivo SCQA + Answer-First (Minto + Hubbard):** `forge_scqa_nhs` (NHS 200 hospitals), `forge_scqa_airbus` (Airbus A350 Hangar 1 vs. 18-month Data Lake).
+  2. **Guion de Descubrimiento & Resistencia (Mom Test + Peter Block + Teresa Torres):** `forge_mom_tyson` (Tyson Foods planners turning off recommendations), `forge_mom_pge` (PG&E foremen giving compliments and 200 feature requests).
+  3. **Hoja de Problema SMART+ & Árbol MECE + EVPI (Conn & McLean + Hubbard):** `forge_bps_port` (Port terminal demurrage penalties), `forge_bps_pharma` (Pharma cold-chain $400k/quarter spoilage).
+- **Deterministic 5-Rule Local Linter (0–100 pts):** checks your written artifact for Answer-First opening, absence of chronological pipeline dumps (`pp_chronological_dump`), quantified Complication tension (`pp_scq`), explicit 90% calibrated ranges (`htma_ci90`), MECE key-line pillars (`pp_mece`), reversal stop-triggers (`fde_go_no_go`), zero future conditionals (`mom_fluff`), neutral resistance naming (`fc_naming_protocol`), past-specific story anchors (`mom_past_specifics`), workaround probes (`mom_workarounds`), commitment currencies (`mom_commitment`), SMART+ decision framing without solution fixation (`bps_problem_statement`, `cdh_whether_or_not`), 2×2 pruning (`bps_2x2`), and Rule-of-Five sampling (`htma_rule_of_five`).
+- **Gold Standard Comparison:** inspect or load the master FDE artifact side-by-side to compare phrasing and structure.
+- **🧮 Interactive EVPI & Rule-of-Five Calculator:** live sidebar calculator computing Expected Opportunity Loss ($\text{EOL} = P_{\text{error}} \times C_{\text{error}}$), Expected Value of Sample Information ($\text{EVSI}$), Net Measurement Value, and exact binomial median confidence ($1 - 2 \cdot 0.5^n$) for small field samples ($n=5 \Rightarrow 93.75\%$, $n=7 \Rightarrow 98.4\%$).
+
+### 3.7 Deep links
 
 | URL | Effect |
 |---|---|
@@ -183,6 +193,7 @@ Two chained campaigns model the Palantir AIP Bootcamp standard: go from zero to 
 | `out/dojo.html#scen=scen_25_cutover_go_no_go` | Opens a specific scenario |
 | `out/dojo.html#mode=calibration` (`#cal`) | Opens the calibration trainer |
 | `out/dojo.html#mode=bootcamp` | Opens the 5-Day AIP Bootcamp selector |
+| `out/dojo.html#mode=forge` | Opens the Artifact Forge & EVPI Lab |
 | `out/dojo.html#mode=sparring` | Opens the sparring generator |
 
 The viewer and the Dojo link to each other from their top navigation, and every node card in the viewer has a green **"🥋 Entrenar en el Dojo"** button.
