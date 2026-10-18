@@ -2,12 +2,18 @@
 
 - Adds new nodes (skips existing ids), edges (skips duplicates / unknown ids),
   resources (dedupe by node_id+url) and applies description corrections.
+- Legacy research predicates are normalized with build.PREDICATE_ALIASES before
+  deduplication so merging never reintroduces non-canonical or duplicated edges.
 Usage:  python research/merge_research.py
 """
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from build import CANONICAL_PREDICATES, PREDICATE_ALIASES  # noqa: E402
+
 GRAPH = ROOT / "graph.json"
 ALLOWED_TYPES = {"Concept", "Framework", "Principle", "Technique", "Pitfall", "FDEPractice", "CrossInsight"}
 
@@ -29,11 +35,20 @@ for f in sorted((ROOT / "research").glob("*.graph-additions.json")):
         ids[n["id"]] = node
         stats["nodes"] += 1
     for e in add.get("edges", []):
-        k = (e["source"], e["relation"].upper(), e["target"])
-        if k in edge_keys or e["source"] not in ids or e["target"] not in ids:
+        source, target = e["source"], e["target"]
+        relation = e["relation"].upper()
+        if relation not in CANONICAL_PREDICATES:
+            if relation not in PREDICATE_ALIASES:
+                stats["skipped"] += 1
+                continue
+            relation, inverted = PREDICATE_ALIASES[relation]
+            if inverted:
+                source, target = target, source
+        k = (source, relation, target)
+        if k in edge_keys or source not in ids or target not in ids:
             stats["skipped"] += 1
             continue
-        g["edges"].append({"source": k[0], "target": k[2], "relation": k[1]})
+        g["edges"].append({"source": source, "target": target, "relation": relation})
         edge_keys.add(k)
         stats["edges"] += 1
     for r in add.get("resources", []):

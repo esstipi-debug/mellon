@@ -16,9 +16,21 @@
     }
   ],
   "edges": [
-    { "source": "fc_instant_compliance", "target": "fc_resistance_forms", "relation": "INCLUDES" },
-    { "source": "fc_naming_protocol", "target": "fc_handle_resistance", "relation": "EMBODIES" },
-    { "source": "fde_resistance_playbook", "target": "fc_naming_protocol", "relation": "USES" }
+    {
+      "source": "fc_resistance_forms",
+      "target": "fc_instant_compliance",
+      "relation": "HAS_COMPONENT"
+    },
+    {
+      "source": "fc_naming_protocol",
+      "target": "fc_handle_resistance",
+      "relation": "EMBODIES"
+    },
+    {
+      "source": "fde_resistance_playbook",
+      "target": "fc_naming_protocol",
+      "relation": "USES"
+    }
   ],
   "resources": [
     {

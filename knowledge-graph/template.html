@@ -3,15 +3,26 @@
 <head>
 <meta charset="utf-8">
 <title>FDE Knowledge Graph — Measurement, Trust, Discovery, Structure & Change</title>
-<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<script src="__VIS_SRC__"></script>
 <style>
-  :root { --bg:#0f1117; --panel:#171a23; --text:#e6e6e6; --muted:#9aa0aa; --border:#2a2f3a; --accent:#8ab4f8; }
+  :root { --bg:#0f1117; --panel:#171a23; --text:#e6e6e6; --muted:#9aa0aa; --border:#2a2f3a; --accent:#8ab4f8; --accent2:#c792ea; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--text); display:flex; height:100vh; }
-  #sidebar { width:400px; background:var(--panel); border-right:1px solid var(--border); padding:16px; overflow-y:auto; }
-  #graph { flex:1; }
-  h1 { font-size:16px; margin:0 0 4px; }
-  .sub { color:var(--muted); font-size:12px; margin-bottom:14px; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--text); display:flex; height:100vh; overflow:hidden; }
+  #sidebar { width:410px; background:var(--panel); border-right:1px solid var(--border); padding:16px; overflow-y:auto; }
+  #graph { flex:1; min-width:0; }
+  h1 { font-size:16px; margin:0 0 3px; }
+  .sub { color:var(--muted); font-size:12px; margin-bottom:12px; line-height:1.45; }
+  .dojo-cta {
+    display:flex; align-items:center; gap:10px; width:100%; text-decoration:none;
+    background:linear-gradient(135deg, rgba(62,207,142,.20), rgba(79,157,255,.16));
+    border:1px solid rgba(62,207,142,.55); color:var(--text); border-radius:10px;
+    padding:11px 13px; margin:0 0 14px; font-size:13px; font-weight:700;
+    transition:.15s ease; box-shadow:0 6px 22px rgba(62,207,142,.10);
+  }
+  .dojo-cta:hover { border-color:#3ecf8e; background:linear-gradient(135deg, rgba(62,207,142,.30), rgba(79,157,255,.22)); text-decoration:none; }
+  .dojo-cta .big { font-size:19px; }
+  .dojo-cta small { display:block; font-weight:500; color:#b9c0cf; font-size:11px; margin-top:2px; }
+  .dojo-cta .arrow { margin-left:auto; color:#3ecf8e; font-size:16px; }
   input[type=search] { width:100%; padding:8px; background:#0f1117; border:1px solid var(--border); color:var(--text); border-radius:6px; }
   fieldset { border:1px solid var(--border); border-radius:6px; margin:10px 0; padding:8px 10px; }
   legend { color:var(--muted); font-size:12px; padding:0 4px; }
@@ -30,18 +41,47 @@
   .rel { color:var(--muted); font-family:monospace; font-size:11px; }
   button { background:#262b36; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; cursor:pointer; font-size:12px; }
   button:hover { background:#323846; }
+  .btnrow { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 4px; }
+  .btnrow .btn { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; text-decoration:none; color:var(--text); background:#242a37; border:1px solid #353b49; border-radius:7px; padding:7px 9px; }
+  .btnrow .btn:hover { background:#2d3444; text-decoration:none; }
+  .btnrow .btn.green { border-color:rgba(62,207,142,.55); color:#bff3d7; }
   details.playbook { margin-top:12px; border:1px solid var(--border); border-radius:6px; padding:8px 10px; background:#12151e; }
   details.playbook summary { cursor:pointer; font-size:12.5px; font-weight:600; color:#3ecf8e; }
   .playbook-body { font-size:12px; line-height:1.45; margin-top:8px; color:#d4d8e2; }
-  .playbook-body table { width:100%; border-collapse:collapse; margin:8px 0; font-size:11.5px; }
-  .playbook-body th, .playbook-body td { border:1px solid var(--border); padding:5px 6px; text-align:left; vertical-align:top; }
-  .playbook-body th { background:#1e2230; color:var(--text); }
+  .playbook-body table, .markdown table { width:100%; border-collapse:collapse; margin:8px 0; font-size:11.5px; }
+  .playbook-body th, .playbook-body td, .markdown th, .markdown td { border:1px solid var(--border); padding:5px 6px; text-align:left; vertical-align:top; }
+  .playbook-body th, .markdown th { background:#1e2230; color:var(--text); }
+
+  /* modal */
+  .modal { position:fixed; inset:0; z-index:100; background:rgba(5,7,11,.78); backdrop-filter:blur(4px); display:flex; align-items:flex-start; justify-content:center; padding:4vh 16px; overflow-y:auto; }
+  .modal[hidden] { display:none; }
+  .modal-box { width:min(860px,100%); background:var(--panel); border:1px solid #353b49; border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.55); padding:20px; position:relative; }
+  .modal-close { position:absolute; top:10px; right:10px; width:30px; height:30px; padding:0; border-radius:8px; }
+  .modal-head { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; padding-right:36px; }
+  .modal-head .badge { margin:0; }
+  .viewtoggle { margin-left:auto; display:flex; gap:5px; }
+  .viewtoggle button.active { background:var(--accent); color:#0d1117; border-color:var(--accent); }
+  .markdown { font-size:12.5px; line-height:1.55; color:#d4d8e2; max-height:70vh; overflow:auto; padding-right:6px; }
+  .markdown h2 { font-size:17px; margin:16px 0 7px; color:#fff; }
+  .markdown h3 { font-size:14.5px; margin:14px 0 6px; color:#dfe4ee; }
+  .markdown h4 { font-size:13px; margin:12px 0 5px; color:var(--accent); }
+  .markdown p { margin:6px 0; }
+  .markdown ul { padding-left:18px; margin:6px 0; }
+  .markdown li { margin:3px 0; }
+  .markdown blockquote { border-left:3px solid var(--accent); margin:8px 0; padding:4px 10px; color:#b9c0cf; background:rgba(138,180,248,.06); }
+  .markdown hr { border:none; border-top:1px solid var(--border); margin:14px 0; }
+  .resource-kind { color:var(--muted); font-size:10.5px; }
 </style>
 </head>
 <body>
 <div id="sidebar">
+  <a class="dojo-cta" href="dojo.html" title="Abrir el simulador de entrenamiento táctico">
+    <span class="big">🥋</span>
+    <span>Ir al FDE Field Dojo<small>Escenarios, calibración 90% CI y sparring de 8 turnos</small></span>
+    <span class="arrow">→</span>
+  </a>
   <h1>FDE Knowledge Graph</h1>
-  <div class="sub">8 books · 193 nodes · 12 canonical predicates · Field Playbooks</div>
+  <div class="sub" id="graphSub">Loading graph…</div>
   <input id="search" type="search" placeholder="Search concepts, scripts, tools…">
   <fieldset id="books"><legend>Books / layers</legend></fieldset>
   <fieldset id="types"><legend>Node types</legend></fieldset>
@@ -50,6 +90,14 @@
   <div id="details"><p class="sub">Click any node to inspect its definition, external resources, connections, and tactical FDE playbook.</p></div>
 </div>
 <div id="graph"></div>
+
+<div id="playbookModal" class="modal" hidden>
+  <div class="modal-box">
+    <button class="modal-close" aria-label="Close">✕</button>
+    <div id="playbookBody"></div>
+  </div>
+</div>
+
 <script>
 const DATA = __GRAPH_DATA__;
 const BOOK_COLORS = { htma:"#4f9dff", ta:"#f5a623", mom:"#e5487a", pp:"#a78bfa", bps:"#22d3ee",
@@ -57,6 +105,7 @@ const BOOK_COLORS = { htma:"#4f9dff", ta:"#f5a623", mom:"#e5487a", pp:"#a78bfa",
 const TYPE_SHAPES = { Book:"box", Author:"ellipse", Concept:"dot", Framework:"diamond", Principle:"triangle",
                       Technique:"square", Pitfall:"triangleDown", CrossInsight:"star", FDEPractice:"hexagon" };
 const TYPE_SIZES  = { Book:30, Framework:22, CrossInsight:24, FDEPractice:22 };
+const DOJO_TYPES = new Set(["Pitfall","Technique","FDEPractice","Framework","Principle","CrossInsight","Concept"]);
 
 const byId = Object.fromEntries(DATA.nodes.map(n => [n.id, n]));
 const degree = {};
@@ -107,9 +156,14 @@ function mkCheck(container, key, set, text, color){
 }
 Object.entries(DATA.meta.books).forEach(([k,v]) => mkCheck(document.getElementById("books"), k, state.books, v, BOOK_COLORS[k]));
 Object.keys(TYPE_SHAPES).forEach(t => mkCheck(document.getElementById("types"), t, state.types, t));
-document.getElementById("hideFromBook").onchange = ev => { state.hideStructural = ev.target.checked; refresh(); };
+document.getElementById("hideFromBook").onchange = ev => { state.hideStructural = ev.target.checked; refresh(); showDetailsIfAny(); };
 document.getElementById("fit").onclick = () => network.fit({ animation:true });
 document.getElementById("reset").onclick = () => { state.focus=null; refresh(); network.fit({animation:true}); };
+
+document.getElementById("graphSub").innerHTML =
+  `${DATA.nodes.length} nodes · ${DATA.edges.length} edges · ${(DATA.resources||[]).length} external resources<br>` +
+  `${Object.keys(DATA.dossiers||{}).length} embedded field playbooks · 12 canonical predicates<br>` +
+  `<span style="color:#3ecf8e">🥋 FDE Field Dojo: scenarios, 90% CI calibration &amp; 8-turn sparring</span>`;
 
 function renderMarkdown(md) {
   if (!md) return "";
@@ -121,15 +175,21 @@ function renderMarkdown(md) {
 
   const fmt = s => s
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
     .replace(/`(.+?)`/g, "<code>$1</code>")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1 ↗</a>');
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1 ↗</a>');
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i].trim();
-    if (!raw || raw === "---") {
+    if (!raw) {
       if (inList) { html += "</ul>"; inList = false; }
       if (inTable) { html += "</table>"; inTable = false; }
+      continue;
+    }
+    if (raw === "---" || raw === "***") {
+      if (inList) { html += "</ul>"; inList = false; }
+      if (inTable) { html += "</table>"; inTable = false; }
+      html += "<hr>";
       continue;
     }
     if (raw.startsWith("|") && raw.endsWith("|")) {
@@ -149,6 +209,9 @@ function renderMarkdown(md) {
     } else if (raw.startsWith("## ") || raw.startsWith("# ")) {
       if (inList) { html += "</ul>"; inList = false; }
       html += `<h3>${fmt(raw.replace(/^#+\s*/, ""))}</h3>`;
+    } else if (raw.startsWith("> ")) {
+      if (inList) { html += "</ul>"; inList = false; }
+      html += `<blockquote>${fmt(raw.slice(2))}</blockquote>`;
     } else if (raw.startsWith("* ") || raw.startsWith("- ") || /^\d+\.\s/.test(raw)) {
       if (!inList) { html += "<ul>"; inList = true; }
       html += `<li>${fmt(raw.replace(/^(\*|-|\d+\.)\s+/, ""))}</li>`;
@@ -178,25 +241,67 @@ function getResourcesForNode(n) {
   return direct;
 }
 
-function showDetails(id){
+function openPlaybook(book, view) {
+  const d = DATA.dossiers && DATA.dossiers[book];
+  if (!d) return;
+  const mode = view === "full" ? "full" : "tactical";
+  document.getElementById("playbookBody").innerHTML = `
+    <div class="modal-head">
+      <span class="badge" style="color:${BOOK_COLORS[book]}">${DATA.meta.books[book]}</span>
+      <span class="badge">${d.title || book.toUpperCase()}</span>
+      <span class="viewtoggle">
+        <button data-view="tactical" class="${mode==="tactical"?"active":""}">Toolkits + field playbook</button>
+        <button data-view="full" class="${mode==="full"?"active":""}">Full dossier</button>
+      </span>
+    </div>
+    <div class="markdown">${renderMarkdown(mode === "full" ? d.full : d.tactical)}</div>`;
+  document.querySelectorAll("#playbookBody [data-view]").forEach(b => {
+    b.onclick = () => openPlaybook(book, b.dataset.view);
+  });
+  document.getElementById("playbookModal").hidden = false;
+}
+
+document.addEventListener("click", ev => {
+  const btn = ev.target.closest("[data-playbook]");
+  if (btn) { openPlaybook(btn.dataset.playbook, "tactical"); return; }
+  const modal = document.getElementById("playbookModal");
+  if (ev.target === modal) modal.hidden = true;
+});
+document.querySelector("#playbookModal .modal-close").onclick = () => { document.getElementById("playbookModal").hidden = true; };
+document.addEventListener("keydown", ev => { if (ev.key === "Escape") document.getElementById("playbookModal").hidden = true; });
+
+function showDetailsIfAny() {
+  if (state.current) showDetails(state.current, { silent:true });
+}
+
+function showDetails(id, opts = {}) {
   const n = byId[id];
+  if (!n) return;
+  state.current = id;
   const out = DATA.edges.filter(e => e.source===id && !(state.hideStructural && ["FROM_BOOK","AUTHORED"].includes(e.relation)));
   const inc = DATA.edges.filter(e => e.target===id && !(state.hideStructural && ["FROM_BOOK","AUTHORED"].includes(e.relation)));
   const link = x => `<a data-id="${x}">${byId[x].label}</a>`;
   const res = getResourcesForNode(n);
   const dossier = DATA.dossiers && DATA.dossiers[n.book];
-  const playbookMd = dossier ? (n.type === "Book" ? dossier.full : dossier.tactical) : "";
+  const dojoHref = `dojo.html#node=${encodeURIComponent(n.id)}`;
 
   document.getElementById("details").innerHTML = `
     <h2>${n.label}</h2>
     <span class="badge">${n.type}</span><span class="badge" style="color:${BOOK_COLORS[n.book]}">${DATA.meta.books[n.book]}</span>
     <p>${n.description}</p>
-    ${res.length ? `<b style="font-size:12px">External Resources</b><ul>${res.map(r=>`<li><a href="${r.url}" target="_blank" rel="noopener">${r.title} ↗</a> <span class="rel">(${r.kind||"link"})</span></li>`).join("")}</ul>` : ""}
+    <div class="btnrow">
+      ${DOJO_TYPES.has(n.type) ? `<a class="btn green" href="${dojoHref}" target="_blank" rel="noopener">🥋 Entrenar en el Dojo</a>` : ""}
+      ${dossier ? `<button class="btn" data-playbook="${n.book}">📖 Field Playbook (${n.book.toUpperCase()})</button>` : ""}
+    </div>
+    ${res.length ? `<b style="font-size:12px">External Resources</b><ul>${res.map(r=>`<li><a href="${r.url}" target="_blank" rel="noopener">${r.title} ↗</a> <span class="resource-kind">(${r.kind||"link"})</span></li>`).join("")}</ul>` : ""}
     ${out.length ? `<b style="font-size:12px">Outgoing (${out.length})</b><ul>${out.map(e=>`<li><span class="rel">${e.relation}</span> → ${link(e.target)}</li>`).join("")}</ul>` : ""}
     ${inc.length ? `<b style="font-size:12px">Incoming (${inc.length})</b><ul>${inc.map(e=>`<li>${link(e.source)} <span class="rel">${e.relation}</span></li>`).join("")}</ul>` : ""}
-    ${playbookMd ? `<details class="playbook" ${n.type==="Book"?"open":""}><summary>Field Playbook & Toolkits (${n.book.toUpperCase()})</summary><div class="playbook-body">${renderMarkdown(playbookMd)}</div></details>` : ""}
   `;
   document.querySelectorAll("#details a[data-id]").forEach(a => a.onclick = () => select(a.dataset.id));
+  if (!opts.silent) {
+    const hash = "#" + encodeURIComponent(id);
+    if (location.hash !== hash) history.replaceState(null, "", hash);
+  }
 }
 
 function select(id){
@@ -218,6 +323,18 @@ document.getElementById("search").addEventListener("input", ev => {
   const q = ev.target.value.trim().toLowerCase(); if (q.length < 2) return;
   const hit = DATA.nodes.find(n => n.label.toLowerCase().includes(q) || n.description.toLowerCase().includes(q));
   if (hit) select(hit.id);
+});
+
+function handleHash() {
+  const raw = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+  if (!raw) return;
+  const id = raw.startsWith("node=") ? raw.slice(5) : raw;
+  if (byId[id]) select(id);
+}
+window.addEventListener("hashchange", handleHash);
+window.addEventListener("load", () => {
+  handleHash();
+  setTimeout(() => { if (state.current) network.focus(state.current, { scale:1.05, animation:true }); }, 350);
 });
 </script>
 </body>

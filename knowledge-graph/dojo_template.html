@@ -1,0 +1,3261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FDE Field Dojo — Entrenamiento táctico en terreno</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#171a23; --panel2:#12151e; --panel3:#1c202b;
+    --text:#e6e6e6; --muted:#9aa0aa; --border:#2a2f3a; --border2:#353b49;
+    --accent:#8ab4f8; --accent2:#c792ea;
+    --tq:#f5a623; --sig:#e5487a; --evi:#4f9dff; --adp:#3ecf8e;
+    --ok:#3ecf8e; --danger:#fb7185; --warn:#facc15;
+    --shadow:0 18px 50px rgba(0,0,0,.45);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:14px; line-height:1.5; min-height:100vh;
+    background-image:radial-gradient(1200px 500px at 80% -10%, rgba(79,157,255,.10), transparent 60%),
+                     radial-gradient(900px 400px at 0% 0%, rgba(62,207,142,.07), transparent 55%);
+    background-attachment:fixed;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1,h2,h3,h4{margin:0;line-height:1.25}
+  p{margin:0 0 10px}
+  code{background:#0b0d13;border:1px solid var(--border);border-radius:5px;padding:1px 5px;font-size:.92em}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:40;
+    display:grid; grid-template-columns:minmax(0,1fr) auto;
+    grid-template-areas:"brand hud" "nav nav";
+    gap:7px 18px; align-items:center;
+    padding:10px 20px 0; background:rgba(15,17,23,.94); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+  }
+  .brand{grid-area:brand;display:flex;gap:11px;align-items:center;min-width:230px}
+  .logo{
+    width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:22px;
+    background:linear-gradient(145deg,#202634,#12151e);border:1px solid var(--border2);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .brand h1{font-size:17px;letter-spacing:.2px}
+  .brand .sub{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .mainnav{grid-area:nav;display:flex;gap:6px;flex-wrap:wrap;min-width:0;padding:7px 0 9px;border-top:1px solid var(--border)}
+  .navbtn,.navlink{
+    display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:12.5px;font-weight:600;
+    color:var(--muted);background:transparent;border:1px solid transparent;border-radius:9px;
+    padding:8px 9px;cursor:pointer;text-decoration:none;transition:.16s ease;
+  }
+  .navbtn:hover,.navlink:hover{color:var(--text);background:#1b1f2a;text-decoration:none}
+  .navbtn.active{color:#0e1117;background:var(--accent);border-color:var(--accent)}
+  .navlink{border-color:var(--border);color:var(--text)}
+
+  /* ---------- HUD ---------- */
+  .hud{grid-area:hud;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;justify-content:flex-end}
+  .metric{width:96px;position:relative}
+  .metric-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+  .mlabel{font-size:10.5px;font-weight:700;letter-spacing:.8px;color:var(--muted)}
+  .mval{font-size:13px;color:var(--c)}
+  .bar{height:6px;background:#0b0d13;border:1px solid var(--border);border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--c,var(--accent));border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .metric .float{
+    position:absolute;right:0;top:-17px;font-size:11px;font-weight:800;pointer-events:none;
+    animation:floatUp 1.3s ease forwards;color:var(--ok);
+  }
+  .metric .float.down{color:var(--danger)}
+  @keyframes floatUp{0%{opacity:0;transform:translateY(4px)}20%{opacity:1}100%{opacity:0;transform:translateY(-12px)}}
+  .hud-extra{display:flex;gap:10px;align-items:center;font-size:12px;color:var(--muted);padding-bottom:2px}
+  .hud-extra b{color:var(--text);font-size:13px}
+  .iconbtn{background:var(--panel3);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:5px 8px;cursor:pointer;font-size:13px}
+  .iconbtn:hover{background:#262c3a}
+
+  /* ---------- layout ---------- */
+  main{max-width:1320px;margin:0 auto;padding:20px 20px 70px}
+  .mode{animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .mode-head{display:flex;gap:20px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}
+  .mode-head h2{font-size:22px;letter-spacing:.2px}
+  .mode-head .lead{color:var(--muted);font-size:13px;max-width:720px;margin-top:5px}
+  .mode-stats{display:flex;gap:8px;flex-wrap:wrap}
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,.018), transparent 120px), var(--panel);
+    border:1px solid var(--border); border-radius:var(--radius); padding:16px;
+    box-shadow:0 1px 0 rgba(255,255,255,.02);
+  }
+  .card h3{font-size:14px;margin-bottom:10px;color:#dfe4ee}
+  .card h4{font-size:12.5px;margin:14px 0 6px;color:var(--accent)}
+  .pill{
+    display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:650;line-height:1.2;
+    border:1px solid var(--c,var(--border2)); color:var(--c,var(--muted));
+    background:color-mix(in srgb, var(--c, #6b7280) 12%, transparent);
+    border-radius:99px;padding:4px 9px;white-space:normal;text-align:left;
+  }
+  .pill.book{border-color:var(--border2);color:var(--c)}
+  .pill.node{cursor:pointer;font:inherit;font-size:11px;font-weight:600}
+  .pill.node:hover{background:color-mix(in srgb, var(--c) 26%, transparent);text-decoration:none}
+  .pill.node.missed{opacity:.55;text-decoration:line-through}
+  .pill.ok{--c:var(--ok)}
+  .pill.bad{--c:var(--danger)}
+  .pill.danger{--c:var(--danger)}
+  .pill.warn{--c:var(--warn)}
+  .pills{display:flex;gap:6px;flex-wrap:wrap}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;justify-content:center;
+    background:#242a37;color:var(--text);border:1px solid var(--border2);border-radius:9px;
+    padding:9px 13px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;
+    transition:.15s ease;text-decoration:none;
+  }
+  .btn:hover{background:#2d3444;border-color:#465063;text-decoration:none}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#0d1117}
+  .btn.primary:hover{background:#a3c9ff}
+  .btn.warn{background:rgba(250,204,21,.12);border-color:rgba(250,204,21,.5);color:#f8e08a}
+  .btn.warn:hover{background:rgba(250,204,21,.2)}
+  .btn.ghost{background:transparent;color:var(--muted)}
+  .btn.ghost:hover{color:var(--text)}
+  .btn.active{background:rgba(138,180,248,.16);border-color:rgba(138,180,248,.65);color:#d7e6ff}
+  .linkbtn{background:none;border:none;color:var(--accent);font:inherit;font-size:12px;cursor:pointer;padding:0;text-decoration:underline}
+
+  /* ---------- filters / banners ---------- */
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;padding:12px 14px}
+  .filters label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);font-weight:650;letter-spacing:.3px;flex:0 1 210px;min-width:180px}
+  .filters .check{flex:0 0 auto;min-width:0;flex-direction:row;align-items:center;gap:7px;padding-bottom:8px;font-size:12px;letter-spacing:0}
+  select,input[type=text],input[type=number],input[type=password],input[type=search],textarea{
+    background:#0b0d13;border:1px solid var(--border2);border-radius:8px;color:var(--text);
+    padding:8px 10px;font:inherit;font-size:12.5px;outline:none;transition:border-color .15s;
+  }
+  select:focus,input:focus,textarea:focus{border-color:var(--accent)}
+  .filters select{width:100%;min-width:0}
+  .banner{
+    display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+    border:1px solid rgba(250,204,21,.35);background:rgba(250,204,21,.08);
+    border-radius:10px;padding:9px 12px;margin-bottom:14px;font-size:12.5px;color:#f8e08a;
+  }
+
+  /* ---------- reflex layout ---------- */
+  .reflex-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start}
+  .side{position:sticky;top:100px}
+  .scenario .scenario-top{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+  .scen-title{font-size:20px;margin-bottom:7px}
+  .context{color:#c3c9d6;font-size:13.5px;margin-bottom:14px}
+  .quote{
+    margin:0 0 18px;padding:14px 16px;border-left:3px solid var(--accent);
+    background:linear-gradient(90deg,rgba(138,180,248,.09),transparent);border-radius:0 10px 10px 0;
+  }
+  .quote p{font-size:14.5px;line-height:1.55;font-style:italic;margin:0 0 7px}
+  .quote footer{font-size:12px;color:var(--muted)}
+  .step{border-top:1px solid var(--border);padding-top:15px;margin-top:6px}
+  .step-head{display:flex;gap:9px;align-items:center;margin-bottom:6px}
+  .stepnum{
+    width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;
+    background:rgba(138,180,248,.16);color:var(--accent);border:1px solid rgba(138,180,248,.4);
+  }
+  .step-head h3{font-size:15px}
+  .q{color:#cfd5e2;margin:4px 0 11px;font-size:13.5px}
+  .options{display:flex;flex-direction:column;gap:8px}
+  .opt{
+    display:flex;gap:11px;text-align:left;background:#131722;border:1px solid var(--border2);
+    border-radius:10px;padding:11px 12px;color:var(--text);cursor:pointer;font:inherit;
+    transition:.15s ease;width:100%;
+  }
+  .opt:hover:not(:disabled){border-color:var(--accent);background:#161c29}
+  .opt:disabled{cursor:default}
+  .opt-letter{
+    flex:0 0 22px;height:22px;border-radius:6px;display:grid;place-items:center;
+    background:#0b0d13;border:1px solid var(--border2);font-size:11px;font-weight:800;color:var(--muted);
+  }
+  .opt-body{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .opt-label{font-size:13px;line-height:1.4}
+  .opt-expl{font-size:12px;color:#b9c0cf;line-height:1.45;border-left:2px solid var(--border2);padding-left:8px}
+  .opt.correct{border-color:rgba(62,207,142,.65);background:rgba(62,207,142,.09)}
+  .opt.correct .opt-letter{background:var(--ok);color:#08120c;border-color:var(--ok)}
+  .opt.wrong{border-color:rgba(251,113,133,.6);background:rgba(251,113,133,.08)}
+  .opt.wrong .opt-letter{background:var(--danger);color:#1a0a0e;border-color:var(--danger)}
+  .opt.dim{opacity:.55}
+  .script{
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;line-height:1.5;
+    color:#cfd5e2;background:#0b0d13;border:1px solid var(--border);border-radius:8px;padding:8px 9px;
+    margin-top:2px;white-space:pre-wrap;
+  }
+  .script-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;font-weight:700}
+  .feedback{border-radius:9px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-top:10px;border:1px solid}
+  .feedback.ok{border-color:rgba(62,207,142,.4);background:rgba(62,207,142,.08);color:#bff3d7}
+  .feedback.bad{border-color:rgba(251,113,133,.4);background:rgba(251,113,133,.08);color:#ffd3da}
+  .feedback.info{border-color:rgba(138,180,248,.4);background:rgba(138,180,248,.08);color:#d7e6ff}
+  .outcome{margin-top:16px;border-top:1px solid var(--border);padding-top:16px}
+  .outcome-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .outcome-head h3{font-size:17px}
+  .xp{font-size:12px;font-weight:800;color:#08120c;background:var(--ok);border-radius:99px;padding:3px 9px}
+  .result-badges{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:11px}
+  .delta-grid{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:11px}
+  .delta{
+    font-size:12px;font-weight:800;padding:4px 9px;border-radius:8px;color:var(--c);
+    background:color-mix(in srgb, var(--c) 12%, transparent);border:1px solid color-mix(in srgb, var(--c) 38%, transparent);
+  }
+  .delta.down{color:var(--danger);background:rgba(251,113,133,.1);border-color:rgba(251,113,133,.4)}
+  .nodes-ref{margin:14px 0}
+  .nodes-ref h4{margin:10px 0 6px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.7px}
+  .queue{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+  .queue-row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;border-bottom:1px dashed var(--border);padding-bottom:6px}
+  .queue-row b{font-size:14px}
+  .log{display:flex;flex-direction:column;gap:7px;margin:8px 0 14px;min-height:40px}
+  .log-item{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:#c3c9d6;border-left:2px solid var(--border2);padding-left:8px}
+  .log-item .ok{color:var(--ok)}
+  .log-item .bad{color:var(--danger)}
+  .empty{border:1px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;color:var(--muted);font-size:13px}
+
+  /* ---------- calibration ---------- */
+  .cal-layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+  .cal-prompt{font-size:19px;line-height:1.4;margin:6px 0 10px}
+  .cal-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .hintbox{border:1px solid rgba(138,180,248,.35);background:rgba(138,180,248,.07);border-radius:8px;padding:8px 10px;font-size:12.5px;margin:6px 0 12px;color:#cfe0ff}
+  .range-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+  .range-grid label{display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:var(--muted);font-weight:650}
+  .inputwrap{display:flex;align-items:center;gap:0;background:#0b0d13;border:1px solid var(--border2);border-radius:8px;overflow:hidden}
+  .inputwrap:focus-within{border-color:var(--accent)}
+  .inputwrap input{border:none;border-radius:0;flex:1;min-width:0;background:transparent}
+  .inputwrap span{font-size:11px;color:var(--muted);padding:0 9px;border-left:1px solid var(--border);white-space:nowrap}
+  .bet-grid{display:grid;grid-template-columns:230px minmax(0,1fr);gap:20px;align-items:center;margin-top:14px}
+  .wheel-side{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .wheel{
+    width:170px;height:170px;border-radius:50%;position:relative;
+    background:conic-gradient(var(--ok) 0 324deg, var(--danger) 324deg 360deg);
+    border:5px solid var(--panel3);box-shadow:var(--shadow);transition:transform 1.6s cubic-bezier(.12,.8,.2,1);
+  }
+  .wheel-center{
+    position:absolute;inset:34%;border-radius:50%;background:var(--panel);border:1px solid var(--border2);
+    display:grid;place-items:center;font-weight:900;font-size:15px;color:var(--text);
+  }
+  .wheel-pointer{width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:12px solid var(--text);margin-bottom:-4px;z-index:2}
+  .wheel-legend{display:flex;gap:10px;font-size:11px;color:var(--muted);flex-wrap:wrap;justify-content:center}
+  .wheel-legend .ok{color:var(--ok)} .wheel-legend .danger{color:var(--danger)}
+  .bet-copy h3{font-size:16px;margin-bottom:8px}
+  .bet-copy p{font-size:13px;line-height:1.55}
+  .cal-side .bigstat{font-size:34px;font-weight:850;letter-spacing:-1px;line-height:1}
+  .cal-side .statline{display:flex;justify-content:space-between;gap:8px;font-size:12px;border-bottom:1px dashed var(--border);padding:6px 0}
+  .cal-side .statline b{color:var(--text)}
+  .chart{margin:10px 0 14px}
+  .chart svg{width:100%;height:auto;display:block}
+  .verdict{display:flex;gap:10px;align-items:flex-start;border-radius:10px;padding:10px 12px;margin:10px 0;border:1px solid;font-size:12.5px}
+  .verdict.ok{border-color:rgba(62,207,142,.45);background:rgba(62,207,142,.08)}
+  .verdict.danger{border-color:rgba(251,113,133,.45);background:rgba(251,113,133,.08)}
+  .verdict.warn{border-color:rgba(250,204,21,.45);background:rgba(250,204,21,.08)}
+  .verdict.muted{border-color:var(--border2);background:#12151e}
+  .verdict b{display:block;font-size:13px;margin-bottom:3px}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+  .summary-grid .card{padding:12px;text-align:center}
+  .summary-grid .n{font-size:24px;font-weight:850;line-height:1.1}
+  .summary-grid .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+
+  /* ---------- sparring ---------- */
+  .spar-layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px;align-items:start}
+  .mission label{display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:var(--muted);font-weight:650;margin-bottom:10px}
+  .mission select,.mission input{width:100%}
+  .mission .check{display:flex;flex-direction:row;align-items:center;gap:7px;font-size:12px;color:var(--text);font-weight:500;margin:6px 0 10px}
+  .mission .check input{width:auto;flex:0 0 auto;margin:0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .hidden-state{border:1px solid var(--border2);border-radius:10px;background:#12151e;padding:10px;margin:8px 0 12px}
+  .hidden-state.spoiler .hs-body{filter:blur(6px);user-select:none}
+  .hs-line{margin-bottom:9px}
+  .hs-line:last-child{margin-bottom:0}
+  .hs-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:4px;font-weight:800}
+  .hs-line p{font-size:12px;color:#c3c9d6;margin:5px 0 0;line-height:1.45}
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:14px;flex-wrap:wrap}
+  .tabs button{
+    background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);
+    font:inherit;font-size:12.5px;font-weight:700;padding:9px 11px;cursor:pointer;
+  }
+  .tabs button.active{color:var(--text);border-bottom-color:var(--accent)}
+  .promptbox{
+    background:#0a0c12;border:1px solid var(--border);border-radius:10px;padding:13px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;line-height:1.5;
+    color:#c3c9d6;white-space:pre-wrap;max-height:440px;overflow:auto;margin:0 0 10px;
+  }
+  .api-config{display:grid;grid-template-columns:130px 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px}
+  .api-config label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted);font-weight:650}
+  .api-config input,.api-config select{width:100%}
+  .chatlog{
+    border:1px solid var(--border);border-radius:10px;background:#0d1017;padding:12px;
+    height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin:10px 0;
+  }
+  .msg{display:flex}
+  .msg.user{justify-content:flex-end}
+  .bubble{max-width:86%;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.5;white-space:normal}
+  .msg.assistant .bubble{background:#1a1f2b;border:1px solid var(--border2);border-bottom-left-radius:3px}
+  .msg.user .bubble{background:rgba(138,180,248,.16);border:1px solid rgba(138,180,248,.36);border-bottom-right-radius:3px}
+  .msg.error .bubble{background:rgba(251,113,133,.1);border:1px solid rgba(251,113,133,.4);color:#ffd3da;max-width:100%}
+  .bubble.typing{color:var(--muted);letter-spacing:2px}
+  .voicebar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:8px 0 5px;color:var(--muted);font-size:11px}
+  .voicebar label{display:flex;flex-direction:row;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin:0}
+  .voicebar select{padding:6px 8px;font-size:11px}
+  .btn.recording{background:rgba(251,113,133,.18);border-color:var(--danger);color:#ffd3da;animation:recPulse 1.15s infinite}
+  @keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,113,133,.35)}50%{box-shadow:0 0 0 7px rgba(251,113,133,0)}}
+  .chatbar{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:end}
+  .chatbar textarea{resize:vertical;min-height:40px}
+  .eval-card{border:1px solid var(--border2);border-radius:12px;padding:14px;margin-top:14px;background:#12151e}
+  .eval-head{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+  .score-ring{
+    --p:0; width:62px;height:62px;border-radius:50%;flex:0 0 62px;display:grid;place-items:center;
+    background:conic-gradient(var(--accent) calc(var(--p)*1%), #232936 0);
+    position:relative;font-weight:850;font-size:18px;
+  }
+  .score-ring::after{content:"";position:absolute;inset:7px;background:#12151e;border-radius:50%}
+  .score-ring span{position:relative;z-index:1}
+  .dims{display:flex;flex-direction:column;gap:10px}
+  .dim-top{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:4px}
+  .evidence{font-size:11.5px;color:#b9c0cf;margin:5px 0 6px}
+  .next-drill{font-size:12.5px;border-left:3px solid var(--accent);padding-left:9px;margin-top:12px;color:#d7e6ff}
+  .selfeval{display:flex;flex-direction:column;gap:9px;margin:10px 0}
+  .selfeval label{display:grid;grid-template-columns:150px 1fr 34px;gap:8px;align-items:center;font-size:12px}
+  .selfeval input[type=range]{accent-color:var(--accent)}
+
+  /* ---------- modal / toast ---------- */
+  .modal{position:fixed;inset:0;z-index:100;background:rgba(5,7,11,.76);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;overflow-y:auto}
+  .modal-box{
+    width:min(760px,100%);background:var(--panel);border:1px solid var(--border2);border-radius:16px;
+    box-shadow:var(--shadow);padding:20px;position:relative;animation:pop .18s ease;
+  }
+  .modal-box.wide{width:min(920px,100%)}
+  @keyframes pop{from{opacity:0;transform:scale(.98) translateY(6px)}to{opacity:1;transform:none}}
+  .modal-close{position:absolute;top:10px;right:10px;background:#242a37;border:1px solid var(--border2);color:var(--text);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px}
+  .modal-close:hover{background:#323a4b}
+  .node-head{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+  .node-desc{font-size:13px;line-height:1.55;color:#cfd5e2;margin:8px 0 14px}
+  .relations{list-style:none;padding:0;margin:6px 0 12px;display:flex;flex-direction:column;gap:5px;font-size:12px}
+  .relations a{color:var(--text)}
+  .relations a:hover{color:var(--accent)}
+  .rel{font-family:ui-monospace,Consolas,monospace;font-size:10.5px;color:var(--muted);background:#0b0d13;border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+  .links{padding-left:16px;font-size:12.5px;line-height:1.7}
+  .markdown{font-size:12.5px;line-height:1.55;color:#d4d8e2;max-height:62vh;overflow:auto;padding-right:6px}
+  .markdown h2{font-size:17px;margin:16px 0 7px;color:#fff}
+  .markdown h3{font-size:14.5px;margin:14px 0 6px;color:#dfe4ee}
+  .markdown h4{font-size:13px;margin:12px 0 5px;color:var(--accent)}
+  .markdown p{margin:6px 0}
+  .markdown ul{padding-left:18px;margin:6px 0}
+  .markdown li{margin:3px 0}
+  .markdown table{width:100%;border-collapse:collapse;margin:9px 0;font-size:11.5px}
+  .markdown th,.markdown td{border:1px solid var(--border);padding:5px 6px;text-align:left;vertical-align:top}
+  .markdown th{background:#1e2230;color:#fff}
+  .markdown blockquote{border-left:3px solid var(--accent);margin:8px 0;padding:4px 10px;color:#b9c0cf;background:rgba(138,180,248,.06)}
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:200;
+    background:#1c2230;border:1px solid var(--border2);border-radius:10px;padding:10px 15px;
+    font-size:12.5px;box-shadow:var(--shadow);max-width:min(720px,90vw);animation:toastIn .2s ease;
+  }
+  .toast.ok{border-color:rgba(62,207,142,.5)} .toast.warn{border-color:rgba(250,204,21,.5)} .toast.error{border-color:rgba(251,113,133,.55)}
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+
+  .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:10px 0 16px}
+  .statgrid .card{padding:11px;text-align:center}
+  .statgrid .n{font-size:21px;font-weight:850}
+  .statgrid .l{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .bookstats{display:flex;flex-direction:column;gap:7px;margin:8px 0 14px}
+  .bookrow{display:grid;grid-template-columns:150px 1fr 54px;gap:8px;align-items:center;font-size:11.5px}
+  .bookrow .bar{height:7px}
+
+  /* ---------- bootcamp ---------- */
+  .camp-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .camp-card{display:flex;flex-direction:column;gap:8px}
+  .camp-card h3{font-size:18px;margin:2px 0}
+  .camp-card .camp-brief{font-size:12.5px;color:#c3c9d6;line-height:1.5;margin:0}
+  .camp-card .btn{margin-top:auto}
+  .boot-timeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:14px 0}
+  .daychip{border:1px solid var(--border);background:#12151e;border-radius:9px;padding:8px;font-size:10.5px;line-height:1.35;color:var(--muted);min-width:0}
+  .daychip .d{display:block;font-size:11.5px;font-weight:800;color:var(--text);margin-bottom:2px}
+  .daychip.done{border-color:rgba(62,207,142,.5);background:rgba(62,207,142,.08)}
+  .daychip.current{border-color:var(--accent);background:rgba(138,180,248,.13);color:#d7e6ff}
+  .daychip.lost{border-color:rgba(251,113,133,.5);background:rgba(251,113,133,.08)}
+  .daychip.locked{opacity:.45}
+  .boot-run-head{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start;margin-bottom:12px}
+  .boot-run-head h3{font-size:19px;margin:4px 0 2px}
+  .boot-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0 14px}
+  .boot-metric{border:1px solid var(--border);border-radius:9px;padding:8px 10px;background:#12151e}
+  .boot-metric .bv{font-size:19px;font-weight:850;color:var(--c)}
+  .boot-metric .bl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .certificate{border:1px solid rgba(62,207,142,.55);border-radius:14px;padding:18px;margin:14px 0;background:linear-gradient(135deg,rgba(62,207,142,.13),rgba(79,157,255,.08))}
+  .certificate h3{font-size:22px;color:var(--ok);margin-bottom:5px}
+  .postmortem{border:1px solid rgba(251,113,133,.5);border-radius:14px;padding:16px;margin:14px 0;background:rgba(251,113,133,.06)}
+  .postmortem h3{font-size:20px;color:var(--danger);margin-bottom:5px}
+  .history-list{display:flex;flex-direction:column;gap:7px;margin:10px 0}
+  .history-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:9px;align-items:center;border-bottom:1px dashed var(--border);padding:6px 0;font-size:12px}
+  .history-row .hd{font-weight:800;color:var(--muted)}
+  .history-row .hdeltas{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+  .history-row .hdeltas span{font-size:10px;padding:1px 5px;border-radius:5px;background:#0b0d13;border:1px solid var(--border);color:var(--muted)}
+  .boot-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .boot-final-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0}
+  .boot-final-grid .card{padding:11px;text-align:center}
+  .boot-final-grid .n{font-size:22px;font-weight:850;line-height:1.1}
+  .boot-final-grid .l{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-top:3px}
+
+  @media (max-width:1180px){
+    .reflex-layout,.cal-layout,.spar-layout{grid-template-columns:1fr}
+    .side{position:static}
+    .statgrid{grid-template-columns:repeat(2,1fr)}
+    .camp-list{grid-template-columns:1fr}
+    .boot-metrics{grid-template-columns:repeat(2,1fr)}
+    .boot-final-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:820px){
+    .topbar{display:flex;flex-wrap:wrap;padding:10px 12px;gap:10px}
+    .brand{min-width:0}
+    .mainnav{min-width:0;order:3;width:100%;border-top:1px solid var(--border);padding-top:8px}
+    .hud{justify-content:flex-start;width:100%;order:4}
+    .metric{width:calc(25% - 8px);min-width:74px}
+    main{padding:14px 12px 60px}
+    .mode-head h2{font-size:19px}
+    .bet-grid{grid-template-columns:1fr}
+    .wheel-side{flex-direction:row;justify-content:center;flex-wrap:wrap}
+    .wheel{width:130px;height:130px}
+    .range-grid,.grid2,.summary-grid{grid-template-columns:1fr}
+    .api-config{grid-template-columns:1fr 1fr}
+    .chatbar{grid-template-columns:1fr 1fr}
+    .chatbar textarea{grid-column:1/-1}
+    .bookrow{grid-template-columns:100px 1fr 44px}
+    .filters label{flex:1 1 100%}
+    .modal{padding:2vh 8px}
+    .modal-box{padding:16px}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">🥋</div>
+    <div>
+      <h1>FDE Field Dojo</h1>
+      <div class="sub">Entrenamiento táctico · <span id="dataCounts">grafo</span></div>
+    </div>
+  </div>
+  <nav class="mainnav">
+    <button class="navbtn active" data-mode="reflex">⚡ Tactical Reflex</button>
+    <button class="navbtn" data-mode="calibration">🎯 Calibración 90% CI</button>
+    <button class="navbtn" data-mode="bootcamp">🏛️ 5-Day Bootcamp</button>
+    <button class="navbtn" data-mode="sparring">🥊 Sparring</button>
+    <a class="navlink" href="index.html">🕸 Grafo</a>
+  </nav>
+  <div class="hud" id="hud"></div>
+</header>
+
+<main>
+  <!-- ================= MODE 1 · TACTICAL REFLEX ================= -->
+  <section id="mode-reflex" class="mode">
+    <div class="mode-head">
+      <div>
+        <h2>⚡ Tactical Reflex Dojo</h2>
+        <p class="lead">Diagnóstico primero, guion después. Cada respuesta mueve tu HUD y entrena nodos reales del grafo: trampas, técnicas y prácticas FDE.</p>
+      </div>
+      <div class="mode-stats" id="reflexStats"></div>
+    </div>
+
+    <div class="card filters">
+      <label>Fase del despliegue
+        <select id="phaseFilter">
+          <option value="all">Todas las fases</option>
+          <option value="Discovery &amp; Contracting">Discovery &amp; Contracting</option>
+          <option value="Diagnosis &amp; Measurement">Diagnosis &amp; Measurement</option>
+          <option value="Resistance &amp; Change">Resistance &amp; Change</option>
+          <option value="Executive Synthesis">Executive Synthesis</option>
+        </select>
+      </label>
+      <label>Libro / capa
+        <select id="bookFilter"><option value="all">Todos los libros</option></select>
+      </label>
+      <label class="check"><input type="checkbox" id="failedOnly"> Solo fallados (needs review)</label>
+      <button id="weakBtn" class="btn warn">🎯 Entrenar mis puntos débiles</button>
+      <button id="palantirBtn" class="btn">🏛️ Solo Casos Palantir (<span id="palantirCount">6</span>)</button>
+      <button id="dueBtn" class="btn ghost">⏱ Repaso espaciado (<span id="dueCount">0</span>)</button>
+      <button id="randomBtn" class="btn">🎲 Escenario aleatorio</button>
+      <button id="clearNode" class="btn ghost" hidden>✕ Quitar filtro de nodo</button>
+    </div>
+    <div id="nodeBanner" class="banner" hidden></div>
+
+    <div class="reflex-layout">
+      <div id="scenarioCard" class="card scenario"></div>
+      <aside class="card side">
+        <h3>📋 Bitácora del operador</h3>
+        <div id="queueInfo" class="queue"></div>
+        <h4>Últimos combates</h4>
+        <div id="sessionLog" class="log"></div>
+        <button id="statsBtn2" class="btn" style="width:100%">📊 Ver progreso completo</button>
+        <p class="hint small" style="margin-top:10px">Teclas: <code>1–4</code> eligen opción · <code>Esc</code> cierra paneles.</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ================= MODE 2 · CALIBRATION ================= -->
+  <section id="mode-calibration" class="mode" hidden>
+    <div class="mode-head">
+      <div>
+        <h2>🎯 Hubbard 90% CI &amp; Equivalent Bet Trainer</h2>
+        <p class="lead">Capítulo 5 de <em>How to Measure Anything</em>: construye intervalos del 90%, somételos a la apuesta equivalente y mide tu calibración real.</p>
+      </div>
+      <div class="mode-stats" id="calStats"></div>
+    </div>
+    <div class="cal-layout">
+      <div id="calCard" class="card"></div>
+      <aside class="card cal-side">
+        <h3>📈 Curva de calibración</h3>
+        <div id="calChart" class="chart"></div>
+        <div id="calSummary"></div>
+        <div class="row" style="margin-top:12px">
+          <button id="calReset" class="btn ghost">🔄 Nueva ronda</button>
+          <button id="calReinforce" class="btn" hidden>🔁 Reforzar falladas</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ================= MODE 4 · 5-DAY AIP BOOTCAMP ================= -->
+  <section id="mode-bootcamp" class="mode" hidden>
+    <div class="mode-head">
+      <div>
+        <h2>🏛️ 5-Day AIP Bootcamp Gauntlet</h2>
+        <p class="lead">Dos campañas encadenadas de lunes a viernes: contracting, gemba con datos sucios, prototipo con guardrails, rebelión de operadores y go/no-go ejecutivo. Empiezas en 55 en las cuatro barras; cada decisión mueve el HUD real.</p>
+      </div>
+      <div class="mode-stats" id="bootStats"></div>
+    </div>
+    <div id="bootRules" class="banner"></div>
+    <div id="bootRoot"></div>
+  </section>
+
+  <!-- ================= MODE 3 · LIVE SPARRING ================= -->
+  <section id="mode-sparring" class="mode" hidden>
+    <div class="mode-head">
+      <div>
+        <h2>🥊 Live Sparring Generator &amp; Rubric Evaluator</h2>
+        <p class="lead">Misiones de 8 turnos generadas desde el grafo. Juégalas con tu LLM favorito por copy-paste o conecta una API key opcional (BYOK).</p>
+      </div>
+      <div class="mode-stats" id="sparStats"></div>
+    </div>
+    <div class="spar-layout">
+      <aside class="card mission">
+        <h3>1 · Construir la misión</h3>
+        <label>Contexto operativo<select id="sparContext"></select></label>
+        <p id="sparContextBrief" class="hint small" style="margin-top:-4px"></p>
+        <label>Práctica objetivo (FDEPractice)<select id="sparPractice"></select></label>
+        <div class="grid2">
+          <label>Trampa oculta #1<select id="sparPitfall1"></select></label>
+          <label>Trampa oculta #2<select id="sparPitfall2"></select></label>
+        </div>
+        <label>Objeción emocional secreta<select id="sparObjection"></select></label>
+        <label class="check"><input type="checkbox" id="sparSpoiler" checked> Mostrar estado oculto (spoiler)</label>
+        <button id="sparRandom" class="btn warn" style="width:100%">🎲 Random Boss Fight</button>
+        <div id="sparHidden" class="hidden-state" style="margin-top:12px"></div>
+        <p class="hint small">Las trampas y la práctica son nodos reales de <code>graph.json</code>. La auditoría final se califica exactamente contra ellos.</p>
+      </aside>
+
+      <div class="card spar-main">
+        <div class="tabs">
+          <button data-tab="prompt" class="active">A · Prompt para LLM (sin API key)</button>
+          <button data-tab="chat">B · Chat BYOK opcional</button>
+        </div>
+        <div id="tab-prompt" class="tabpane">
+          <p class="hint">Copia este prompt en Claude, ChatGPT o Gemini como mensaje de sistema (o primer mensaje). El LLM interpretará al stakeholder durante 8 turnos y al escribir <code>/evaluar</code> emitirá la auditoría JSON.</p>
+          <pre id="promptBox" class="promptbox"></pre>
+          <div class="row">
+            <button id="copyPrompt" class="btn primary">📋 Copiar prompt</button>
+            <button id="downloadPrompt" class="btn">⬇ Descargar .md</button>
+            <span id="copyNote" class="hint small"></span>
+          </div>
+        </div>
+        <div id="tab-chat" class="tabpane" hidden>
+          <div class="api-config">
+            <label>Proveedor<select id="apiProvider">
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="gemini">Google Gemini</option>
+            </select></label>
+            <label>Modelo<input id="apiModel" list="modelList" placeholder="gpt-4o-mini"><datalist id="modelList"></datalist></label>
+            <label>API key<input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+            <button id="apiSave" class="btn">Guardar</button>
+          </div>
+          <p class="hint small">La key se guarda solo en este navegador (<code>fde_dojo_api_v1</code>) y las llamadas van directas del navegador al proveedor. Si tu red bloquea CORS, usa la Opción A.</p>
+          <div id="chatLog" class="chatlog"></div>
+          <div class="voicebar">
+            <label>Voz<select id="speechLang">
+              <option value="es-CL">Español (CL)</option>
+              <option value="en-US">English (US)</option>
+            </select></label>
+            <button id="voiceBtn" class="btn" type="button">🎙️ Hablar (Push-to-Talk)</button>
+            <span id="voiceStatus" class="hint small">Pulsa para dictar tu intervención; vuelve a pulsar para detener.</span>
+          </div>
+          <div class="chatbar">
+            <textarea id="chatInput" rows="2" placeholder="Escribe tu intervención… (/evaluar para auditar)"></textarea>
+            <button id="chatSend" class="btn primary">Enviar</button>
+            <button id="chatEval" class="btn warn">Evaluar ahora</button>
+            <button id="chatReset" class="btn ghost">Nueva sesión</button>
+          </div>
+          <div id="chatMeta" class="hint small" style="margin-top:8px"></div>
+          <div id="rubricResult"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ================= MODALS ================= -->
+<div id="nodeModal" class="modal" hidden>
+  <div class="modal-box">
+    <button class="modal-close" aria-label="Cerrar">✕</button>
+    <div id="nodeBody"></div>
+  </div>
+</div>
+<div id="playbookModal" class="modal" hidden>
+  <div class="modal-box wide">
+    <button class="modal-close" aria-label="Cerrar">✕</button>
+    <div id="playbookBody"></div>
+  </div>
+</div>
+<div id="statsModal" class="modal" hidden>
+  <div class="modal-box wide">
+    <button class="modal-close" aria-label="Cerrar">✕</button>
+    <div id="statsBody"></div>
+  </div>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const DATA = __DOJO_DATA__;
+
+/* =====================================================================
+   0 · CORE: constants, state, storage, HUD, utilities
+   ===================================================================== */
+"use strict";
+
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const round1 = (n) => Math.round(n * 10) / 10;
+const fmtNum = (n) => (Math.abs(n) >= 1000 ? n.toLocaleString("es-ES") : String(round1(n)));
+const fmtDate = (ts) => new Date(ts).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+const dayKey = (ts = Date.now()) => new Date(ts).toISOString().slice(0, 10);
+
+const STORAGE_KEY = "fde_dojo_state_v1";
+const API_STORE_KEY = "fde_dojo_api_v1";
+
+const METRICS = [
+  { key: "TQ",  label: "Trust Quotient",    color: "#f5a623", desc: "Maister: credibilidad + fiabilidad + intimidad, dividido por auto-orientación. Sube al escuchar y nombrar; cae con la necesidad de tener razón y el pitch prematuro." },
+  { key: "SIG", label: "Signal Quality",    color: "#e5487a", desc: "Fitzpatrick & Torres: hechos pasados específicos, historias y compromisos reales. Cae con cumplidos, opiniones futuras y features sin dolor." },
+  { key: "EVI", label: "Information Value", color: "#4f9dff", desc: "Hubbard & Conn: valor esperado de la información. Sube al definir la decisión, muestrear y priorizar el supuesto más riesgoso; cae con la inversión de medición." },
+  { key: "ADP", label: "Adoption Momentum", color: "#3ecf8e", desc: "Block & Heath: contracting 50/50, resistencia nombrada y Rider + Elephant + Path alineados. Cae al pelear la resistencia con más datos." }
+];
+
+const TYPE_COLORS = {
+  Book: "#ffffff", Author: "#c792ea", Concept: "#9aa0aa", Framework: "#a78bfa",
+  Principle: "#facc15", Technique: "#22d3ee", Pitfall: "#fb7185",
+  CrossInsight: "#c792ea", FDEPractice: "#3ecf8e"
+};
+const BOOK_COLORS = {
+  htma: "#4f9dff", ta: "#f5a623", mom: "#e5487a", pp: "#a78bfa", bps: "#22d3ee",
+  sw: "#facc15", fc: "#fb7185", cdh: "#a3e635", fde: "#3ecf8e"
+};
+const BOOKS = DATA.meta.books;
+const BOOK_KEYS = Object.keys(BOOKS);
+const NODES = Object.fromEntries(DATA.nodes.map((n) => [n.id, n]));
+const EDGE_OUT = {}, EDGE_IN = {};
+DATA.edges.forEach((e) => {
+  (EDGE_OUT[e.source] = EDGE_OUT[e.source] || []).push(e);
+  (EDGE_IN[e.target] = EDGE_IN[e.target] || []).push(e);
+});
+const SCENARIOS = DATA.scenarios;
+const PHASE_SHORT = {
+  "Discovery & Contracting": "Discovery",
+  "Diagnosis & Measurement": "Diagnosis",
+  "Resistance & Change": "Resistance",
+  "Executive Synthesis": "Synthesis"
+};
+
+function scenarioNodes(s) {
+  return [...(s.active_pitfalls || []), ...(s.target_techniques || []), ...(s.supporting_nodes || []), s.target_practice].filter(Boolean);
+}
+
+/* Deterministic per-session option shuffle: the correct option is never pinned
+   to the first card, and the order stays stable while the user is in a scenario. */
+const OPTION_CACHE = new Map();
+const SESSION_SEED = (() => {
+  try {
+    let seed = sessionStorage.getItem("fde_dojo_seed_v1");
+    if (!seed) {
+      seed = Math.random().toString(36).slice(2) + "-" + Date.now().toString(36);
+      sessionStorage.setItem("fde_dojo_seed_v1", seed);
+    }
+    return seed;
+  } catch (err) {
+    return "no-session-" + Math.random().toString(36).slice(2);
+  }
+})();
+
+function hashString(value) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffledOptions(items, key, flag) {
+  const cacheKey = `${key}|${SESSION_SEED}|${items.map((o) => o.id).join(",")}`;
+  let ids = OPTION_CACHE.get(cacheKey);
+  if (!ids) {
+    const rng = mulberry32(hashString(cacheKey));
+    const arr = items.slice();
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    if (flag && arr.length > 1 && arr[0][flag]) {
+      const j = 1 + Math.floor(rng() * (arr.length - 1));
+      [arr[0], arr[j]] = [arr[j], arr[0]];
+    }
+    ids = arr.map((o) => o.id);
+    OPTION_CACHE.set(cacheKey, ids);
+  }
+  return ids.map((id) => items.find((o) => o.id === id));
+}
+
+/* ---------- state ---------- */
+function defaultState() {
+  return {
+    version: 1,
+    metrics: { TQ: 50, SIG: 50, EVI: 50, ADP: 50 },
+    xp: 0,
+    streak: 0,
+    lastStudyDay: null,
+    scenarios: {},
+    log: [],
+    calibration: { history: [], rounds: [], round: null },
+    sparring: [],
+    bootcamp: null,
+    lastMode: "reflex",
+    updatedAt: null
+  };
+}
+
+function hydrate(raw) {
+  const base = defaultState();
+  if (!raw || typeof raw !== "object") return base;
+  const s = { ...base, ...raw };
+  s.metrics = { ...base.metrics, ...(raw.metrics || {}) };
+  METRICS.forEach((m) => { s.metrics[m.key] = clamp(Number(s.metrics[m.key]) || 0, 0, 100); });
+  s.scenarios = raw.scenarios && typeof raw.scenarios === "object" ? raw.scenarios : {};
+  s.log = Array.isArray(raw.log) ? raw.log.slice(-40) : [];
+  s.sparring = Array.isArray(raw.sparring) ? raw.sparring.slice(-20) : [];
+  s.calibration = raw.calibration && typeof raw.calibration === "object" ? raw.calibration : base.calibration;
+  s.calibration.history = Array.isArray(s.calibration.history) ? s.calibration.history : [];
+  s.calibration.rounds = Array.isArray(s.calibration.rounds) ? s.calibration.rounds : [];
+  s.bootcamp = raw.bootcamp && typeof raw.bootcamp === "object" && raw.bootcamp.campaignId ? raw.bootcamp : null;
+  if (s.bootcamp) {
+    if (!Array.isArray(s.bootcamp.history)) s.bootcamp.history = [];
+    if (typeof s.bootcamp.stageIndex !== "number" || s.bootcamp.stageIndex < 0 || s.bootcamp.stageIndex > 4) s.bootcamp = null;
+  }
+  s.xp = Math.max(0, Number(raw.xp) || 0);
+  s.streak = Math.max(0, Number(raw.streak) || 0);
+  return s;
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return hydrate(raw ? JSON.parse(raw) : null);
+  } catch (err) {
+    console.warn("No se pudo leer el estado local:", err);
+    return defaultState();
+  }
+}
+
+const state = loadState();
+
+function saveState() {
+  state.updatedAt = Date.now();
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    toast("No se pudo guardar el progreso (localStorage lleno o bloqueado).", "error");
+    console.warn(err);
+  }
+}
+
+/* ---------- HUD ---------- */
+function renderHUD() {
+  const hud = $("#hud");
+  if (!hud) return;
+  hud.innerHTML =
+    METRICS.map((m) => {
+      const v = Math.round(state.metrics[m.key]);
+      return `<div class="metric" style="--c:${m.color}" title="${esc(m.desc)}">
+        <div class="metric-top"><span class="mlabel">${m.key}</span><b class="mval" data-metric="${m.key}">${v}</b></div>
+        <div class="bar"><i data-bar="${m.key}" style="width:${v}%"></i></div>
+      </div>`;
+    }).join("") +
+    `<div class="hud-extra">
+      <span title="Puntos de experiencia">⭐ <b id="xpValue">${state.xp}</b></span>
+      <span title="Días consecutivos de entrenamiento">🔥 <b id="streakValue">${state.streak}</b></span>
+      <button class="iconbtn" id="openStats" title="Ver progreso completo">📊</button>
+    </div>`;
+  const btn = $("#openStats");
+  if (btn) btn.onclick = openStats;
+}
+
+function applyDeltas(deltas, opts = {}) {
+  const changes = [];
+  METRICS.forEach((m) => {
+    const d = Number(deltas[m.key] || 0);
+    if (!d) return;
+    const before = state.metrics[m.key];
+    const after = clamp(before + d, 0, 100);
+    state.metrics[m.key] = after;
+    const valEl = $(`[data-metric="${m.key}"]`);
+    const barEl = $(`[data-bar="${m.key}"]`);
+    if (valEl) valEl.textContent = Math.round(after);
+    if (barEl) barEl.style.width = after + "%";
+    const metricEl = valEl ? valEl.closest(".metric") : null;
+    if (metricEl) {
+      const float = document.createElement("span");
+      float.className = "float" + (d < 0 ? " down" : "");
+      float.textContent = (d > 0 ? "+" : "") + d;
+      metricEl.appendChild(float);
+      setTimeout(() => float.remove(), 1300);
+    }
+    changes.push(`${m.key} ${d > 0 ? "+" : ""}${d}`);
+  });
+  saveState();
+  if (!opts.silent && changes.length) toast(changes.join("  ·  "), "info");
+}
+
+function addXP(n) {
+  state.xp = Math.max(0, state.xp + Math.round(n));
+  const el = $("#xpValue");
+  if (el) el.textContent = state.xp;
+  saveState();
+}
+
+function touchStudyDay() {
+  const today = dayKey();
+  if (state.lastStudyDay === today) return;
+  const yesterday = dayKey(Date.now() - 86400000);
+  state.streak = state.lastStudyDay === yesterday ? state.streak + 1 : 1;
+  state.lastStudyDay = today;
+  const el = $("#streakValue");
+  if (el) el.textContent = state.streak;
+  saveState();
+}
+
+/* ---------- toasts & modals ---------- */
+let toastTimer = null;
+function toast(message, kind = "info") {
+  const el = $("#toast");
+  if (!el) return;
+  el.className = "toast " + kind;
+  el.textContent = message;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 3600);
+}
+
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.hidden = false;
+  document.body.style.overflow = "hidden";
+  const box = modal.querySelector(".modal-box");
+  if (box) box.scrollTop = 0;
+}
+
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.hidden = true;
+  if (!$$(".modal:not([hidden])").length) document.body.style.overflow = "";
+}
+
+$$(".modal").forEach((modal) => {
+  modal.addEventListener("click", (ev) => { if (ev.target === modal) closeModal(modal.id); });
+  const close = modal.querySelector(".modal-close");
+  if (close) close.addEventListener("click", () => closeModal(modal.id));
+});
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape") $$(".modal:not([hidden])").forEach((m) => closeModal(m.id));
+});
+
+/* ---------- node pills, node card, playbook ---------- */
+function nodePill(id, extraClass = "") {
+  const n = NODES[id];
+  if (!n) return "";
+  const color = TYPE_COLORS[n.type] || "#8ab4f8";
+  return `<button type="button" class="pill node ${extraClass}" data-node="${esc(id)}" style="--c:${color}" title="${esc(n.type)} · ${esc(n.label)}">${esc(n.label)}</button>`;
+}
+
+function openNode(id) {
+  const n = NODES[id];
+  if (!n) { toast("Nodo no encontrado: " + id, "error"); return; }
+  const out = EDGE_OUT[id] || [];
+  const inc = EDGE_IN[id] || [];
+  const resources = (DATA.resources || []).filter((r) => r.node_id === id);
+  const training = SCENARIOS.filter((s) => scenarioNodes(s).includes(id));
+  const dossier = DATA.dossiers ? DATA.dossiers[n.book] : null;
+
+  const relationList = (edges, dir) => {
+    if (!edges.length) return `<li class="muted">Sin conexiones ${dir === "out" ? "salientes" : "entrantes"}.</li>`;
+    return edges.map((e) => {
+      const otherId = dir === "out" ? e.target : e.source;
+      const other = NODES[otherId];
+      return `<li><span class="rel">${esc(e.relation)}</span> ${dir === "out" ? "→" : "←"} <a href="#" data-node="${esc(otherId)}">${esc(other ? other.label : otherId)}</a></li>`;
+    }).join("");
+  };
+
+  $("#nodeBody").innerHTML = `
+    <div class="node-head">
+      <span class="pill" style="--c:${TYPE_COLORS[n.type] || "#8ab4f8"}">${esc(n.type)}</span>
+      <span class="pill book" style="--c:${BOOK_COLORS[n.book] || "#9aa0aa"}">${esc(BOOKS[n.book] || n.book)}</span>
+      ${training.length ? `<span class="pill ok">${training.length} escenario${training.length === 1 ? "" : "s"}</span>` : ""}
+    </div>
+    <h2>${esc(n.label)}</h2>
+    <p class="node-desc">${esc(n.description)}</p>
+    <p class="muted small"><code>${esc(n.id)}</code></p>
+    ${resources.length ? `<h4>Recursos externos</h4><ul class="links">${resources.map((r) => `<li><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)} ↗</a> <span class="muted">(${esc(r.kind)})</span></li>`).join("")}</ul>` : ""}
+    <h4>Conexiones salientes (${out.length})</h4>
+    <ul class="relations">${relationList(out, "out")}</ul>
+    <h4>Referenciado por (${inc.length})</h4>
+    <ul class="relations">${relationList(inc, "in")}</ul>
+    <div class="row" style="margin-top:14px">
+      <a class="btn" href="index.html#${encodeURIComponent(n.id)}" target="_blank" rel="noopener">🕸 Abrir en el grafo</a>
+      ${training.length ? `<button class="btn primary" id="trainNodeBtn">🎯 Entrenar este nodo (${training.length})</button>` : ""}
+      ${dossier && n.book !== "fde" ? `<button class="btn" id="nodePlaybookBtn">📖 Field Playbook ${n.book.toUpperCase()}</button>` : ""}
+    </div>`;
+
+  const trainBtn = $("#trainNodeBtn");
+  if (trainBtn) trainBtn.onclick = () => { closeModal("nodeModal"); setNodeFilter(id); };
+  const pbBtn = $("#nodePlaybookBtn");
+  if (pbBtn) pbBtn.onclick = () => openPlaybook(n.book);
+  openModal("nodeModal");
+}
+
+document.addEventListener("click", (ev) => {
+  const target = ev.target.closest("[data-node]");
+  if (!target) return;
+  ev.preventDefault();
+  openNode(target.getAttribute("data-node"));
+});
+
+function openPlaybook(book) {
+  const dossier = DATA.dossiers ? DATA.dossiers[book] : null;
+  if (!dossier) { toast("No hay dossier táctico para este libro.", "warn"); return; }
+  $("#playbookBody").innerHTML = `
+    <div class="node-head">
+      <span class="pill book" style="--c:${BOOK_COLORS[book] || "#9aa0aa"}">${esc(BOOKS[book] || book)}</span>
+      <span class="pill">${esc(dossier.title || "Dossier")}</span>
+    </div>
+    <h2>Field Playbook · ${esc(book.toUpperCase())}</h2>
+    <div class="markdown">${renderMarkdown(dossier.full)}</div>`;
+  openModal("playbookModal");
+}
+
+/* ---------- minimal markdown renderer (dossiers & docs) ---------- */
+function renderMarkdown(md) {
+  if (!md) return "";
+  const lines = String(md).split(/\r?\n/);
+  let html = "", inList = false, inTable = false, headerRow = false;
+  const fmt = (s) => esc(s)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1 ↗</a>');
+
+  const closeList = () => { if (inList) { html += "</ul>"; inList = false; } };
+  const closeTable = () => { if (inTable) { html += "</table>"; inTable = false; } };
+
+  for (const line of lines) {
+    const raw = line.trim();
+    if (!raw) { closeList(); closeTable(); continue; }
+    if (raw === "---" || raw === "***") { closeList(); closeTable(); html += "<hr>"; continue; }
+    if (raw.startsWith("|") && raw.endsWith("|")) {
+      closeList();
+      if (/^\|[\s\-:|]+\|$/.test(raw)) continue;
+      if (!inTable) { html += "<table>"; inTable = true; headerRow = true; }
+      const cells = raw.slice(1, -1).split("|").map((c) => fmt(c.trim()));
+      const tag = headerRow ? "th" : "td";
+      html += "<tr>" + cells.map((c) => `<${tag}>${c}</${tag}>`).join("") + "</tr>";
+      headerRow = false;
+      continue;
+    }
+    closeTable();
+    if (raw.startsWith("### ")) { closeList(); html += `<h4>${fmt(raw.slice(4))}</h4>`; }
+    else if (raw.startsWith("## ")) { closeList(); html += `<h3>${fmt(raw.slice(3))}</h3>`; }
+    else if (raw.startsWith("# ")) { closeList(); html += `<h2>${fmt(raw.slice(2))}</h2>`; }
+    else if (raw.startsWith("> ")) { closeList(); html += `<blockquote>${fmt(raw.slice(2))}</blockquote>`; }
+    else if (raw.startsWith("* ") || raw.startsWith("- ") || /^\d+\.\s/.test(raw)) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      html += `<li>${fmt(raw.replace(/^(\*|-|\d+\.)\s+/, ""))}</li>`;
+    } else { closeList(); html += `<p>${fmt(raw)}</p>`; }
+  }
+  closeList(); closeTable();
+  return html;
+}
+
+/* ---------- stats modal ---------- */
+function bookAccuracy() {
+  const map = {};
+  SCENARIOS.forEach((s) => {
+    const st = state.scenarios[s.id];
+    if (!st) return;
+    const m = map[s.book] || (map[s.book] = { book: s.book, diagRight: 0, diagTries: 0, best: 0, tries: 0 });
+    m.diagRight += st.diagRight || 0;
+    m.diagTries += st.diagTries || 0;
+    m.best += st.bestRight || 0;
+    m.tries += st.actionTries || 0;
+  });
+  return map;
+}
+
+function dueScenarios() {
+  const now = Date.now();
+  return SCENARIOS.filter((s) => {
+    const st = state.scenarios[s.id];
+    return st && st.due && st.due <= now;
+  });
+}
+
+function openStats() {
+  const entries = Object.entries(state.scenarios);
+  const diagRight = entries.reduce((a, [, s]) => a + (s.diagRight || 0), 0);
+  const diagTries = entries.reduce((a, [, s]) => a + (s.diagTries || 0), 0);
+  const bestRight = entries.reduce((a, [, s]) => a + (s.bestRight || 0), 0);
+  const actionTries = entries.reduce((a, [, s]) => a + (s.actionTries || 0), 0);
+  const needsReview = SCENARIOS.filter((s) => state.scenarios[s.id] && state.scenarios[s.id].needsReview);
+  const due = dueScenarios();
+  const acc = bookAccuracy();
+  const cal = (typeof getCalibrationStats === "function") ? getCalibrationStats() : null;
+
+  $("#statsBody").innerHTML = `
+    <h2>📊 Progreso del operador</h2>
+    <p class="muted small">Persistido en <code>localStorage["${STORAGE_KEY}"]</code> · última actualización ${state.updatedAt ? fmtDate(state.updatedAt) : "—"}</p>
+    <div class="statgrid">
+      <div class="card"><div class="n">${state.xp}</div><div class="l">XP total</div></div>
+      <div class="card"><div class="n">${state.streak}</div><div class="l">Días seguidos</div></div>
+      <div class="card"><div class="n">${entries.length}/${SCENARIOS.length}</div><div class="l">Escenarios vistos</div></div>
+      <div class="card"><div class="n">${due.length}</div><div class="l">Repaso pendiente</div></div>
+    </div>
+
+    <h3>Cómo leer tu HUD</h3>
+    ${METRICS.map((m) => `<div style="margin:8px 0">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><b style="color:${m.color}">${m.key} · ${m.label}</b><span>${Math.round(state.metrics[m.key])}/100</span></div>
+      <div class="bar" style="--c:${m.color}"><i style="width:${state.metrics[m.key]}%"></i></div>
+      <p class="muted small" style="margin:4px 0 0">${esc(m.desc)}</p>
+    </div>`).join("")}
+
+    <h3>Precisión por libro</h3>
+    <div class="bookstats">
+      ${BOOK_KEYS.map((b) => {
+        const m = acc[b] || { diagRight: 0, diagTries: 0, best: 0, tries: 0 };
+        const pct = m.diagTries ? Math.round(m.diagRight / m.diagTries * 100) : 0;
+        return `<div class="bookrow"><span style="color:${BOOK_COLORS[b]}">${esc(b.toUpperCase())} <span class="muted">${esc(BOOKS[b].split(" (")[0])}</span></span>
+          <div class="bar" style="--c:${BOOK_COLORS[b]}"><i style="width:${pct}%"></i></div>
+          <span class="muted">${m.diagTries ? pct + "%" : "—"}</span></div>`;
+      }).join("")}
+    </div>
+    <div class="summary-grid">
+      <div class="card"><div class="n">${diagTries ? Math.round(diagRight / diagTries * 100) : 0}%</div><div class="l">Diagnóstico</div></div>
+      <div class="card"><div class="n">${actionTries ? Math.round(bestRight / actionTries * 100) : 0}%</div><div class="l">Acción óptima</div></div>
+      <div class="card"><div class="n">${needsReview.length}</div><div class="l">Por reforzar</div></div>
+    </div>
+
+    ${cal ? `<h3>Calibración 90% CI</h3>
+      <p class="small">${cal.n ? `${cal.n} estimaciones · ${cal.hits} aciertos · ${Math.round(cal.rate)}% real vs 90% objetivo. Veredicto: <b style="color:${cal.v.tone === "ok" ? "var(--ok)" : cal.v.tone === "danger" ? "var(--danger)" : "var(--warn)"}">${esc(cal.v.label)}</b>.` : "Aún no has completado estimaciones."}</p>` : ""}
+
+    <h3>Sparring reciente</h3>
+    ${state.sparring.length ? `<ul class="relations">${state.sparring.slice(-6).reverse().map((sp) => `<li><b>${sp.overall}/100</b> · ${esc(sp.contextLabel || "")} · ${fmtDate(sp.at)}</li>`).join("")}</ul>` : `<p class="muted small">Sin sesiones de sparring todavía.</p>`}
+
+    <div class="row" style="margin-top:18px">
+      <button class="btn" id="exportState">⬇ Exportar progreso (.json)</button>
+      <button class="btn ghost" id="resetState">🗑 Reiniciar todo</button>
+    </div>`;
+
+  $("#exportState").onclick = () => {
+    downloadFile("fde-dojo-progress.json", JSON.stringify(state, null, 2), "application/json");
+  };
+  $("#resetState").onclick = () => {
+    if (confirm("Esto borra XP, métricas, repaso espaciado y calibración de este navegador. ¿Continuar?")) {
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+  };
+  openModal("statsModal");
+}
+
+function downloadFile(filename, content, mime = "text/plain") {
+  const blob = new Blob([content], { type: mime + ";charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/* =====================================================================
+   1 · TACTICAL REFLEX DOJO
+   ===================================================================== */
+const REFLEX = {
+  phase: "all",
+  book: "all",
+  failedOnly: false,
+  palantirOnly: false,
+  nodeFilter: null,
+  order: [],
+  idx: 0,
+  currentId: null,
+  step: 1,
+  diagChoice: null,
+  actionChoice: null,
+  finished: false
+};
+
+const BOX_HOURS = [0, 24, 72, 168, 336, 720];
+
+function scheduleReview(st, good) {
+  if (good) {
+    st.box = Math.min((st.box || 0) + 1, BOX_HOURS.length - 1);
+    st.due = Date.now() + BOX_HOURS[st.box] * 3600000;
+    st.needsReview = false;
+  } else {
+    st.box = 0;
+    st.due = Date.now() + 10 * 60000;
+    st.needsReview = true;
+  }
+}
+
+function filteredScenarios() {
+  return SCENARIOS.filter((s) => {
+    if (REFLEX.phase !== "all" && s.phase !== REFLEX.phase) return false;
+    if (REFLEX.book !== "all" && s.book !== REFLEX.book) return false;
+    if (REFLEX.palantirOnly && s.case_study !== "palantir") return false;
+    const st = state.scenarios[s.id];
+    if (REFLEX.failedOnly && !(st && st.needsReview)) return false;
+    if (REFLEX.nodeFilter && !scenarioNodes(s).includes(REFLEX.nodeFilter)) return false;
+    return true;
+  });
+}
+
+function buildOrder(shuffle = false) {
+  const now = Date.now();
+  const list = filteredScenarios();
+  list.sort((a, b) => {
+    const sa = state.scenarios[a.id] || {};
+    const sb = state.scenarios[b.id] || {};
+    const da = sa.due ? Math.min(sa.due, now) : 0;
+    const db = sb.due ? Math.min(sb.due, now) : 0;
+    if (da !== db) return da - db;
+    return SCENARIOS.indexOf(a) - SCENARIOS.indexOf(b);
+  });
+  if (shuffle) {
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+  }
+  REFLEX.order = list;
+  REFLEX.idx = 0;
+  return list;
+}
+
+function renderReflexStats() {
+  const seen = Object.keys(state.scenarios).length;
+  const diagTries = Object.values(state.scenarios).reduce((a, s) => a + (s.diagTries || 0), 0);
+  const diagRight = Object.values(state.scenarios).reduce((a, s) => a + (s.diagRight || 0), 0);
+  const pct = diagTries ? Math.round(diagRight / diagTries * 100) : 0;
+  const due = dueScenarios().length;
+  const dueEl = $("#dueCount");
+  if (dueEl) dueEl.textContent = due;
+  const pos = REFLEX.order.length ? REFLEX.idx + 1 : 0;
+  $("#reflexStats").innerHTML = `
+    <span class="pill">${pos}/${REFLEX.order.length || filteredScenarios().length} escenarios</span>
+    <span class="pill book" style="--c:var(--evi)">${seen}/${SCENARIOS.length} vistos</span>
+    <span class="pill ${pct >= 70 ? "ok" : "warn"}" style="--c:${pct >= 70 ? "var(--ok)" : "var(--warn)"}">${pct}% diagnóstico</span>
+    <span class="pill ${due ? "warn" : ""}" style="--c:${due ? "var(--warn)" : "var(--muted)"}">${due} en repaso</span>
+    ${REFLEX.palantirOnly ? '<span class="pill" style="--c:#f5a623">🏛️ Palantir</span>' : ""}`;
+}
+
+function renderReflexSide() {
+  const seen = Object.keys(state.scenarios).length;
+  const diagTries = Object.values(state.scenarios).reduce((a, s) => a + (s.diagTries || 0), 0);
+  const diagRight = Object.values(state.scenarios).reduce((a, s) => a + (s.diagRight || 0), 0);
+  const pct = diagTries ? Math.round(diagRight / diagTries * 100) : 0;
+  const needsReview = SCENARIOS.filter((s) => state.scenarios[s.id] && state.scenarios[s.id].needsReview).length;
+  const due = dueScenarios().length;
+
+  $("#queueInfo").innerHTML = `
+    <div class="queue-row"><span>Repaso pendiente</span><b>${due}</b></div>
+    <div class="queue-row"><span>Fallados por reforzar</span><b>${needsReview}</b></div>
+    <div class="queue-row"><span>Escenarios completados</span><b>${seen}/${SCENARIOS.length}</b></div>
+    <div class="queue-row"><span>Acierto de diagnóstico</span><b>${pct}%</b></div>`;
+
+  const recent = state.log.slice(-6).reverse();
+  $("#sessionLog").innerHTML = recent.length
+    ? recent.map((entry) => {
+        const s = SCENARIOS.find((x) => x.id === entry.id);
+        return `<div class="log-item">
+          <span>${entry.diagOk ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'} ${esc(s ? s.title : entry.id)}</span>
+          <span class="muted">+${entry.xp} XP</span>
+        </div>`;
+      }).join("")
+    : `<p class="muted small">Todavía no hay combates registrados. Empieza con el primer escenario.</p>`;
+
+  renderReflexStats();
+}
+
+function renderScenario(s) {
+  const st = state.scenarios[s.id];
+  const practice = NODES[s.target_practice];
+  const attempt = st ? st.attempts : 0;
+  const difficulty = { core: "Core", advanced: "Advanced", boss: "Boss fight" }[s.difficulty || "core"] || "Core";
+  const casePill = s.case_study === "palantir"
+    ? `<span class="pill" style="--c:#f5a623">🏛️ ${esc(s.case_org || "Palantir")} case</span>` : "";
+  const diagOptions = shuffledOptions(s.diagnosis_options, "diag:" + s.id, "is_correct");
+  const actionOptions = shuffledOptions(s.action_options, "action:" + s.id, "is_best");
+
+  $("#scenarioCard").innerHTML = `
+    <div class="scenario-top">
+      <span class="pill">🌐 Capa del grafo</span>
+      <span class="pill">${esc(s.phase)}</span>
+      <span class="pill" style="--c:${TYPE_COLORS.FDEPractice}">🎯 Práctica FDE</span>
+      <span class="pill ${s.difficulty === "boss" ? "danger" : s.difficulty === "advanced" ? "warn" : ""}" style="--c:${s.difficulty === "boss" ? "var(--danger)" : s.difficulty === "advanced" ? "var(--warn)" : "var(--muted)"}">${difficulty}</span>
+      ${casePill}
+      ${st && st.needsReview ? '<span class="pill danger">needs review</span>' : ""}
+      ${attempt ? `<span class="pill">intento ${attempt + 1}</span>` : ""}
+    </div>
+    <h2 class="scen-title">${esc(s.title)}</h2>
+    <p class="context">${esc(s.context)}</p>
+    <blockquote class="quote">
+      <p>${esc(s.stakeholder_quote)}</p>
+      <footer>— ${esc(s.stakeholder_role)}</footer>
+    </blockquote>
+
+    <div class="step" id="step1">
+      <div class="step-head"><span class="stepnum">1</span><h3>Diagnóstico · ¿qué está pasando realmente?</h3></div>
+      <p class="q">${esc(s.diagnosis_question)}</p>
+      <div class="options" id="diagOptions">
+        ${diagOptions.map((o, i) => `
+          <button type="button" class="opt" data-diag="${esc(o.id)}">
+            <span class="opt-letter">${String.fromCharCode(65 + i)}</span>
+            <span class="opt-body">
+              <span class="opt-label">${esc(o.text)}</span>
+              <span class="opt-expl" hidden>${esc(o.explanation)}</span>
+            </span>
+          </button>`).join("")}
+      </div>
+      <div id="diagFeedback"></div>
+    </div>
+
+    <div class="step" id="step2" hidden>
+      <div class="step-head"><span class="stepnum">2</span><h3>Acción · tu jugada en la sala</h3></div>
+      <p class="q">${esc(s.action_question)}</p>
+      <p class="hint small">El guion de cada opción permanece oculto hasta que eliges: decide por criterio, no por longitud ni por nombres de marcos.</p>
+      <div class="options" id="actionOptions">
+        ${actionOptions.map((o, i) => `
+          <button type="button" class="opt" data-action="${esc(o.id)}">
+            <span class="opt-letter">${i + 1}</span>
+            <span class="opt-body">
+              <span class="opt-label"><b>${esc(o.label)}</b></span>
+              <span class="script" hidden>${esc(o.script)}</span>
+            </span>
+          </button>`).join("")}
+      </div>
+    </div>
+    <div id="outcome"></div>`;
+
+  $$("#diagOptions .opt").forEach((btn) => {
+    btn.onclick = () => chooseDiagnosis(s, btn.getAttribute("data-diag"));
+  });
+  $$("#actionOptions .opt").forEach((btn) => {
+    btn.onclick = () => chooseAction(s, btn.getAttribute("data-action"));
+  });
+}
+
+function chooseDiagnosis(s, optId) {
+  if (REFLEX.step !== 1) return;
+  const chosen = s.diagnosis_options.find((o) => o.id === optId);
+  if (!chosen) return;
+  REFLEX.diagChoice = chosen;
+  const correct = s.diagnosis_options.find((o) => o.is_correct);
+  $$("#diagOptions .opt").forEach((btn) => {
+    const opt = s.diagnosis_options.find((o) => o.id === btn.getAttribute("data-diag"));
+    btn.disabled = true;
+    if (opt.is_correct) btn.classList.add("correct");
+    else if (opt.id === chosen.id) btn.classList.add("wrong");
+    else btn.classList.add("dim");
+    if (opt.is_correct || opt.id === chosen.id) {
+      const expl = btn.querySelector(".opt-expl");
+      if (expl) expl.hidden = false;
+    }
+  });
+  $("#diagFeedback").innerHTML = `
+    <div class="feedback ${chosen.is_correct ? "ok" : "bad"}">
+      <b>${chosen.is_correct ? "✓ Diagnóstico correcto." : "✗ Diagnóstico incorrecto."}</b> ${esc(chosen.explanation)}
+      ${chosen.is_correct ? "" : `<br><br><b>Lo que estaba pasando:</b> ${esc(correct.text)}`}
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" id="toStep2Btn">Ir al paso 2 · Acción →</button>
+    </div>`;
+  $("#toStep2Btn").onclick = () => {
+    REFLEX.step = 2;
+    const step2 = $("#step2");
+    step2.hidden = false;
+    step2.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+}
+
+function chooseAction(s, optId) {
+  if (REFLEX.step !== 2 || REFLEX.finished) return;
+  const chosen = s.action_options.find((o) => o.id === optId);
+  if (!chosen) return;
+  REFLEX.actionChoice = chosen;
+  REFLEX.finished = true;
+  const best = s.action_options.find((o) => o.is_best);
+  $$("#actionOptions .opt").forEach((btn) => {
+    const opt = s.action_options.find((o) => o.id === btn.getAttribute("data-action"));
+    btn.disabled = true;
+    if (opt.is_best) btn.classList.add("correct");
+    else if (opt.id === chosen.id) btn.classList.add("wrong");
+    else btn.classList.add("dim");
+    if (opt.is_best || opt.id === chosen.id) {
+      const script = btn.querySelector(".script");
+      if (script) script.hidden = false;
+    }
+  });
+
+  const diagOk = !!(REFLEX.diagChoice && REFLEX.diagChoice.is_correct);
+  const actionOk = !!chosen.is_best;
+  const gained = 5 + (diagOk ? 10 : 0) + (actionOk ? 20 : 0) + (diagOk && actionOk ? 10 : 0);
+
+  applyDeltas(chosen.deltas, { silent: true });
+  addXP(gained);
+  touchStudyDay();
+
+  const st = state.scenarios[s.id] || (state.scenarios[s.id] = {
+    attempts: 0, diagRight: 0, diagTries: 0, bestRight: 0, actionTries: 0, box: 0
+  });
+  st.attempts = (st.attempts || 0) + 1;
+  st.diagTries = (st.diagTries || 0) + 1;
+  st.actionTries = (st.actionTries || 0) + 1;
+  if (diagOk) st.diagRight = (st.diagRight || 0) + 1;
+  if (actionOk) st.bestRight = (st.bestRight || 0) + 1;
+  st.lastAt = Date.now();
+  st.lastDiag = diagOk;
+  st.lastAction = actionOk;
+  scheduleReview(st, diagOk && actionOk);
+
+  state.log.push({ id: s.id, at: Date.now(), diagOk, actionOk, xp: gained });
+  if (state.log.length > 40) state.log = state.log.slice(-40);
+  saveState();
+
+  renderHUD();
+  renderOutcome(s, chosen, best, diagOk, actionOk, gained);
+  renderReflexSide();
+  $("#outcome").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderOutcome(s, chosen, best, diagOk, actionOk, gained) {
+  const pitfallPills = (s.active_pitfalls || []).map((id) => nodePill(id)).join("");
+  const techniquePills = (s.target_techniques || []).map((id) => nodePill(id)).join("");
+  const practicePill = nodePill(s.target_practice);
+  const supportPills = (s.supporting_nodes || []).map((id) => nodePill(id)).join("");
+  const deltaChips = METRICS.map((m) => {
+    const d = Number(chosen.deltas[m.key] || 0);
+    return `<span class="delta ${d < 0 ? "down" : ""}" style="--c:${m.color}">${m.key} ${d > 0 ? "+" : ""}${d}</span>`;
+  }).join("");
+
+  $("#outcome").innerHTML = `
+    <div class="outcome">
+      <div class="outcome-head">
+        <h3>Resultado del combate</h3>
+        <span class="xp">+${gained} XP</span>
+      </div>
+      <div class="result-badges">
+        <span class="pill book" style="--c:${BOOK_COLORS[s.book]}">${esc(BOOKS[s.book])}</span>
+        <span class="pill ${diagOk ? "ok" : "bad"}" style="--c:${diagOk ? "var(--ok)" : "var(--danger)"}">Diagnóstico ${diagOk ? "✓" : "✗"}</span>
+        <span class="pill ${actionOk ? "ok" : "bad"}" style="--c:${actionOk ? "var(--ok)" : "var(--danger)"}">Acción ${actionOk ? "óptima" : "mejorable"}</span>
+        <span class="pill ${diagOk && actionOk ? "ok" : "warn"}" style="--c:${diagOk && actionOk ? "var(--ok)" : "var(--warn)"}">${diagOk && actionOk ? "Repaso desbloqueado" : "A la cola de repaso"}</span>
+      </div>
+      <div class="delta-grid">${deltaChips}</div>
+      <div class="feedback ${actionOk ? "ok" : "bad"}">${esc(chosen.feedback)}</div>
+      ${actionOk ? "" : `<div class="script-block" style="margin-top:12px"><div class="script-label">La respuesta que faltaba</div><p class="script">${esc(best.script)}</p></div>`}
+      <div class="nodes-ref">
+        <h4>Trampas activas</h4><div class="pills">${pitfallPills}</div>
+        <h4>Técnicas objetivo</h4><div class="pills">${techniquePills}</div>
+        <h4>Práctica FDE</h4><div class="pills">${practicePill}</div>
+        ${supportPills ? `<h4>Conceptos de apoyo</h4><div class="pills">${supportPills}</div>` : ""}
+      </div>
+      <div class="row">
+        <button class="btn primary" id="nextScenarioBtn">Siguiente escenario →</button>
+        <button class="btn ghost" id="retryScenarioBtn">↺ Repetir este</button>
+      </div>
+    </div>`;
+
+  $("#nextScenarioBtn").onclick = () => {
+    const list = REFLEX.order.length ? REFLEX.order : SCENARIOS;
+    const pos = Math.max(0, list.findIndex((x) => x.id === s.id));
+    REFLEX.idx = (pos + 1) % list.length;
+    loadScenario(list[REFLEX.idx].id);
+    $("#scenarioCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  $("#retryScenarioBtn").onclick = () => loadScenario(s.id);
+}
+
+function loadScenario(id) {
+  const s = SCENARIOS.find((x) => x.id === id);
+  if (!s) { toast("Escenario no encontrado: " + id, "error"); return; }
+  REFLEX.currentId = id;
+  REFLEX.step = 1;
+  REFLEX.diagChoice = null;
+  REFLEX.actionChoice = null;
+  REFLEX.finished = false;
+  const pos = REFLEX.order.findIndex((x) => x.id === id);
+  if (pos >= 0) REFLEX.idx = pos;
+  renderScenario(s);
+  renderReflexStats();
+}
+
+function renderReflex() {
+  if (!REFLEX.order.length) buildOrder();
+  const list = REFLEX.order;
+  if (!list.length) {
+    $("#scenarioCard").innerHTML = `
+      <div class="empty">
+        <p>No hay escenarios con estos filtros.</p>
+        <p class="small muted">Prueba a quitar el filtro de nodo, el modo "solo fallados" o cambia de fase/libro.</p>
+        <div class="row" style="justify-content:center;margin-top:10px"><button class="btn" id="resetFiltersBtn">Quitar filtros</button></div>
+      </div>`;
+    $("#resetFiltersBtn").onclick = () => resetReflexFilters();
+    renderReflexSide();
+    return;
+  }
+  if (!REFLEX.currentId || !list.some((s) => s.id === REFLEX.currentId)) {
+    REFLEX.idx = 0;
+    loadScenario(list[0].id);
+  } else {
+    renderReflexStats();
+    renderReflexSide();
+  }
+}
+
+function syncReflexControls() {
+  $("#phaseFilter").value = REFLEX.phase;
+  $("#bookFilter").value = REFLEX.book;
+  $("#failedOnly").checked = REFLEX.failedOnly;
+  $("#palantirBtn").classList.toggle("active", REFLEX.palantirOnly);
+  $("#palantirCount").textContent = (DATA.counts && DATA.counts.palantir) || 6;
+  $("#clearNode").hidden = !REFLEX.nodeFilter;
+  const banner = $("#nodeBanner");
+  if (REFLEX.nodeFilter) {
+    const n = NODES[REFLEX.nodeFilter];
+    banner.hidden = false;
+    banner.innerHTML = `<span>Entrenando escenarios que usan <b>${esc(n ? n.label : REFLEX.nodeFilter)}</b> <span class="muted">(${esc(n ? n.type : "nodo")})</span></span>
+      <button class="btn ghost" id="bannerClear">✕ Quitar filtro</button>`;
+    $("#bannerClear").onclick = () => resetReflexFilters();
+  } else {
+    banner.hidden = true;
+  }
+}
+
+function applyReflexFilters() {
+  REFLEX.phase = $("#phaseFilter").value;
+  REFLEX.book = $("#bookFilter").value;
+  REFLEX.failedOnly = $("#failedOnly").checked;
+  REFLEX.palantirOnly = false;
+  buildOrder();
+  REFLEX.currentId = null;
+  renderReflex();
+  syncReflexControls();
+}
+
+function resetReflexFilters() {
+  REFLEX.phase = "all";
+  REFLEX.book = "all";
+  REFLEX.failedOnly = false;
+  REFLEX.palantirOnly = false;
+  REFLEX.nodeFilter = null;
+  buildOrder();
+  REFLEX.currentId = null;
+  renderReflex();
+  syncReflexControls();
+  history.replaceState(null, "", "#mode=reflex");
+}
+
+function setNodeFilter(id) {
+  REFLEX.nodeFilter = id;
+  REFLEX.phase = "all";
+  REFLEX.book = "all";
+  REFLEX.failedOnly = false;
+  REFLEX.palantirOnly = false;
+  buildOrder();
+  REFLEX.currentId = null;
+  syncReflexControls();
+  if (typeof setMode === "function") setMode("reflex", { silent: true });
+  renderReflex();
+  history.replaceState(null, "", "#node=" + encodeURIComponent(id));
+  const n = NODES[id];
+  const count = REFLEX.order.length;
+  toast(count ? `Filtrados ${count} escenarios que entrenan ${n ? n.label : id}.` : `Ningún escenario entrena ${n ? n.label : id} todavía.`, count ? "info" : "warn");
+  $("#scenarioCard").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function focusScenario(id) {
+  const s = SCENARIOS.find((x) => x.id === id);
+  if (!s) return;
+  REFLEX.phase = "all";
+  REFLEX.book = "all";
+  REFLEX.failedOnly = false;
+  REFLEX.palantirOnly = false;
+  REFLEX.nodeFilter = null;
+  buildOrder();
+  const pos = REFLEX.order.findIndex((x) => x.id === id);
+  REFLEX.idx = Math.max(0, pos);
+  loadScenario(id);
+  syncReflexControls();
+  history.replaceState(null, "", "#scen=" + encodeURIComponent(id));
+}
+
+function initReflex() {
+  $("#bookFilter").innerHTML = `<option value="all">Todos los libros</option>` +
+    BOOK_KEYS.map((b) => `<option value="${b}">${esc(BOOKS[b])}</option>`).join("");
+  $("#phaseFilter").onchange = applyReflexFilters;
+  $("#bookFilter").onchange = applyReflexFilters;
+  $("#failedOnly").onchange = applyReflexFilters;
+  $("#weakBtn").onclick = () => {
+    REFLEX.phase = "all";
+    REFLEX.book = "all";
+    REFLEX.nodeFilter = null;
+    REFLEX.palantirOnly = false;
+    REFLEX.failedOnly = true;
+    $("#failedOnly").checked = true;
+    buildOrder();
+    history.replaceState(null, "", "#mode=reflex");
+    REFLEX.currentId = null;
+    renderReflex();
+    syncReflexControls();
+    if (!REFLEX.order.length) toast("Aún no tienes escenarios fallados. El repaso aparece al fallar diagnóstico o acción.", "warn");
+  };
+  $("#palantirBtn").onclick = () => {
+    REFLEX.phase = "all";
+    REFLEX.book = "all";
+    REFLEX.failedOnly = false;
+    REFLEX.nodeFilter = null;
+    REFLEX.palantirOnly = true;
+    buildOrder();
+    REFLEX.currentId = null;
+    renderReflex();
+    syncReflexControls();
+    history.replaceState(null, "", "#mode=reflex");
+    toast(`Casos Palantir: ${REFLEX.order.length} escenarios de campo real.`, "info");
+    $("#scenarioCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  $("#randomBtn").onclick = () => {
+    REFLEX.palantirOnly = false;
+    buildOrder();
+    if (!REFLEX.order.length) { toast("No hay escenarios con estos filtros.", "warn"); return; }
+    const list = REFLEX.order.slice();
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    REFLEX.order = list;
+    REFLEX.currentId = null;
+    renderReflex();
+    syncReflexControls();
+    toast("Escenario aleatorio cargado.", "info");
+  };
+  $("#clearNode").onclick = resetReflexFilters;
+  $("#dueBtn").onclick = () => {
+    const due = dueScenarios();
+    if (!due.length) {
+      toast("No hay repasos vencidos todavía. Completa un escenario o falla uno para programar la cola.", "info");
+      return;
+    }
+    REFLEX.phase = "all";
+    REFLEX.book = "all";
+    REFLEX.nodeFilter = null;
+    REFLEX.failedOnly = false;
+    REFLEX.palantirOnly = false;
+    REFLEX.order = due.slice();
+    REFLEX.idx = 0;
+    REFLEX.currentId = null;
+    syncReflexControls();
+    renderReflex();
+    history.replaceState(null, "", "#mode=reflex");
+    toast(`Cola de repaso espaciado: ${due.length} escenario${due.length === 1 ? "" : "s"} vencido${due.length === 1 ? "" : "s"}.`, "ok");
+  };
+  $("#statsBtn2").onclick = openStats;
+
+  document.addEventListener("keydown", (ev) => {
+    if (!/^[1-4]$/.test(ev.key)) return;
+    if ($("#mode-reflex").hidden) return;
+    if ($$(".modal:not([hidden])").length) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    const container = REFLEX.step === 1 ? "#diagOptions" : "#step2";
+    const btns = $$(`${container} .opt:not(:disabled)`);
+    const btn = btns[Number(ev.key) - 1];
+    if (btn) btn.click();
+  });
+}
+
+/* =====================================================================
+   2 · HUBBARD 90% CI & EQUIVALENT BET TRAINER
+   ===================================================================== */
+const CAL = { stage: "input", qid: null, min: "", max: "", revealResult: null };
+const CAL_TARGET = 90;
+
+function fmtAnswer(n) {
+  return Number(n).toLocaleString("es-ES", { maximumFractionDigits: 3 });
+}
+
+function ensureCalRound() {
+  const cal = state.calibration;
+  const all = DATA.calibration.questions.map((q) => q.id);
+  let round = cal.round;
+  if (!round || !Array.isArray(round.queue) || !round.queue.length) {
+    round = cal.round = { startedAt: Date.now(), queue: all, results: [], summarized: false };
+    saveState();
+  }
+  round.queue = round.queue.filter((id) => DATA.calibration.questions.some((q) => q.id === id));
+  if (!round.queue.length) {
+    round.queue = all;
+    round.results = [];
+    round.summarized = false;
+  }
+  round.results = Array.isArray(round.results) ? round.results : [];
+  return round;
+}
+
+function currentQuestion() {
+  const round = ensureCalRound();
+  const idx = round.results.length;
+  if (idx >= round.queue.length) return null;
+  return DATA.calibration.questions.find((q) => q.id === round.queue[idx]) || null;
+}
+
+function calibrateVerdict(results) {
+  const n = results.length;
+  const hits = results.filter((r) => r.hit).length;
+  const rate = n ? (hits / n) * 100 : 0;
+  const ratios = results
+    .filter((r) => Number.isFinite(r.ratio) && r.ratio > 0)
+    .map((r) => r.ratio)
+    .sort((a, b) => a - b);
+  const median = ratios.length ? ratios[Math.floor(ratios.length / 2)] : 0;
+  const wideCount = results.filter((r) => r.wide).length;
+  let v;
+  if (n < 5) {
+    v = { key: "insufficient", tone: "muted", label: "Muestra insuficiente", text: `Llevas ${n} estimación${n === 1 ? "" : "es"}. Con 5 o más empezamos a diagnosticar tu calibración.` };
+  } else if (rate < 75) {
+    v = { key: "over", tone: "danger", label: "Sobreconfianza", node: "htma_overconfidence", text: `Aciertas ${Math.round(rate)}% de tus rangos cuando esperabas 90%. Tus intervalos son demasiado estrechos: ensancha antes de bloquear.` };
+  } else if (rate > 95) {
+    v = { key: "under", tone: "warn", label: "Subconfianza", text: `Aciertas ${Math.round(rate)}%. Tus rangos son tan amplios que casi siempre aciertas: la apuesta equivalente te haría ganar, pero la estimación no aporta información.` };
+  } else if (rate >= 80 && rate <= 92) {
+    v = { key: "calibrated", tone: "ok", label: "Calibrado", text: `Aciertas ${Math.round(rate)}%, dentro de la banda 80–92%. Tus rangos son informativos y honestos: mantén el criterio.` };
+  } else if (rate < 80) {
+    v = { key: "near", tone: "warn", label: "Cerca: tiende a sobreconfianza", text: `Aciertas ${Math.round(rate)}%, algo por debajo de la banda 80–92%. Ensancha un poco más tus rangos.` };
+  } else {
+    v = { key: "near2", tone: "warn", label: "Ligeramente conservador", text: `Aciertas ${Math.round(rate)}%, por encima de 92%. Puedes estrechar sin perder honestidad.` };
+  }
+  return { n, hits, rate, median, wideCount, v };
+}
+
+function getCalibrationStats() {
+  const results = (state.calibration.history && state.calibration.history.length)
+    ? state.calibration.history
+    : (state.calibration.round ? state.calibration.round.results || [] : []);
+  return calibrateVerdict(results);
+}
+
+function maybeFinishRound(round) {
+  if (round.summarized || round.results.length < round.queue.length) return;
+  const stats = calibrateVerdict(round.results);
+  round.summarized = true;
+  state.calibration.rounds.push({
+    at: Date.now(),
+    n: stats.n,
+    hits: stats.hits,
+    rate: Math.round(stats.rate),
+    verdict: stats.v.label,
+    medianRatio: stats.median
+  });
+  if (state.calibration.rounds.length > 30) state.calibration.rounds = state.calibration.rounds.slice(-30);
+  saveState();
+}
+
+function startCalRound(queueIds) {
+  const all = DATA.calibration.questions.map((q) => q.id);
+  const queue = Array.isArray(queueIds) && queueIds.length
+    ? queueIds.filter((id) => all.includes(id))
+    : all;
+  state.calibration.round = { startedAt: Date.now(), queue, results: [], summarized: false };
+  CAL.stage = "input";
+  CAL.qid = null;
+  CAL.min = "";
+  CAL.max = "";
+  CAL.revealResult = null;
+  saveState();
+  renderCalibration();
+}
+
+function renderCalibration() {
+  ensureCalRound();
+  renderCalStatsHeader();
+  renderCalChart();
+  renderCalSideSummary();
+
+  if (CAL.stage === "revealed" && CAL.revealResult) {
+    renderCalReveal(CAL.revealResult);
+    return;
+  }
+  const q = currentQuestion();
+  if (!q) {
+    renderCalSummary();
+    return;
+  }
+  if (CAL.stage === "bet" && CAL.qid === q.id) renderCalBet(q);
+  else renderCalQuestion(q);
+}
+
+function renderCalStatsHeader() {
+  const round = ensureCalRound();
+  const stats = calibrateVerdict(round.results);
+  const done = round.results.length;
+  const total = round.queue.length;
+  $("#calStats").innerHTML = `
+    <span class="pill">${done}/${total} preguntas</span>
+    <span class="pill ${stats.n && stats.rate >= 80 && stats.rate <= 92 ? "ok" : ""}" style="--c:${stats.n && stats.rate >= 80 && stats.rate <= 92 ? "var(--ok)" : "var(--muted)"}">${stats.n ? Math.round(stats.rate) + "% real" : "sin datos"}</span>
+    <span class="pill">objetivo ${CAL_TARGET}%</span>
+    <span class="pill">${state.calibration.history.length} históricas</span>`;
+}
+
+function renderCalQuestion(q) {
+  const round = ensureCalRound();
+  const pos = round.results.length + 1;
+  const total = round.queue.length;
+  $("#calCard").innerHTML = `
+    <div class="cal-top">
+      <span class="pill">Pregunta ${pos} / ${total}</span>
+      <span class="pill book" style="--c:var(--accent)">${esc(q.category)}</span>
+      <span class="pill">objetivo 90%</span>
+    </div>
+    <h2 class="cal-prompt">${esc(q.prompt)}</h2>
+    <p class="muted">Unidad de respuesta: <b>${esc(q.unit)}</b>${q.magnitude_hint ? ' · <button class="linkbtn" id="hintToggle">ver pista de magnitud</button>' : ""}</p>
+    <div id="hintBox" class="hintbox" hidden>${esc(q.magnitude_hint || "")}</div>
+    <div class="range-grid">
+      <label>Límite inferior (min)
+        <div class="inputwrap"><input id="calMin" type="number" step="any" inputmode="decimal" value="${esc(CAL.min)}" placeholder="0"><span>${esc(q.unit)}</span></div>
+      </label>
+      <label>Límite superior (max)
+        <div class="inputwrap"><input id="calMax" type="number" step="any" inputmode="decimal" value="${esc(CAL.max)}" placeholder="100"><span>${esc(q.unit)}</span></div>
+      </label>
+    </div>
+    <p class="hint">Construye un intervalo que contenga el valor real con 90% de confianza. No busques exactitud: busca honestidad. La apuesta equivalente te obligará a comprobarlo.</p>
+    <div class="row">
+      <button class="btn primary" id="calSubmit">Someter a la apuesta equivalente →</button>
+    </div>`;
+
+  const hintBtn = $("#hintToggle");
+  if (hintBtn) hintBtn.onclick = () => { $("#hintBox").hidden = !$("#hintBox").hidden; };
+  $("#calSubmit").onclick = () => {
+    const minRaw = $("#calMin").value.trim();
+    const maxRaw = $("#calMax").value.trim();
+    const min = Number(minRaw);
+    const max = Number(maxRaw);
+    if (!minRaw || !maxRaw || !Number.isFinite(min) || !Number.isFinite(max)) {
+      toast("Escribe ambos límites numéricos antes de continuar.", "warn");
+      return;
+    }
+    if (min >= max) {
+      toast("El límite inferior debe ser menor que el superior.", "warn");
+      return;
+    }
+    if (q.unit === "%" && (min < 0 || max > 100)) {
+      toast("Para porcentajes usa un rango dentro de 0–100.", "warn");
+      return;
+    }
+    CAL.qid = q.id;
+    CAL.min = minRaw;
+    CAL.max = maxRaw;
+    CAL.stage = "bet";
+    renderCalibration();
+  };
+}
+
+function renderCalBet(q) {
+  const min = Number(CAL.min);
+  const max = Number(CAL.max);
+  const round = ensureCalRound();
+  const pos = round.results.length + 1;
+  $("#calCard").innerHTML = `
+    <div class="cal-top">
+      <span class="pill">Pregunta ${pos} / ${round.queue.length}</span>
+      <span class="pill book" style="--c:var(--accent)">${esc(q.category)}</span>
+      <span class="pill warn" style="--c:var(--warn)">apuesta equivalente</span>
+    </div>
+    <h2 class="cal-prompt" style="font-size:17px">${esc(q.prompt)}</h2>
+    <div class="bet-grid">
+      <div class="wheel-side">
+        <div class="wheel-pointer"></div>
+        <div class="wheel" id="betWheel"><div class="wheel-center">90%</div></div>
+        <div class="wheel-legend"><span class="ok">● 90% ganas $1.000</span><span class="danger">● 10% ganas $0</span></div>
+        <button class="btn ghost" id="spinWheel">🎡 Girar (demo)</button>
+        <div id="spinResult" class="hint small" style="text-align:center;min-height:28px"></div>
+      </div>
+      <div class="bet-copy">
+        <h3>La apuesta equivalente</h3>
+        <p>¿Prefieres girar esta ruleta con <b>90% de probabilidad de ganar $1.000</b>, o apostar los $1.000 a que el valor real cae dentro de tu rango <b>[${fmtAnswer(min)}, ${fmtAnswer(max)}] ${esc(q.unit)}</b>?</p>
+        <p class="muted">Si prefieres la ruleta, tu rango es demasiado estrecho: estás sobreconfiado. Ensancha hasta que te sea indiferente.</p>
+        <div class="row">
+          <button class="btn warn" id="widenBtn">↔ Ensanchar mi rango (estoy sobreconfiado)</button>
+          <button class="btn primary" id="lockBtn">🔒 Estoy indiferente → Bloquear estimación</button>
+        </div>
+      </div>
+    </div>`;
+
+  const spinBtn = $("#spinWheel");
+  if (spinBtn) {
+    spinBtn.onclick = () => {
+      const wheel = $("#betWheel");
+      const deg = 1440 + Math.floor(Math.random() * 360);
+      wheel.style.transform = `rotate(${deg}deg)`;
+      const win = Math.random() < 0.9;
+      setTimeout(() => {
+        const out = $("#spinResult");
+        if (out) out.textContent = win
+          ? "🎉 Ganaste $1.000. Compáralo: ¿de verdad prefieres la ruleta a tu rango?"
+          : "💸 Ganaste $0 (el 10% ocurre). Un rango honesto también falla 1 de cada 10 veces.";
+      }, 900);
+    };
+  }
+
+  $("#widenBtn").onclick = () => {
+    const center = (min + max) / 2;
+    const half = Math.max((max - min) / 2, Math.abs(center) * 0.01 || 1);
+    let newMin = center - half * 3;
+    let newMax = center + half * 3;
+    if (q.unit === "%") { newMin = Math.max(0, newMin); newMax = Math.min(100, newMax); }
+    else if (min >= 0) { newMin = Math.max(0, newMin); }
+    CAL.min = String(round1(newMin));
+    CAL.max = String(round1(newMax));
+    CAL.stage = "input";
+    renderCalibration();
+    toast("Rango ensanchado ×3. Ajusta los límites y vuelve a someterlo.", "info");
+  };
+
+  $("#lockBtn").onclick = () => recordCalibration(q);
+}
+
+function recordCalibration(q) {
+  const min = Number(CAL.min);
+  const max = Number(CAL.max);
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min >= max) {
+    toast("El rango ya no es válido; vuelve a escribirlo.", "warn");
+    CAL.stage = "input";
+    renderCalibration();
+    return;
+  }
+  const round = ensureCalRound();
+  const hit = min <= q.answer && q.answer <= max;
+  const ratio = min > 0 ? max / min : (max <= 0 ? 1 : Infinity);
+  const wide = !Number.isFinite(ratio) || ratio > q.plausible_ratio;
+  const result = {
+    qid: q.id,
+    question: q.prompt,
+    unit: q.unit,
+    min,
+    max,
+    answer: q.answer,
+    hit,
+    ratio: Number.isFinite(ratio) ? round1(ratio) : null,
+    wide,
+    at: Date.now(),
+    source: q.source
+  };
+  round.results.push(result);
+  state.calibration.history.push(result);
+  if (state.calibration.history.length > 200) state.calibration.history = state.calibration.history.slice(-200);
+
+  const eviDelta = hit ? (wide ? 1 : 3) : -3;
+  applyDeltas({ TQ: 0, SIG: 0, EVI: eviDelta, ADP: 0 }, { silent: true });
+  addXP(hit ? 8 : 2);
+  touchStudyDay();
+  maybeFinishRound(round);
+  saveState();
+  renderHUD();
+
+  CAL.stage = "revealed";
+  CAL.qid = q.id;
+  CAL.revealResult = result;
+  renderCalibration();
+}
+
+function renderCalReveal(result) {
+  const q = DATA.calibration.questions.find((x) => x.id === result.qid) || {};
+  const round = ensureCalRound();
+  const last = round.results.length >= round.queue.length;
+  const learn = result.hit
+    ? (result.wide
+      ? "Acertaste, pero con un rango tan ancho que no informa. En un comité de inversión ese intervalo no ayuda a decidir: intenta reducirlo sin caer por debajo de la honestidad."
+      : "Acertaste y el rango fue informativo. Ese es exactamente el estándar: ni falsa precisión ni un rango que lo abarca todo.")
+    : "Fallaste. No es un fracaso: es la evidencia de que tu intervalo era demasiado estrecho. La próxima vez, ensancha antes de bloquear.";
+
+  $("#calCard").innerHTML = `
+    <div class="cal-top">
+      <span class="pill">Pregunta ${round.results.length} / ${round.queue.length}</span>
+      <span class="pill ${result.hit ? "ok" : "bad"}" style="--c:${result.hit ? "var(--ok)" : "var(--danger)"}">${result.hit ? "dentro del rango" : "fuera del rango"}</span>
+      ${result.wide ? '<span class="pill warn" style="--c:var(--warn)">rango poco informativo</span>' : ""}
+    </div>
+    <h2 class="cal-prompt" style="font-size:18px">${esc(q.prompt || result.question)}</h2>
+    <div class="summary-grid" style="margin:16px 0">
+      <div class="card"><div class="n" style="color:${result.hit ? "var(--ok)" : "var(--danger)"}">${esc(fmtAnswer(result.answer))}</div><div class="l">valor real (${esc(result.unit)})</div></div>
+      <div class="card"><div class="n" style="font-size:16px;line-height:1.9">[${esc(fmtAnswer(result.min))}, ${esc(fmtAnswer(result.max))}]</div><div class="l">tu rango</div></div>
+      <div class="card"><div class="n">${result.ratio ? "×" + result.ratio : "—"}</div><div class="l">amplitud max/min</div></div>
+    </div>
+    <div class="verdict ${result.hit ? "ok" : "danger"}">
+      <div><b>${result.hit ? "✓ El valor real cayó dentro" : "✗ El valor real quedó fuera"}</b>${esc(learn)}</div>
+    </div>
+    <p class="muted small"><b>Fuente:</b> ${esc(result.source || q.source || "—")}</p>
+    <div class="row">
+      <button class="btn primary" id="nextCalBtn">${last ? "Ver resumen de la ronda →" : "Siguiente pregunta →"}</button>
+    </div>`;
+
+  $("#nextCalBtn").onclick = () => {
+    CAL.stage = "input";
+    CAL.qid = null;
+    CAL.min = "";
+    CAL.max = "";
+    CAL.revealResult = null;
+    renderCalibration();
+  };
+}
+
+function renderCalSummary() {
+  const round = ensureCalRound();
+  maybeFinishRound(round);
+  const results = round.results;
+  if (!results.length) {
+    $("#calCard").innerHTML = `
+      <h2>Ronda de calibración</h2>
+      <p class="muted">Vas a estimar 15 magnitudes reales con intervalos del 90%. El objetivo no es saber el número: es saber cuánto no sabes.</p>
+      <button class="btn primary" id="startCalBtn">Empezar ronda →</button>`;
+    $("#startCalBtn").onclick = () => startCalRound();
+    return;
+  }
+  const stats = calibrateVerdict(results);
+  const failedIds = results.filter((r) => !r.hit).map((r) => r.qid);
+  const rec = stats.v.key === "over"
+    ? "Drill recomendado: repite la ronda y usa la regla 'si dudo, ensancho ×3'. El objetivo es que la ruleta te sea indiferente, no que el número te quede cerca."
+    : stats.v.key === "under"
+      ? "Drill recomendado: antes de bloquear, pregúntate cuál sería el valor si te equivocaras por exceso y por defecto. Si el rango supera 10× la magnitud, probablemente no informa."
+      : stats.v.key === "calibrated"
+        ? "Siguiente nivel: mantén la calibración bajo presión de tiempo (30 segundos por pregunta) y con variables operativas de tu cliente."
+        : "Drill recomendado: usa la apuesta equivalente antes de cada bloqueo y registra el motivo de tu rango.";
+
+  $("#calCard").innerHTML = `
+    <div class="cal-top">
+      <span class="pill">Ronda completada</span>
+      <span class="pill ${stats.v.tone === "ok" ? "ok" : stats.v.tone === "danger" ? "bad" : "warn"}" style="--c:${stats.v.tone === "ok" ? "var(--ok)" : stats.v.tone === "danger" ? "var(--danger)" : "var(--warn)"}">${esc(stats.v.label)}</span>
+      <span class="pill">${stats.n} preguntas</span>
+    </div>
+    <h2 class="cal-prompt">Tu calibración real fue ${Math.round(stats.rate)}%</h2>
+    <p class="muted">Objetivo: 90%. La banda de calibración sana es 80–92%; por debajo hay sobreconfianza y por encima, subconfianza.</p>
+    <div class="summary-grid">
+      <div class="card"><div class="n">${stats.hits}/${stats.n}</div><div class="l">aciertos</div></div>
+      <div class="card"><div class="n">${Math.round(stats.rate)}%</div><div class="l">tasa real</div></div>
+      <div class="card"><div class="n">${stats.median ? "×" + round1(stats.median) : "—"}</div><div class="l">amplitud mediana</div></div>
+    </div>
+    <div class="verdict ${stats.v.tone}">
+      <div><b>${esc(stats.v.label)}</b>${esc(stats.v.text)}${stats.wideCount ? `<br><br><b>${stats.wideCount}</b> de tus rangos fueron tan amplios que resultan poco informativos (superan la amplitud plausible de la pregunta).` : ""}</div>
+    </div>
+    <div class="feedback info">${esc(rec)}</div>
+    <div class="nodes-ref">
+      <h4>Nodos de práctica</h4>
+      <div class="pills">${nodePill("htma_equivalent_bet")}${nodePill("htma_ci90")}${stats.v.node ? nodePill(stats.v.node) : ""}${nodePill("htma_calibration")}</div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn primary" id="newCalRoundBtn">🔄 Nueva ronda (15)</button>
+      ${failedIds.length ? `<button class="btn warn" id="reinforceCalBtn">🔁 Reforzar ${failedIds.length} fallada${failedIds.length === 1 ? "" : "s"}</button>` : ""}
+    </div>`;
+
+  const newBtn = $("#newCalRoundBtn");
+  if (newBtn) newBtn.onclick = () => startCalRound();
+  const reinf = $("#reinforceCalBtn");
+  if (reinf) reinf.onclick = () => startCalRound(failedIds);
+}
+
+function renderCalChart() {
+  const round = ensureCalRound();
+  const results = round.results.length ? round.results : state.calibration.history.slice(-15);
+  const box = $("#calChart");
+  if (!results.length) {
+    box.innerHTML = `<p class="muted small">Sin estimaciones todavía. La curva aparecerá aquí tras tu primera apuesta.</p>`;
+    return;
+  }
+  const W = 330, H = 190, padL = 30, padR = 10, padT = 12, padB = 26;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const y = (v) => padT + plotH * (1 - v / 100);
+  const x = (i) => padL + (results.length === 1 ? plotW / 2 : (plotW * i) / (results.length - 1));
+  let cum = 0;
+  const pts = [];
+  const dots = [];
+  results.forEach((r, i) => {
+    if (r.hit) cum += 1;
+    const rate = (cum / (i + 1)) * 100;
+    pts.push(`${x(i).toFixed(1)},${y(rate).toFixed(1)}`);
+    dots.push(`<circle cx="${x(i).toFixed(1)}" cy="${y(rate).toFixed(1)}" r="3.2" fill="${r.hit ? "#3ecf8e" : "#fb7185"}"/>`);
+  });
+  const grid = [0, 25, 50, 75, 100].map((v) => `
+    <line x1="${padL}" y1="${y(v)}" x2="${W - padR}" y2="${y(v)}" stroke="#242a37" stroke-width="1"/>
+    <text x="${padL - 6}" y="${y(v) + 3}" fill="#6b7280" font-size="9" text-anchor="end">${v}</text>`).join("");
+  const marks = results.map((r, i) => `<rect x="${(x(i) - 3.5).toFixed(1)}" y="${H - padB + 5}" width="7" height="4" rx="1" fill="${r.hit ? "#3ecf8e" : "#fb7185"}"/>`).join("");
+
+  box.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva de calibración acumulada">
+      ${grid}
+      <line x1="${padL}" y1="${y(90)}" x2="${W - padR}" y2="${y(90)}" stroke="#facc15" stroke-width="1.3" stroke-dasharray="5 4"/>
+      <text x="${W - padR}" y="${y(90) - 4}" fill="#facc15" font-size="9" text-anchor="end">objetivo 90%</text>
+      <path d="M${pts.join(" L")}" fill="none" stroke="#8ab4f8" stroke-width="2.2" stroke-linejoin="round"/>
+      ${dots}
+      ${marks}
+      <line x1="${padL}" y1="${y(0)}" x2="${W - padR}" y2="${y(0)}" stroke="#353b49" stroke-width="1"/>
+    </svg>`;
+}
+
+function renderCalSideSummary() {
+  const round = ensureCalRound();
+  const results = round.results.length ? round.results : state.calibration.history.slice(-15);
+  const stats = calibrateVerdict(results);
+  $("#calSummary").innerHTML = `
+    <div class="statline"><span>Estimaciones en esta ronda</span><b>${round.results.length}/${round.queue.length}</b></div>
+    <div class="statline"><span>Aciertos</span><b>${stats.hits}/${stats.n}</b></div>
+    <div class="statline"><span>Tasa real</span><b>${stats.n ? Math.round(stats.rate) + "%" : "—"}</b></div>
+    <div class="statline"><span>Amplitud mediana</span><b>${stats.median ? "×" + round1(stats.median) : "—"}</b></div>
+    <div class="statline"><span>Rangos poco informativos</span><b>${stats.wideCount}</b></div>
+    <div class="verdict ${stats.v.tone}">
+      <div><b>${esc(stats.v.label)}</b>${esc(stats.v.text)}</div>
+    </div>
+    ${state.calibration.rounds.length ? `<p class="muted small" style="margin-top:8px">Rondas anteriores: ${state.calibration.rounds.slice(-3).reverse().map((r) => `${r.rate}% (${r.n})`).join(" · ")}</p>` : ""}
+    <p class="muted small">Histórico total: ${state.calibration.history.length} estimaciones.</p>`;
+}
+
+function initCalibration() {
+  $("#calReset").onclick = () => {
+    if (confirm("¿Empezar una ronda nueva con las 15 preguntas? Se conserva tu histórico.")) startCalRound();
+  };
+  $("#calReinforce").hidden = true;
+  ensureCalRound();
+}
+
+/* =====================================================================
+   2.5 · 5-DAY AIP BOOTCAMP GAUNTLET
+   ===================================================================== */
+const BOOT = DATA.bootcamps || null;
+const BOOT_DAY_LABELS = { 1: "Lunes", 2: "Martes", 3: "Miércoles", 4: "Jueves", 5: "Viernes" };
+const BOOT_DAY_SHORT = { 1: "Contracting", 2: "Gemba + data", 3: "Prototype + HITL", 4: "Rebelión", 5: "Go/No-Go" };
+
+function bootRules() {
+  return (BOOT && BOOT.rules) || {
+    days: 5,
+    start_metrics: { TQ: 55, SIG: 55, EVI: 55, ADP: 55 },
+    loss_threshold: 30,
+    win_threshold: 65,
+    win_average: 75
+  };
+}
+
+function bootCampaign() {
+  if (!BOOT || !state.bootcamp) return null;
+  return BOOT.campaigns.find((c) => c.id === state.bootcamp.campaignId) || null;
+}
+
+function bootStage() {
+  const campaign = bootCampaign();
+  if (!campaign || !state.bootcamp) return null;
+  return campaign.stages[state.bootcamp.stageIndex] || null;
+}
+
+function bootAverage() {
+  return METRICS.reduce((sum, m) => sum + state.metrics[m.key], 0) / METRICS.length;
+}
+
+function bootStatusLabel(status) {
+  return { active: "En curso", won: "Production Contract Signed", lost: "Account Lost / Pilot Cancelled" }[status] || status;
+}
+
+function renderBootcampStats() {
+  const rules = bootRules();
+  const stages = BOOT ? BOOT.campaigns.reduce((a, c) => a + c.stages.length, 0) : 0;
+  const b = state.bootcamp;
+  const status = b ? b.status : null;
+  $("#bootStats").innerHTML = `
+    <span class="pill">${BOOT ? BOOT.campaigns.length : 0} campañas</span>
+    <span class="pill">${stages} etapas</span>
+    <span class="pill">inicio 55 · derrota &lt;${rules.loss_threshold} · victoria ≥${rules.win_threshold} / avg ≥${rules.win_average}</span>
+    ${status ? `<span class="pill ${status === "won" ? "ok" : status === "lost" ? "bad" : "warn"}" style="--c:${status === "won" ? "var(--ok)" : status === "lost" ? "var(--danger)" : "var(--warn)"}">${esc(bootStatusLabel(status))}</span>` : ""}`;
+}
+
+function renderBootcamp() {
+  if (!BOOT) {
+    $("#bootRoot").innerHTML = `<div class="empty">Este build no incluye campañas de Bootcamp.</div>`;
+    return;
+  }
+  const rules = bootRules();
+  renderBootcampStats();
+  $("#bootRules").innerHTML = `
+    <span>🏛️ <b>Reglas de supervivencia:</b> empiezas el lunes con TQ/SIG/EVI/ADP en <b>${rules.start_metrics.TQ}</b>. Cada decisión mueve tus barras reales. Si cualquier barra cae por debajo de <b>${rules.loss_threshold}</b>, el cliente cancela el Bootcamp. Ganas el viernes si las cuatro están <b>≥${rules.win_threshold}</b> y el promedio es <b>≥${rules.win_average}</b>.</span>`;
+  const campaign = bootCampaign();
+  if (!state.bootcamp || !campaign) {
+    renderBootcampSelector();
+    return;
+  }
+  renderBootcampRun(campaign);
+}
+
+function renderBootcampSelector() {
+  const rules = bootRules();
+  $("#bootRoot").innerHTML = `
+    <div class="camp-list">
+      ${BOOT.campaigns.map((c) => `
+        <article class="card camp-card">
+          <div class="scenario-top">
+            <span class="pill">5 días · 5 etapas</span>
+            <span class="pill" style="--c:#f5a623">${esc(c.sector)}</span>
+          </div>
+          <h3>${esc(c.title)}</h3>
+          <p class="camp-brief">${esc(c.brief)}</p>
+          <div class="boot-timeline">
+            ${c.stages.map((st) => `<div class="daychip"><span class="d">${BOOT_DAY_LABELS[st.day]}</span>${esc(st.theme)}</div>`).join("")}
+          </div>
+          <button class="btn primary" data-boot-start="${esc(c.id)}">▶ Empezar campaña</button>
+        </article>`).join("")}
+    </div>
+    <p class="hint small">Al empezar se reinician tus cuatro barras del HUD a ${rules.start_metrics.TQ}. El progreso del Bootcamp se guarda en <code>localStorage</code> y se puede reanudar tras recargar.</p>`;
+  $$("[data-boot-start]").forEach((btn) => {
+    btn.onclick = () => startBootcamp(btn.getAttribute("data-boot-start"));
+  });
+}
+
+function renderBootTimeline(campaign) {
+  const b = state.bootcamp;
+  const completed = new Set(b.history.map((h) => h.day));
+  const currentDay = bootStage() ? bootStage().day : 0;
+  return `<div class="boot-timeline">
+    ${campaign.stages.map((st) => {
+      let cls = "daychip";
+      if (completed.has(st.day)) cls += " done";
+      if (st.day === currentDay && b.status === "active") cls += " current";
+      if (st.day === currentDay && b.status === "lost") cls += " lost";
+      if (!completed.has(st.day) && st.day !== currentDay) cls += " locked";
+      return `<div class="${cls}"><span class="d">${BOOT_DAY_LABELS[st.day]}</span>${esc(BOOT_DAY_SHORT[st.day])}</div>`;
+    }).join("")}
+  </div>`;
+}
+
+function renderBootMetrics() {
+  return `<div class="boot-metrics">
+    ${METRICS.map((m) => `<div class="boot-metric" style="--c:${m.color}">
+      <div class="bv">${Math.round(state.metrics[m.key])}</div>
+      <div class="bl">${m.key} · ${esc(m.label)}</div>
+    </div>`).join("")}
+  </div>`;
+}
+
+function renderBootcampRun(campaign) {
+  const b = state.bootcamp;
+  const stage = bootStage();
+  const statusColor = b.status === "won" ? "var(--ok)" : b.status === "lost" ? "var(--danger)" : "var(--warn)";
+  $("#bootRoot").innerHTML = `
+    <div class="card">
+      <div class="boot-run-head">
+        <div>
+          <div class="scenario-top">
+            <span class="pill" style="--c:${statusColor}">${esc(bootStatusLabel(b.status))}</span>
+            <span class="pill">${esc(campaign.sector)}</span>
+          </div>
+          <h3>${esc(campaign.title)}</h3>
+          <p class="muted">${stage ? `Día ${stage.day}/5 · ${esc(stage.theme)}` : "Campaña finalizada"} · promedio ${round1(bootAverage())}</p>
+        </div>
+        <div class="row">
+          <button class="btn ghost" id="bootExit">Cambiar campaña</button>
+          <button class="btn" id="bootRestart">Reiniciar campaña</button>
+        </div>
+      </div>
+      ${renderBootTimeline(campaign)}
+      ${renderBootMetrics()}
+      <div id="bootStageSlot"></div>
+      <div id="bootResultSlot"></div>
+    </div>`;
+  const exit = $("#bootExit");
+  if (exit) exit.onclick = () => {
+    if (confirm("¿Volver al selector de campañas? Se descartará el progreso de esta campaña.")) {
+      state.bootcamp = null;
+      saveState();
+      renderBootcamp();
+    }
+  };
+  const restart = $("#bootRestart");
+  if (restart) restart.onclick = () => startBootcamp(campaign.id);
+  if (b.status === "active" && stage) {
+    renderBootcampStage(campaign, stage);
+  } else if (b.status !== "active") {
+    renderBootcampResult(campaign);
+  }
+}
+
+function renderBootcampStage(campaign, stage) {
+  const b = state.bootcamp;
+  const options = shuffledOptions(stage.options, `boot:${campaign.id}:${stage.id}`, "is_best");
+  const chosen = b.lastChoice ? b.lastChoice.optionId : null;
+  const practice = NODES[stage.target_practice];
+  const optionHtml = options.map((o, i) => {
+    let cls = "opt";
+    if (chosen) {
+      if (o.is_best) cls += " correct";
+      else if (o.id === chosen) cls += " wrong";
+      else cls += " dim";
+    }
+    const showScript = chosen && (o.is_best || o.id === chosen);
+    return `<button type="button" class="${cls}" data-boot-option="${esc(o.id)}" ${chosen ? "disabled" : ""}>
+      <span class="opt-letter">${i + 1}</span>
+      <span class="opt-body">
+        <span class="opt-label"><b>${esc(o.label)}</b></span>
+        <span class="script" ${showScript ? "" : "hidden"}>${esc(o.script)}</span>
+      </span>
+    </button>`;
+  }).join("");
+
+  let feedback = "";
+  if (chosen) {
+    const picked = stage.options.find((o) => o.id === chosen);
+    const best = stage.options.find((o) => o.is_best);
+    feedback = `<div class="feedback ${picked.is_best ? "ok" : "bad"}">${esc(picked.feedback)}</div>
+      ${picked.is_best ? "" : `<div class="script-label" style="margin-top:10px">La jugada que faltaba</div><p class="script">${esc(best.script)}</p>`}
+      ${b.status === "active" ? `<div class="boot-actions"><button class="btn primary" id="bootContinue">Continuar al Día ${stage.day + 1} →</button></div>` : ""}`;
+  }
+
+  const nodePills = [
+    ...stage.active_pitfalls.map((id) => nodePill(id)),
+    ...stage.target_techniques.map((id) => nodePill(id)),
+    nodePill(stage.target_practice),
+    ...(stage.supporting_nodes || []).map((id) => nodePill(id))
+  ].join("");
+
+  $("#bootStageSlot").innerHTML = `
+    <div class="boot-stage">
+      <div class="scenario-top">
+        <span class="pill">Día ${stage.day} · ${BOOT_DAY_LABELS[stage.day]}</span>
+        <span class="pill">${esc(stage.theme)}</span>
+        <span class="pill" style="--c:${TYPE_COLORS.FDEPractice}">🎯 Práctica FDE</span>
+      </div>
+      <h3 style="margin-top:8px">${esc(stage.title)}</h3>
+      <p class="context">${esc(stage.context)}</p>
+      <blockquote class="quote"><p>${esc(stage.stakeholder_quote)}</p><footer>— ${esc(stage.stakeholder_role)}</footer></blockquote>
+      <p class="small"><b>Objetivo del día:</b> ${esc(stage.objective)}</p>
+      <p class="q">${esc(stage.decision_question)}</p>
+      <p class="hint small">Los guiones de las opciones se revelan al elegir. Decide por criterio operativo, no por longitud ni por nombres de marcos.</p>
+      <div class="options" id="bootOptions">${optionHtml}</div>
+      <div id="bootFeedback">${feedback}</div>
+      ${chosen ? `<div class="nodes-ref"><h4>Nodos que entrena este día</h4><div class="pills">${nodePills}</div></div>` : ""}
+    </div>`;
+
+  if (!chosen) {
+    $$("#bootOptions .opt").forEach((btn) => {
+      btn.onclick = () => chooseBootcampOption(stage, stage.options.find((o) => o.id === btn.getAttribute("data-boot-option")));
+    });
+  } else {
+    const cont = $("#bootContinue");
+    if (cont) cont.onclick = continueBootcamp;
+  }
+}
+
+function chooseBootcampOption(stage, option) {
+  const b = state.bootcamp;
+  if (!b || b.status !== "active" || b.lastChoice || !option) return;
+  const rules = bootRules();
+  applyDeltas(option.deltas, { silent: true });
+  const after = { ...state.metrics };
+  b.history.push({
+    day: stage.day,
+    stageId: stage.id,
+    optionId: option.id,
+    label: option.label,
+    deltas: { ...option.deltas },
+    metricsAfter: after,
+    best: !!option.is_best
+  });
+  b.lastChoice = { stageId: stage.id, optionId: option.id, label: option.label, feedback: option.feedback };
+  const failed = METRICS.find((m) => after[m.key] < rules.loss_threshold);
+  if (failed) {
+    b.status = "lost";
+    b.lossReason = `Día ${stage.day} · ${stage.theme}: ${failed.label} cayó a ${Math.round(after[failed.key])} y el cliente canceló el Bootcamp antes del viernes.`;
+  } else if (stage.day === rules.days) {
+    const allOk = METRICS.every((m) => state.metrics[m.key] >= rules.win_threshold);
+    const avgOk = bootAverage() >= rules.win_average;
+    b.status = allOk && avgOk ? "won" : "lost";
+    if (!allOk || !avgOk) {
+      b.lossReason = `El comité no firmó el contrato: ${allOk ? "el promedio" : "una o más barras"} quedó por debajo del umbral de victoria (todas ≥${rules.win_threshold}, promedio ≥${rules.win_average}).`;
+    }
+  }
+  addXP(option.is_best ? 15 : 4);
+  touchStudyDay();
+  saveState();
+  renderHUD();
+  renderBootcamp();
+  const msg = option.is_best ? "Decisión de alto criterio: +15 XP" : "Decisión registrada: +4 XP";
+  toast(msg + (b.status === "active" ? ` · promedio ${round1(bootAverage())}` : ` · ${bootStatusLabel(b.status)}`), option.is_best ? "ok" : "warn");
+  $("#bootRoot").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function continueBootcamp() {
+  const b = state.bootcamp;
+  if (!b || b.status !== "active" || !b.lastChoice) return;
+  b.stageIndex += 1;
+  b.lastChoice = null;
+  saveState();
+  renderBootcamp();
+  $("#bootRoot").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function startBootcamp(campaignId) {
+  const campaign = BOOT ? BOOT.campaigns.find((c) => c.id === campaignId) : null;
+  if (!campaign) return;
+  if (state.bootcamp && state.bootcamp.status === "active" && !confirm("Hay una campaña en curso. ¿Reiniciarla y empezar desde el lunes?")) return;
+  const rules = bootRules();
+  METRICS.forEach((m) => { state.metrics[m.key] = rules.start_metrics[m.key]; });
+  state.bootcamp = {
+    campaignId,
+    stageIndex: 0,
+    status: "active",
+    history: [],
+    lastChoice: null,
+    lossReason: null,
+    startedAt: Date.now()
+  };
+  saveState();
+  renderHUD();
+  renderBootcamp();
+  toast(`Bootcamp iniciado: ${campaign.title}. Barras reiniciadas a ${rules.start_metrics.TQ}.`, "ok");
+  $("#bootRoot").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderBootcampResult(campaign) {
+  const b = state.bootcamp;
+  const rules = bootRules();
+  const won = b.status === "won";
+  const last = b.history.length ? b.history[b.history.length - 1] : null;
+  const finalMetrics = last ? last.metricsAfter : state.metrics;
+  const avg = METRICS.reduce((sum, m) => sum + finalMetrics[m.key], 0) / METRICS.length;
+  const drillNodes = [...new Set(campaign.stages.flatMap((st) => [...st.active_pitfalls, ...st.target_techniques, st.target_practice]))];
+  const statusBox = won
+    ? `<div class="certificate">
+        <h3>Production Contract Signed</h3>
+        <p>El comité firmó el despliegue. Cerraste el viernes con las cuatro barras en umbral de victoria y un promedio de <b>${round1(avg)}</b>.</p>
+        <p class="small muted">Campaña: ${esc(campaign.title)} · ${esc(campaign.sector)}</p>
+      </div>`
+    : `<div class="postmortem">
+        <h3>Account Lost / Pilot Cancelled</h3>
+        <p>${esc(b.lossReason || "El cliente canceló antes de firmar el contrato.")}</p>
+        <p class="small muted">El post-mortem está abajo: identifica qué barra rompió la confianza y qué nodo practicar antes de reintentar.</p>
+      </div>`;
+
+  $("#bootResultSlot").innerHTML = `
+    ${statusBox}
+    <div class="boot-final-grid">
+      ${METRICS.map((m) => `<div class="card"><div class="n" style="color:${m.color}">${Math.round(finalMetrics[m.key])}</div><div class="l">${m.key}</div></div>`).join("")}
+      <div class="card"><div class="n">${round1(avg)}</div><div class="l">promedio</div></div>
+    </div>
+    <h4>Decisiones de la semana</h4>
+    <div class="history-list">
+      ${b.history.map((h) => `<div class="history-row">
+        <span class="hd">D${h.day}</span>
+        <span>${esc(h.label)} <span class="muted small">· ${h.best ? "óptima" : "mejorable"}</span></span>
+        <span class="hdeltas">${METRICS.map((m) => { const d = h.deltas[m.key] || 0; return d ? `<span>${m.key} ${d > 0 ? "+" : ""}${d}</span>` : ""; }).join("")}</span>
+      </div>`).join("")}
+    </div>
+    <div class="nodes-ref"><h4>Nodos para el próximo intento</h4><div class="pills">${drillNodes.map((id) => nodePill(id)).join("")}</div></div>
+    <p class="hint small">Regla del Bootcamp: derrota si cualquier barra &lt;${rules.loss_threshold}; victoria el viernes con todas ≥${rules.win_threshold} y promedio ≥${rules.win_average}.</p>
+    <div class="boot-actions">
+      <button class="btn primary" id="bootRestartResult">↻ Repetir campaña</button>
+      <button class="btn ghost" id="bootExitResult">Cambiar de campaña</button>
+    </div>`;
+
+  const restart = $("#bootRestartResult");
+  if (restart) restart.onclick = () => startBootcamp(campaign.id);
+  const exit = $("#bootExitResult");
+  if (exit) exit.onclick = () => {
+    state.bootcamp = null;
+    saveState();
+    renderBootcamp();
+  };
+}
+
+/* =====================================================================
+   3 · LIVE SPARRING GENERATOR & RUBRIC EVALUATOR
+   ===================================================================== */
+const PROVIDERS = {
+  openai: {
+    label: "OpenAI",
+    models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"],
+    defaultModel: "gpt-4o-mini"
+  },
+  anthropic: {
+    label: "Anthropic",
+    models: ["claude-sonnet-4-5", "claude-3-5-haiku-latest", "claude-sonnet-4-20250514"],
+    defaultModel: "claude-sonnet-4-5"
+  },
+  gemini: {
+    label: "Google Gemini",
+    models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"],
+    defaultModel: "gemini-2.0-flash"
+  }
+};
+
+const SPAR = {
+  contextId: null,
+  practiceId: null,
+  pitfalls: [null, null],
+  objectionId: null,
+  spoiler: true,
+  tab: "prompt",
+  chat: { history: [], visible: [], turns: 0, busy: false, evaluated: false, evaluation: null, system: null, token: null }
+};
+
+function readApiConfig() {
+  try { return JSON.parse(localStorage.getItem(API_STORE_KEY) || "{}"); }
+  catch { return {}; }
+}
+
+function writeApiConfig(cfg) {
+  try { localStorage.setItem(API_STORE_KEY, JSON.stringify(cfg)); }
+  catch { toast("No se pudo guardar la configuración en este navegador.", "error"); }
+}
+
+function contextById(id) { return DATA.sparring.contexts.find((c) => c.id === id); }
+function objectionById(id) { return DATA.sparring.objections.find((o) => o.id === id); }
+
+function mission() {
+  const context = contextById(SPAR.contextId) || DATA.sparring.contexts[0];
+  const practice = NODES[SPAR.practiceId] || null;
+  const pitfalls = SPAR.pitfalls.map((id) => NODES[id]).filter(Boolean);
+  const objection = objectionById(SPAR.objectionId) || DATA.sparring.objections[0];
+  return { context, practice, pitfalls, objection };
+}
+
+function missionKey(m) {
+  return [m.context.id, m.practice ? m.practice.id : "", ...m.pitfalls.map((p) => p.id), m.objection.id].join("|");
+}
+
+function nodeRef(id) {
+  const n = NODES[id];
+  if (!n) return `- ${id}`;
+  return `- ${id} (${n.type}): ${n.label} — ${n.description}`;
+}
+
+function rubricText() {
+  return DATA.sparring.rubric.map((d) => [
+    `### ${d.label} (${d.weight} puntos)`,
+    d.prompt,
+    `- Nivel bajo (0/${d.weight}): ${d.anchor_low}`,
+    `- Nivel alto (${d.weight}/${d.weight}): ${d.anchor_high}`,
+    `- Nodos de referencia:`,
+    ...d.nodes.map(nodeRef)
+  ].join("\n")).join("\n\n");
+}
+
+function buildSparringPrompt(m) {
+  const lines = [];
+  lines.push("# MISIÓN · FDE LIVE SPARRING — 8 TURNOS");
+  lines.push("");
+  lines.push("Vas a interpretar a un stakeholder difícil en una reunión de despliegue real. El usuario es un Forward Deployed Engineer (FDE). La reunión dura exactamente 8 turnos de conversación.");
+  lines.push("");
+  lines.push("## TU PERSONAJE");
+  lines.push(`- Rol: ${m.context.stakeholder_role}.`);
+  lines.push(`- Contexto operativo: ${m.context.brief}`);
+  lines.push(`- Presión que sientes: ${m.context.pressure}`);
+  lines.push(`- Práctica FDE que el usuario intenta aplicar: ${m.practice ? m.practice.label : "—"}${m.practice ? ` — ${m.practice.description}` : ""}`);
+  lines.push("");
+  lines.push("## ESTADO OCULTO (PROHIBIDO REVELARLO DIRECTAMENTE)");
+  m.pitfalls.forEach((p, i) => lines.push(`- Trampa activa ${i + 1}: ${p.label} — ${p.description}`));
+  lines.push(`- Objeción emocional secreta: "${m.objection.line}" (${m.objection.label}).`);
+  lines.push("");
+  lines.push("## CÓMO ACTUAR");
+  lines.push("1. Habla en español, en primera persona, como un ejecutivo real y ocupado. Máximo 110 palabras por turno.");
+  lines.push("2. Nunca digas que eres una IA, ni menciones el ejercicio, ni expliques la rúbrica ni las trampas.");
+  lines.push("3. No reveles el estado oculto con palabras: muéstralo con comportamiento (evasivas, exigencia de datos, culpa, control, presión política).");
+  lines.push("4. Si el FDE hace pitch prematuro, promete certeza falsa, pelea la resistencia con más datos o ignora la relación, endurece tu resistencia.");
+  lines.push("5. Si el FDE escucha, nombra la resistencia sin atacar, pide hechos pasados específicos, propone un paso pequeño y reversible o reconoce la incertidumbre con honestidad, cede gradualmente (nunca del todo).");
+  lines.push("6. No resuelvas tú el problema ni propongas la solución: el FDE debe ganarse cada avance.");
+  lines.push("7. Turno 8: cierra la reunión como el personaje y después entrega la auditoría.");
+  lines.push("");
+  lines.push("## AUDITORÍA FINAL (solo en el turno 8 o cuando el usuario escriba /evaluar)");
+  lines.push("Abandona el personaje y evalúa al FDE de 0 a 100 contra exactamente estas cinco dimensiones. Cita evidencia textual de la conversación; no infles la nota.");
+  lines.push("");
+  lines.push(rubricText());
+  lines.push("");
+  lines.push("## FORMATO OBLIGATORIO DE LA AUDITORÍA");
+  lines.push("Devuelve SOLO un bloque de código JSON válido, sin texto antes ni después:");
+  lines.push("```json");
+  lines.push('{"overall": 0, "dimensions": [{"id": "trust", "score": 0, "evidence": "cita textual", "nodes_used": ["id_de_nodo"], "nodes_missed": ["id_de_nodo"]}, {"id": "signal", "score": 0, "evidence": "", "nodes_used": [], "nodes_missed": []}, {"id": "information", "score": 0, "evidence": "", "nodes_used": [], "nodes_missed": []}, {"id": "adoption", "score": 0, "evidence": "", "nodes_used": [], "nodes_missed": []}, {"id": "synthesis", "score": 0, "evidence": "", "nodes_used": [], "nodes_missed": []}], "strongest_node": "id_de_nodo", "next_drill": "una práctica concreta para la próxima reunión", "summary": "2 frases de diagnóstico"}');
+  lines.push("```");
+  lines.push("Cada score de dimensión es un entero de 0 a 20. `overall` es la suma de las cinco dimensiones (0 a 100). `nodes_used` y `nodes_missed` deben usar IDs reales del grafo listados arriba.");
+  return lines.join("\n");
+}
+
+function buildEvaluationRequest(m) {
+  const lines = [];
+  lines.push("INSTRUCCIÓN DE EVALUACIÓN (FIN DE LA SIMULACIÓN)");
+  lines.push("");
+  lines.push(`Has interpretado a ${m.context.stakeholder_role} durante esta reunión. Abandona el personaje y audita al FDE con honestidad.`);
+  lines.push("");
+  lines.push(`Contexto: ${m.context.brief}`);
+  lines.push(`Presión: ${m.context.pressure}`);
+  lines.push(`Práctica objetivo: ${m.practice ? m.practice.label : "—"}.`);
+  lines.push(`Trampas ocultas que debía neutralizar: ${m.pitfalls.map((p) => p.label).join("; ")}.`);
+  lines.push(`Objeción emocional secreta: "${m.objection.line}".`);
+  lines.push("");
+  lines.push("Evalúa contra estas dimensiones y sus nodos:");
+  lines.push(rubricText());
+  lines.push("");
+  lines.push("Devuelve SOLO un objeto JSON válido con este esquema exacto (sin markdown, sin texto adicional):");
+  lines.push('{"overall": 0, "dimensions": [{"id": "trust", "score": 0, "evidence": "", "nodes_used": [], "nodes_missed": []}, {"id": "signal", "score": 0, "evidence": "", "nodes_used": [], "nodes_missed": []}, {"id": "information", "score": 0, "evidence": "", "nodes_used": [], "nodes_missed": []}, {"id": "adoption", "score": 0, "evidence": "", "nodes_used": [], "nodes_missed": []}, {"id": "synthesis", "score": 0, "evidence": "", "nodes_used": [], "nodes_missed": []}], "strongest_node": "id_de_nodo", "next_drill": "", "summary": ""}');
+  return lines.join("\n");
+}
+
+function extractJson(text) {
+  if (!text) return null;
+  const fenced = String(text).match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fenced ? fenced[1] : String(text);
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try { return JSON.parse(candidate.slice(start, end + 1)); }
+  catch { return null; }
+}
+
+function normalizeEvaluation(raw) {
+  const byId = {};
+  if (Array.isArray(raw.dimensions)) raw.dimensions.forEach((d) => { if (d && d.id) byId[d.id] = d; });
+  else if (raw.dimensions && typeof raw.dimensions === "object") Object.assign(byId, raw.dimensions);
+
+  const dimensions = DATA.sparring.rubric.map((d) => {
+    const found = byId[d.id] || {};
+    const score = clamp(Math.round(Number(found.score) || 0), 0, d.weight);
+    return {
+      id: d.id,
+      label: d.label,
+      weight: d.weight,
+      score,
+      evidence: String(found.evidence || "Sin evidencia citada."),
+      nodes_used: Array.isArray(found.nodes_used) ? found.nodes_used.filter((id) => NODES[id]) : [],
+      nodes_missed: Array.isArray(found.nodes_missed) ? found.nodes_missed.filter((id) => NODES[id]) : []
+    };
+  });
+  const total = dimensions.reduce((a, d) => a + d.score, 0);
+  const overall = clamp(Math.round(Number(raw.overall) || total), 0, 100);
+  return {
+    overall,
+    dimensions,
+    strongest_node: NODES[raw.strongest_node] ? raw.strongest_node : "",
+    next_drill: String(raw.next_drill || ""),
+    summary: String(raw.summary || "")
+  };
+}
+
+function renderEvaluation(ev) {
+  const used = ev.dimensions.flatMap((d) => d.nodes_used);
+  const missed = ev.dimensions.flatMap((d) => d.nodes_missed);
+  $("#rubricResult").innerHTML = `
+    <div class="eval-card">
+      <div class="eval-head">
+        <div class="score-ring" style="--p:${ev.overall}"><span>${ev.overall}</span></div>
+        <div>
+          <h3>Auditoría de la reunión</h3>
+          <p class="muted small" style="margin:2px 0 0">${esc(ev.summary || "Sin resumen del evaluador.")}</p>
+        </div>
+      </div>
+      <div class="dims">
+        ${ev.dimensions.map((d) => `
+          <div class="dim">
+            <div class="dim-top"><span>${esc(d.label)}</span><b>${d.score}/${d.weight}</b></div>
+            <div class="bar" style="--c:var(--accent)"><i style="width:${(d.score / d.weight) * 100}%"></i></div>
+            <p class="evidence">${esc(d.evidence)}</p>
+            <div class="pills">
+              ${d.nodes_used.map((id) => nodePill(id)).join("")}
+              ${d.nodes_missed.map((id) => nodePill(id, "missed")).join("")}
+            </div>
+          </div>`).join("")}
+      </div>
+      ${ev.strongest_node ? `<p class="small" style="margin-top:12px"><b>Nodo más fuerte:</b> ${nodePill(ev.strongest_node)}</p>` : ""}
+      ${ev.next_drill ? `<div class="next-drill">🔁 <b>Próximo drill:</b> ${esc(ev.next_drill)}</div>` : ""}
+      <p class="muted small" style="margin-top:10px">Nodos usados: ${used.length} · Nodos faltantes: ${missed.length}. La puntuación se aplicó al HUD.</p>
+    </div>`;
+}
+
+function applyEvaluation(ev, m) {
+  if (SPAR.chat.evaluation && SPAR.chat.evaluation.applied) return;
+  const metricMap = { trust: "TQ", signal: "SIG", information: "EVI", adoption: "ADP", synthesis: null };
+  const deltas = { TQ: 0, SIG: 0, EVI: 0, ADP: 0 };
+  ev.dimensions.forEach((d) => {
+    const normalized = (d.score / d.weight) * 100;
+    const delta = Math.round((normalized - 50) * 0.2);
+    const key = metricMap[d.id];
+    if (key) deltas[key] += delta;
+    else { deltas.EVI += Math.round(delta / 2); deltas.ADP += Math.round(delta / 2); }
+  });
+  applyDeltas(deltas, { silent: true });
+  addXP(Math.round(ev.overall / 2));
+  touchStudyDay();
+  state.sparring.push({
+    at: Date.now(),
+    context: m.context.id,
+    contextLabel: m.context.label,
+    practice: m.practice ? m.practice.id : null,
+    pitfalls: m.pitfalls.map((p) => p.id),
+    objection: m.objection.id,
+    overall: ev.overall,
+    nextDrill: ev.next_drill,
+    summary: ev.summary,
+    dimensions: ev.dimensions.map((d) => ({ id: d.id, score: d.score }))
+  });
+  if (state.sparring.length > 20) state.sparring = state.sparring.slice(-20);
+  ev.applied = true;
+  saveState();
+  renderHUD();
+  renderSparStats();
+  toast(`Auditoría aplicada al HUD · ${ev.overall}/100 · +${Math.round(ev.overall / 2)} XP`, ev.overall >= 75 ? "ok" : "warn");
+}
+
+function renderSelfEval(m, reason) {
+  const selfHtml = `
+    <div class="eval-card" style="margin-top:12px">
+      <h3>Autoevaluación de respaldo</h3>
+      <p class="muted small">${esc(reason || "Sin auditoría automática disponible.")} Puntúa cada dimensión de 0 a 20 con honestidad; se aplicará al HUD igual que una auditoría del LLM.</p>
+      <div class="selfeval">
+        ${DATA.sparring.rubric.map((d) => `
+          <label>${esc(d.label)}
+            <input type="range" min="0" max="${d.weight}" value="${Math.round(d.weight / 2)}" id="self_${d.id}" oninput="document.getElementById('selfval_${d.id}').textContent=this.value">
+            <span id="selfval_${d.id}">${Math.round(d.weight / 2)}</span>
+          </label>`).join("")}
+      </div>
+      <button class="btn primary" id="selfEvalSave">Aplicar autoevaluación al HUD</button>
+    </div>`;
+  $("#rubricResult").innerHTML = `<div class="feedback bad">No se pudo obtener una auditoría automática: ${esc(reason || "respuesta no válida")}</div>${selfHtml}`;
+  $("#selfEvalSave").onclick = () => {
+    const dims = DATA.sparring.rubric.map((d) => {
+      const el = document.getElementById("self_" + d.id);
+      return {
+        id: d.id,
+        label: d.label,
+        weight: d.weight,
+        score: clamp(Number(el ? el.value : 0) || 0, 0, d.weight),
+        evidence: "Autoevaluación manual del operador.",
+        nodes_used: [],
+        nodes_missed: []
+      };
+    });
+    const overall = dims.reduce((a, d) => a + d.score, 0);
+    const ev = { overall, dimensions: dims, strongest_node: "", next_drill: "Repetir la misión con un LLM externo para obtener evidencia textual.", summary: "Autoevaluación manual (sin LLM)." };
+    SPAR.chat.evaluated = true;
+    SPAR.chat.evaluation = ev;
+    applyEvaluation(ev, m);
+    renderEvaluation(ev);
+  };
+}
+
+/* ---------- API calls ---------- */
+async function chatCall(messages, system) {
+  const cfg = readApiConfig();
+  if (!cfg.key) throw new Error("Falta la API key. Guarda una en el panel B o usa la Opción A (copy-paste).");
+  const providerKey = PROVIDERS[cfg.provider] ? cfg.provider : "openai";
+  const model = cfg.model || PROVIDERS[providerKey].defaultModel;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 90000);
+  try {
+    if (providerKey === "openai") {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.key}` },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          temperature: 0.7,
+          messages: [{ role: "system", content: system }, ...messages.map((m) => ({ role: m.role, content: m.content }))]
+        })
+      });
+      if (!res.ok) throw new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      const data = await res.json();
+      const text = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : "";
+      if (!text) throw new Error("OpenAI devolvió una respuesta vacía.");
+      return text.trim();
+    }
+    if (providerKey === "anthropic") {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": cfg.key,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          max_tokens: 1400,
+          system,
+          messages: messages.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }))
+        })
+      });
+      if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      const data = await res.json();
+      const text = (data.content || []).map((c) => c.text || "").join("");
+      if (!text) throw new Error("Anthropic devolvió una respuesta vacía.");
+      return text.trim();
+    }
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(cfg.key)}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1400 }
+      })
+    });
+    if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    const data = await res.json();
+    const parts = data.candidates && data.candidates[0] && data.candidates[0].content ? data.candidates[0].content.parts || [] : [];
+    const text = parts.map((p) => p.text || "").join("");
+    if (!text) throw new Error("Gemini devolvió una respuesta vacía.");
+    return text.trim();
+  } catch (err) {
+    if (err.name === "AbortError") throw new Error("La llamada superó los 90 segundos. Reintenta o usa la Opción A.");
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function providerLabel() {
+  const cfg = readApiConfig();
+  const prov = PROVIDERS[cfg.provider] || PROVIDERS.openai;
+  return `${prov.label}${cfg.model ? " · " + cfg.model : ""}${cfg.key ? "" : " · sin key"}`;
+}
+
+/* ---------- chat UI ---------- */
+function renderChat() {
+  const log = $("#chatLog");
+  const visible = SPAR.chat.visible;
+  log.innerHTML = visible.length
+    ? visible.map((m) => `<div class="msg ${m.role}"><div class="bubble">${esc(m.content).replace(/\n/g, "<br>")}</div></div>`).join("")
+    : `<div class="empty" style="margin:auto;border:none;background:transparent">Escribe tu primera intervención para abrir la reunión.<br><span class="small">El LLM responderá como el stakeholder. Necesitas una API key guardada o usar la Opción A.</span></div>`;
+  if (SPAR.chat.busy) {
+    log.insertAdjacentHTML("beforeend", `<div class="msg assistant"><div class="bubble typing">● ● ●</div></div>`);
+  }
+  log.scrollTop = log.scrollHeight;
+  const m = mission();
+  $("#chatMeta").textContent = `Turno ${Math.min(SPAR.chat.turns, DATA.sparring.turns)}/${DATA.sparring.turns} · ${SPAR.chat.evaluated ? "auditoría completada" : "en curso"} · ${providerLabel()} · práctica: ${m.practice ? m.practice.label : "—"}`;
+  $("#chatSend").disabled = SPAR.chat.busy;
+  $("#chatEval").disabled = SPAR.chat.busy;
+}
+
+function resetChatState() {
+  SPAR.chat = { history: [], visible: [], turns: 0, busy: false, evaluated: false, evaluation: null, system: null, token: null };
+  const box = $("#rubricResult");
+  if (box) box.innerHTML = "";
+  const input = $("#chatInput");
+  if (input) input.value = "";
+  renderChat();
+}
+
+function beginChat(firstText) {
+  const m = mission();
+  const token = Math.random().toString(36).slice(2);
+  SPAR.chat = {
+    history: [{ role: "user", content: firstText }],
+    visible: [{ role: "user", content: firstText }],
+    turns: 1,
+    busy: true,
+    evaluated: false,
+    evaluation: null,
+    system: buildSparringPrompt(m),
+    token
+  };
+  renderChat();
+  chatCall(SPAR.chat.history, SPAR.chat.system)
+    .then((text) => {
+      if (SPAR.chat.token !== token) return;
+      SPAR.chat.busy = false;
+      SPAR.chat.history.push({ role: "assistant", content: text });
+      SPAR.chat.visible.push({ role: "assistant", content: text });
+      renderChat();
+      if (SPAR.chat.turns >= DATA.sparring.turns && !SPAR.chat.evaluated) {
+        toast("Turno 8 completado: solicitando auditoría automática…", "info");
+        evaluateChat();
+      }
+    })
+    .catch((err) => {
+      if (SPAR.chat.token !== token) return;
+      SPAR.chat.busy = false;
+      SPAR.chat.visible.push({ role: "error", content: "Error del proveedor: " + err.message });
+      renderChat();
+      toast(err.message, "error");
+    });
+}
+
+function pushChatTurn(text) {
+  const m = mission();
+  const token = SPAR.chat.token || Math.random().toString(36).slice(2);
+  SPAR.chat.token = token;
+  SPAR.chat.system = SPAR.chat.system || buildSparringPrompt(m);
+  SPAR.chat.history.push({ role: "user", content: text });
+  SPAR.chat.visible.push({ role: "user", content: text });
+  SPAR.chat.turns += 1;
+  SPAR.chat.busy = true;
+  renderChat();
+  chatCall(SPAR.chat.history, SPAR.chat.system)
+    .then((response) => {
+      if (SPAR.chat.token !== token) return;
+      SPAR.chat.busy = false;
+      SPAR.chat.history.push({ role: "assistant", content: response });
+      SPAR.chat.visible.push({ role: "assistant", content: response });
+      renderChat();
+      if (SPAR.chat.turns >= DATA.sparring.turns && !SPAR.chat.evaluated) {
+        toast("Turno 8 completado: solicitando auditoría automática…", "info");
+        evaluateChat();
+      }
+    })
+    .catch((err) => {
+      if (SPAR.chat.token !== token) return;
+      SPAR.chat.busy = false;
+      SPAR.chat.visible.push({ role: "error", content: "Error del proveedor: " + err.message });
+      renderChat();
+      toast(err.message, "error");
+    });
+}
+
+function sendChatMessage() {
+  const input = $("#chatInput");
+  const text = input.value.trim();
+  if (!text || SPAR.chat.busy) return;
+  if (text.toLowerCase() === "/evaluar") { input.value = ""; evaluateChat(); return; }
+  if (SPAR.chat.turns >= DATA.sparring.turns) {
+    toast("Ya completaste los 8 turnos. Pulsa 'Evaluar ahora' o inicia una nueva sesión.", "warn");
+    return;
+  }
+  input.value = "";
+  if (!SPAR.chat.history.length) beginChat(text);
+  else pushChatTurn(text);
+}
+
+function evaluateChat() {
+  if (SPAR.chat.busy) { toast("Espera a que termine el turno en curso.", "warn"); return; }
+  if (!SPAR.chat.history.length) { toast("Inicia la conversación antes de evaluar.", "warn"); return; }
+  if (SPAR.chat.evaluated) { toast("Esta sesión ya tiene auditoría. Inicia una nueva para volver a evaluar.", "info"); return; }
+  const m = mission();
+  const token = SPAR.chat.token;
+  const evalMessages = [...SPAR.chat.history, { role: "user", content: buildEvaluationRequest(m) }];
+  SPAR.chat.busy = true;
+  renderChat();
+  chatCall(evalMessages, SPAR.chat.system || buildSparringPrompt(m))
+    .then((text) => {
+      if (SPAR.chat.token !== token) return;
+      SPAR.chat.busy = false;
+      const raw = extractJson(text);
+      const ev = raw ? normalizeEvaluation(raw) : null;
+      if (ev) {
+        SPAR.chat.evaluated = true;
+        SPAR.chat.evaluation = ev;
+        applyEvaluation(ev, m);
+        renderEvaluation(ev);
+        renderChat();
+      } else {
+        renderChat();
+        $("#rubricResult").innerHTML = `<details class="feedback info"><summary>El modelo no devolvió JSON válido. Ver respuesta cruda</summary><pre class="promptbox">${esc(text)}</pre></details>`;
+        renderSelfEval(m, "La respuesta del modelo no contenía un JSON de auditoría válido.");
+        toast("No se pudo parsear la auditoría; usa la autoevaluación de respaldo.", "warn");
+      }
+    })
+    .catch((err) => {
+      if (SPAR.chat.token !== token) return;
+      SPAR.chat.busy = false;
+      renderChat();
+      renderSelfEval(m, err.message);
+      toast(err.message, "error");
+    });
+}
+
+/* ---------- mission & prompt rendering ---------- */
+function renderMission() {
+  const m = mission();
+  $("#sparContextBrief").textContent = m.context.brief;
+  const hidden = $("#sparHidden");
+  hidden.classList.toggle("spoiler", !SPAR.spoiler);
+  hidden.innerHTML = `
+    <div class="hs-line"><span class="hs-label">Trampa oculta #1</span><div class="hs-body">${nodePill(m.pitfalls[0] ? m.pitfalls[0].id : "")}<p>${esc(m.pitfalls[0] ? m.pitfalls[0].description : "")}</p></div></div>
+    <div class="hs-line"><span class="hs-label">Trampa oculta #2</span><div class="hs-body">${nodePill(m.pitfalls[1] ? m.pitfalls[1].id : "")}<p>${esc(m.pitfalls[1] ? m.pitfalls[1].description : "")}</p></div></div>
+    <div class="hs-line"><span class="hs-label">Objeción emocional secreta</span><div class="hs-body"><p>“${esc(m.objection.line)}”</p><p class="muted small">${esc(m.objection.label)}</p></div></div>`;
+}
+
+function renderPrompt() {
+  const m = mission();
+  $("#promptBox").textContent = buildSparringPrompt(m);
+  $("#sparPractice").value = SPAR.practiceId;
+}
+
+function renderSparStats() {
+  const m = mission();
+  $("#sparStats").innerHTML = `
+    <span class="pill">${DATA.sparring.turns} turnos</span>
+    <span class="pill book" style="--c:${m.practice ? TYPE_COLORS.FDEPractice : "var(--muted)"}">${esc(m.practice ? m.practice.label : "sin práctica")}</span>
+    <span class="pill">${state.sparring.length} sesiones</span>
+    ${SPAR.chat.evaluated && SPAR.chat.evaluation ? `<span class="pill ok" style="--c:var(--ok)">${SPAR.chat.evaluation.overall}/100</span>` : ""}`;
+}
+
+function syncSparControls() {
+  $("#sparContext").value = SPAR.contextId;
+  $("#sparPractice").value = SPAR.practiceId;
+  $("#sparPitfall1").value = SPAR.pitfalls[0];
+  $("#sparPitfall2").value = SPAR.pitfalls[1];
+  $("#sparObjection").value = SPAR.objectionId;
+  $("#sparSpoiler").checked = SPAR.spoiler;
+}
+
+function renderSparring() {
+  syncSparControls();
+  renderMission();
+  renderPrompt();
+  renderChat();
+  renderSparStats();
+}
+
+function chooseSuggestedPitfalls(context) {
+  const suggestions = (context.suggested_pitfalls || []).filter((id) => NODES[id]);
+  const all = DATA.nodes.filter((n) => n.type === "Pitfall").map((n) => n.id);
+  const p1 = suggestions[0] || all[0];
+  const p2 = suggestions[1] || all.find((id) => id !== p1) || all[1];
+  SPAR.pitfalls = [p1, p2];
+}
+
+function onMissionChange() {
+  SPAR.contextId = $("#sparContext").value;
+  SPAR.practiceId = $("#sparPractice").value;
+  SPAR.objectionId = $("#sparObjection").value;
+  const p1 = $("#sparPitfall1").value;
+  let p2 = $("#sparPitfall2").value;
+  if (p1 === p2) {
+    const all = DATA.nodes.filter((n) => n.type === "Pitfall").map((n) => n.id);
+    p2 = all.find((id) => id !== p1) || p1;
+    $("#sparPitfall2").value = p2;
+  }
+  SPAR.pitfalls = [p1, p2];
+  resetChatState();
+  renderMission();
+  renderPrompt();
+  renderSparStats();
+}
+
+function onContextChange() {
+  SPAR.contextId = $("#sparContext").value;
+  const context = contextById(SPAR.contextId);
+  if (context) {
+    chooseSuggestedPitfalls(context);
+    $("#sparPitfall1").value = SPAR.pitfalls[0];
+    $("#sparPitfall2").value = SPAR.pitfalls[1];
+  }
+  onMissionChange();
+}
+
+function randomBossFight() {
+  const rnd = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const contexts = DATA.sparring.contexts;
+  const practices = DATA.nodes.filter((n) => n.type === "FDEPractice");
+  const pitfalls = DATA.nodes.filter((n) => n.type === "Pitfall");
+  const objections = DATA.sparring.objections;
+  const context = rnd(contexts);
+  SPAR.contextId = context.id;
+  SPAR.practiceId = rnd(practices).id;
+  const shuffled = pitfalls.slice().sort(() => Math.random() - 0.5);
+  SPAR.pitfalls = [shuffled[0].id, shuffled[1].id];
+  SPAR.objectionId = rnd(objections).id;
+  syncSparControls();
+  resetChatState();
+  renderMission();
+  renderPrompt();
+  renderSparStats();
+  toast(`Boss fight: ${context.label} · ${SPAR.pitfalls.map((id) => NODES[id].label).join(" + ")}`, "info");
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch { ok = false; }
+    ta.remove();
+    return ok;
+  }
+}
+
+function initVoiceInput() {
+  const btn = $("#voiceBtn");
+  const status = $("#voiceStatus");
+  const lang = $("#speechLang");
+  if (!btn || !status || !lang) return;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    btn.disabled = true;
+    btn.title = "Este navegador no soporta SpeechRecognition.";
+    status.textContent = "Reconocimiento de voz no disponible en este navegador. Escribe tu intervención; el resto del Sparring funciona igual.";
+    return;
+  }
+  try {
+    const saved = localStorage.getItem("fde_dojo_voice_lang_v1");
+    if (saved && Array.from(lang.options).some((o) => o.value === saved)) lang.value = saved;
+  } catch (err) { /* localStorage may be unavailable; keep default */ }
+  lang.onchange = () => {
+    try { localStorage.setItem("fde_dojo_voice_lang_v1", lang.value); } catch (err) { /* ignore */ }
+    status.textContent = `Idioma de voz: ${lang.value}. Pulsa Hablar cuando quieras.`;
+  };
+
+  let recognition = null;
+  let active = false;
+  let baseText = "";
+
+  const resetButton = () => {
+    active = false;
+    btn.textContent = "🎙️ Hablar (Push-to-Talk)";
+    btn.classList.remove("recording");
+  };
+
+  btn.onclick = () => {
+    if (active && recognition) {
+      try { recognition.stop(); } catch (err) { /* already stopped */ }
+      return;
+    }
+    if (SPAR.chat.busy) {
+      toast("Espera a que termine el turno antes de dictar.", "warn");
+      return;
+    }
+    baseText = $("#chatInput").value;
+    recognition = new SpeechRecognition();
+    recognition.lang = lang.value;
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+    active = true;
+    btn.textContent = "⏹ Detener";
+    btn.classList.add("recording");
+    status.textContent = "Escuchando… habla con naturalidad; vuelve a pulsar para detener.";
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript + " ";
+      }
+      const merged = (baseText ? baseText.trim() + " " : "") + transcript.trim();
+      $("#chatInput").value = merged.replace(/\s+/g, " ").replace(/^\s+/, "");
+    };
+    recognition.onerror = (event) => {
+      const messages = {
+        "not-allowed": "Permiso de micrófono denegado. Habilítalo en el navegador o escribe la intervención.",
+        "service-not-allowed": "El servicio de voz no está permitido en este contexto (usa http://localhost o HTTPS).",
+        "no-speech": "No se detectó voz. Intenta de nuevo acercándote al micrófono.",
+        "network": "El servicio de voz no está disponible por red. Escribe la intervención.",
+        "aborted": "Escucha cancelada."
+      };
+      const message = messages[event.error] || `Error de voz: ${event.error}`;
+      status.textContent = message;
+      if (event.error !== "aborted") toast(message, "warn");
+    };
+    recognition.onend = () => {
+      resetButton();
+      if (status.textContent.startsWith("Escuchando")) status.textContent = "Listo. Revisa el texto dictado y pulsa Enviar.";
+    };
+    try {
+      recognition.start();
+    } catch (err) {
+      resetButton();
+      status.textContent = "No se pudo iniciar el micrófono: " + err.message;
+    }
+  };
+}
+
+function initSparring() {
+  $("#sparContext").innerHTML = DATA.sparring.contexts.map((c) => `<option value="${c.id}">${esc(c.label)}</option>`).join("");
+  $("#sparPractice").innerHTML = DATA.nodes
+    .filter((n) => n.type === "FDEPractice")
+    .sort((a, b) => a.label.localeCompare(b.label, "es"))
+    .map((n) => `<option value="${n.id}">${esc(n.label)}</option>`).join("");
+  $("#sparPitfall1").innerHTML = DATA.nodes
+    .filter((n) => n.type === "Pitfall")
+    .sort((a, b) => a.label.localeCompare(b.label, "es"))
+    .map((n) => `<option value="${n.id}">${esc(n.label)}</option>`).join("");
+  $("#sparPitfall2").innerHTML = $("#sparPitfall1").innerHTML;
+  $("#sparObjection").innerHTML = DATA.sparring.objections.map((o) => `<option value="${o.id}">${esc(o.label)}</option>`).join("");
+
+  const defaultContext = DATA.sparring.contexts[0];
+  SPAR.contextId = defaultContext.id;
+  SPAR.practiceId = NODES["fde_contracting_meeting"] ? "fde_contracting_meeting" : DATA.nodes.find((n) => n.type === "FDEPractice").id;
+  SPAR.objectionId = DATA.sparring.objections[0].id;
+  chooseSuggestedPitfalls(defaultContext);
+  syncSparControls();
+
+  $("#sparContext").onchange = onContextChange;
+  $("#sparPractice").onchange = onMissionChange;
+  $("#sparPitfall1").onchange = onMissionChange;
+  $("#sparPitfall2").onchange = onMissionChange;
+  $("#sparObjection").onchange = onMissionChange;
+  $("#sparSpoiler").onchange = () => { SPAR.spoiler = $("#sparSpoiler").checked; renderMission(); };
+  $("#sparRandom").onclick = randomBossFight;
+
+  $$(".tabs button").forEach((btn) => {
+    btn.onclick = () => {
+      SPAR.tab = btn.getAttribute("data-tab");
+      $$(".tabs button").forEach((b) => b.classList.toggle("active", b === btn));
+      $("#tab-prompt").hidden = SPAR.tab !== "prompt";
+      $("#tab-chat").hidden = SPAR.tab !== "chat";
+    };
+  });
+
+  $("#copyPrompt").onclick = async () => {
+    const ok = await copyText(buildSparringPrompt(mission()));
+    $("#copyNote").textContent = ok ? "Copiado al portapapeles." : "No se pudo copiar; selecciona el texto manualmente.";
+    toast(ok ? "Prompt copiado." : "No se pudo copiar el prompt.", ok ? "ok" : "warn");
+  };
+  $("#downloadPrompt").onclick = () => {
+    const m = mission();
+    downloadFile(`fde-sparring-${m.context.id}.md`, buildSparringPrompt(m), "text/markdown");
+  };
+
+  // API config
+  const cfg = readApiConfig();
+  if (cfg.provider && PROVIDERS[cfg.provider]) $("#apiProvider").value = cfg.provider;
+  updateModelOptions();
+  if (cfg.model) $("#apiModel").value = cfg.model;
+  if (cfg.key) $("#apiKey").value = cfg.key;
+  $("#apiProvider").onchange = () => { updateModelOptions(); };
+  $("#apiSave").onclick = () => {
+    const next = { provider: $("#apiProvider").value, model: $("#apiModel").value.trim(), key: $("#apiKey").value.trim() };
+    writeApiConfig(next);
+    toast(next.key ? "Configuración guardada solo en este navegador." : "Guardado sin API key: el chat no funcionará hasta que agregues una.", next.key ? "ok" : "warn");
+    renderChat();
+  };
+
+  $("#chatSend").onclick = sendChatMessage;
+  $("#chatEval").onclick = evaluateChat;
+  $("#chatReset").onclick = () => {
+    if (SPAR.chat.history.length && !confirm("¿Reiniciar la sesión de chat? Se conservará la misión y el histórico de evaluaciones.")) return;
+    resetChatState();
+    toast("Sesión reiniciada.", "info");
+  };
+  $("#chatInput").addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); sendChatMessage(); }
+  });
+
+  initVoiceInput();
+  renderSparring();
+}
+
+function updateModelOptions() {
+  const providerKey = $("#apiProvider").value;
+  const provider = PROVIDERS[providerKey] || PROVIDERS.openai;
+  $("#modelList").innerHTML = provider.models.map((m) => `<option value="${m}"></option>`).join("");
+  const current = $("#apiModel").value.trim();
+  if (!current || !provider.models.includes(current)) $("#apiModel").value = provider.defaultModel;
+}
+
+/* =====================================================================
+   4 · MODE ROUTING & BOOT
+   ===================================================================== */
+function setMode(mode, opts = {}) {
+  const valid = ["reflex", "calibration", "bootcamp", "sparring"].includes(mode) ? mode : "reflex";
+  $$(".mode").forEach((section) => { section.hidden = section.id !== "mode-" + valid; });
+  $$(".navbtn").forEach((btn) => btn.classList.toggle("active", btn.getAttribute("data-mode") === valid));
+  state.lastMode = valid;
+  saveState();
+  if (valid === "reflex") renderReflex();
+  else if (valid === "calibration") renderCalibration();
+  else if (valid === "bootcamp") renderBootcamp();
+  else if (valid === "sparring") renderSparring();
+  if (!opts.silent) {
+    const hash = "#mode=" + valid;
+    if (location.hash !== hash) history.replaceState(null, "", hash);
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function routeFromHash() {
+  const raw = decodeURIComponent(location.hash.replace(/^#/, ""));
+  if (raw.startsWith("node=")) {
+    setMode("reflex", { silent: true });
+    setNodeFilter(raw.slice(5));
+    return;
+  }
+  if (raw.startsWith("scen=")) {
+    setMode("reflex", { silent: true });
+    focusScenario(raw.slice(5));
+    return;
+  }
+  if (raw === "calibration" || raw === "cal") { setMode("calibration", { silent: true }); return; }
+  if (raw === "bootcamp" || raw === "mode=bootcamp") { setMode("bootcamp", { silent: true }); return; }
+  if (raw === "sparring") { setMode("sparring", { silent: true }); return; }
+  if (raw === "reflex" || raw === "mode=reflex") { setMode("reflex", { silent: true }); return; }
+  if (raw === "mode=calibration") { setMode("calibration", { silent: true }); return; }
+  if (raw === "mode=sparring") { setMode("sparring", { silent: true }); return; }
+  setMode(["reflex", "calibration", "bootcamp", "sparring"].includes(state.lastMode) ? state.lastMode : "reflex", { silent: true });
+}
+
+function boot() {
+  const counts = DATA.counts || {};
+  $("#dataCounts").textContent = `${counts.nodes || DATA.nodes.length} nodos · ${counts.scenarios || SCENARIOS.length} escenarios · ${counts.calibration || DATA.calibration.questions.length} preguntas CI`;
+  renderHUD();
+  initReflex();
+  initCalibration();
+  initSparring();
+  $$(".navbtn").forEach((btn) => { btn.onclick = () => setMode(btn.getAttribute("data-mode")); });
+  window.addEventListener("hashchange", routeFromHash);
+  routeFromHash();
+  renderReflexSide();
+  saveState();
+}
+
+boot();
+</script>
+</body>
+</html>
