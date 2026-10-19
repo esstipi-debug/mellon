@@ -216,6 +216,32 @@
   .log-item .bad{color:var(--danger)}
   .empty{border:1px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;color:var(--muted);font-size:13px}
 
+  /* ---------- Masterclass Táctica & Damage Control ---------- */
+  .step-stakeholder{background:#0e121a;border:1px solid var(--border);border-left:3px solid var(--warn);border-radius:10px;padding:14px;margin:12px 0}
+  .step-stakeholder.ok{border-left-color:var(--ok);background:rgba(62,207,142,.05)}
+  .step-stakeholder.bad{border-left-color:var(--danger);background:rgba(251,113,133,.05)}
+  .stakeholder-badge{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:6px}
+  .stakeholder-speech{font-size:14px;font-style:italic;line-height:1.5;color:var(--text);margin:0}
+
+  .masterclass-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+  @media (max-width:850px){ .masterclass-grid{grid-template-columns:1fr} }
+  .mc-card{border:1px solid var(--border);border-radius:10px;padding:14px;background:#0f121a}
+  .mc-card.yours{border-color:rgba(251,113,133,.3);background:rgba(251,113,133,.03)}
+  .mc-card.yours.ok{border-color:rgba(62,207,142,.3);background:rgba(62,207,142,.03)}
+  .mc-card.master{border-color:rgba(79,157,255,.35);background:rgba(79,157,255,.04)}
+  .mc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .mc-head h4{font-size:13px;text-transform:uppercase;letter-spacing:.6px;margin:0}
+  .mc-body .script{font-size:13px;line-height:1.5;margin:0 0 10px;color:var(--text);background:#0a0c12;padding:10px;border-radius:8px;border:1px solid var(--border2)}
+  .mc-rationale{font-size:12.5px;line-height:1.5;color:#c3c9d6}
+  .mc-breakdown{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:12px}
+  .mc-breakdown-item{background:#0a0c12;padding:6px 9px;border-radius:6px;border:1px solid var(--border)}
+  .mc-breakdown-item b{color:var(--accent)}
+
+  .metric-impact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0}
+  .impact-chip{border:1px solid var(--border);border-radius:9px;padding:10px;background:#0d1017}
+  .impact-chip .ih{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .impact-chip .ib{font-size:12px;line-height:1.45;color:#a8b2c4}
+
   /* ---------- calibration ---------- */
   .cal-layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
   .cal-prompt{font-size:19px;line-height:1.4;margin:6px 0 10px}
@@ -320,6 +346,32 @@
   .selfeval{display:flex;flex-direction:column;gap:9px;margin:10px 0}
   .selfeval label{display:grid;grid-template-columns:150px 1fr 34px;gap:8px;align-items:center;font-size:12px}
   .selfeval input[type=range]{accent-color:var(--accent)}
+
+  /* ---------- Native Sparring Simulator Styles ---------- */
+  .native-sparring-box{display:flex;flex-direction:column;gap:12px}
+  .spar-dialogue-card{border:1px solid var(--border);border-radius:12px;background:#0b0d13;padding:14px;min-height:240px;max-height:480px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+  .spar-turn{display:flex;flex-direction:column;gap:4px}
+  .spar-turn.stakeholder{align-self:flex-start;max-width:90%}
+  .spar-turn.fde{align-self:flex-end;max-width:90%}
+  .spar-turn-head{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .spar-bubble{padding:11px 14px;border-radius:10px;font-size:13px;line-height:1.52}
+  .spar-turn.stakeholder .spar-bubble{background:#161b26;border:1px solid var(--border2);border-top-left-radius:2px;color:#e1e6f0}
+  .spar-turn.fde .spar-bubble{background:rgba(62,207,142,.12);border:1px solid rgba(62,207,142,.35);border-top-right-radius:2px;color:#d8fae8}
+
+  .spar-stances{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .stance-opt{background:#12151e;border:1px solid var(--border2);border-radius:9px;padding:11px 13px;text-align:left;cursor:pointer;transition:all .15s ease;color:var(--text)}
+  .stance-opt:hover{border-color:var(--accent);background:#181d2a}
+  .stance-opt .st-title{font-size:12px;font-weight:800;color:var(--accent);display:block;margin-bottom:3px}
+  .stance-opt .st-text{font-size:12.5px;color:#cbd3e1;line-height:1.45;margin:0}
+
+  .audit-scorecard{border:1px solid rgba(62,207,142,.45);border-radius:12px;padding:18px;background:linear-gradient(135deg,rgba(62,207,142,.08),rgba(79,157,255,.05));margin-top:12px}
+  .audit-score-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .audit-dim-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:14px}
+  .audit-dim-row{background:#0b0d13;border:1px solid var(--border);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .audit-dim-info{font-size:12px;font-weight:700}
+  .audit-dim-bar{flex:1;max-width:180px;height:8px;background:#1e2330;border-radius:4px;overflow:hidden}
+  .audit-dim-fill{height:100%;background:var(--ok)}
+  .audit-dim-score{font-size:13px;font-weight:850;min-width:40px;text-align:right}
 
   /* ---------- modal / toast ---------- */
   .modal{position:fixed;inset:0;z-index:100;background:rgba(5,7,11,.76);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;overflow-y:auto}
@@ -560,55 +612,68 @@
 
       <div class="card spar-main">
         <div class="tabs">
-          <button data-tab="prompt" class="active">A · Prompt para LLM (sin API key)</button>
-          <button data-tab="chat">B · Chat BYOK opcional</button>
+          <button data-tab="native" class="active">🎮 Simulador Táctico Interactivo (100% Offline · Cero API Key)</button>
+          <button data-tab="advanced">⚙️ Modo Avanzado: LLM Externo (BYOK o Copiar Prompt)</button>
         </div>
-        <div id="tab-prompt" class="tabpane">
-          <p class="hint">Copia este prompt en Claude, ChatGPT o Gemini como mensaje de sistema (o primer mensaje). El LLM interpretará al stakeholder durante 8 turnos y al escribir <code>/evaluar</code> emitirá la auditoría JSON.</p>
-          <pre id="promptBox" class="promptbox"></pre>
-          <div class="row">
-            <button id="copyPrompt" class="btn primary">📋 Copiar prompt</button>
-            <button id="downloadPrompt" class="btn">⬇ Descargar .md</button>
-            <span id="copyNote" class="hint small"></span>
+        <div id="tab-native" class="tabpane">
+          <div class="native-sparring-box">
+            <div id="nativeStatus" class="result-badges" style="margin-bottom:8px"></div>
+            <div class="spar-dialogue-card" id="nativeDialogue"></div>
+            <div id="nativeControls" style="margin-top:10px"></div>
           </div>
-          <div class="paste-eval" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-            <h4 style="margin:0 0 4px;font-size:13px">📥 Pegar auditoría de Claude / ChatGPT / Gemini (sin API key)</h4>
-            <p class="hint small" style="margin:0 0 8px">Al terminar tu sesión externa con <code>/evaluar</code>, pega aquí la respuesta del modelo (o el bloque JSON) para renderizar la rúbrica de 5 dimensiones y actualizar tu HUD.</p>
-            <textarea id="pasteEvalInput" rows="3" placeholder='Pega aquí la respuesta de /evaluar o el JSON {"overall": 82, "dimensions": [...]}' style="width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:12px"></textarea>
-            <div class="row" style="margin-top:8px">
-              <button id="pasteEvalBtn" class="btn primary" type="button">⚖️ Procesar auditoría JSON</button>
-              <button id="openSelfEvalBtn" class="btn ghost" type="button">📝 Autoevaluación manual (0–20)</button>
+        </div>
+        <div id="tab-advanced" class="tabpane" hidden>
+          <div class="subtabs" style="display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">
+            <button class="btn small active" id="subtabPromptBtn" type="button">📋 Copiar Prompt para ChatGPT / Claude</button>
+            <button class="btn small ghost" id="subtabChatBtn" type="button">🔑 Conectar API Key (OpenAI / Anthropic / Gemini)</button>
+          </div>
+          <div id="subpane-prompt">
+            <p class="hint">Copia este prompt en Claude, ChatGPT o Gemini como mensaje de sistema (o primer mensaje). El LLM interpretará al stakeholder durante 8 turnos y al escribir <code>/evaluar</code> emitirá la auditoría JSON.</p>
+            <pre id="promptBox" class="promptbox"></pre>
+            <div class="row">
+              <button id="copyPrompt" class="btn primary">📋 Copiar prompt</button>
+              <button id="downloadPrompt" class="btn">⬇ Descargar .md</button>
+              <span id="copyNote" class="hint small"></span>
+            </div>
+            <div class="paste-eval" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+              <h4 style="margin:0 0 4px;font-size:13px">📥 Pegar auditoría de Claude / ChatGPT / Gemini (sin API key)</h4>
+              <p class="hint small" style="margin:0 0 8px">Al terminar tu sesión externa con <code>/evaluar</code>, pega aquí la respuesta del modelo (o el bloque JSON) para renderizar la rúbrica de 5 dimensiones y actualizar tu HUD.</p>
+              <textarea id="pasteEvalInput" rows="3" placeholder='Pega aquí la respuesta de /evaluar o el JSON {"overall": 82, "dimensions": [...]}' style="width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:12px"></textarea>
+              <div class="row" style="margin-top:8px">
+                <button id="pasteEvalBtn" class="btn primary" type="button">⚖️ Procesar auditoría JSON</button>
+                <button id="openSelfEvalBtn" class="btn ghost" type="button">📝 Autoevaluación manual (0–20)</button>
+              </div>
             </div>
           </div>
-        </div>
-        <div id="tab-chat" class="tabpane" hidden>
-          <div class="api-config">
-            <label>Proveedor<select id="apiProvider">
-              <option value="openai">OpenAI</option>
-              <option value="anthropic">Anthropic</option>
-              <option value="gemini">Google Gemini</option>
-            </select></label>
-            <label>Modelo<input id="apiModel" list="modelList" placeholder="gpt-4o-mini"><datalist id="modelList"></datalist></label>
-            <label>API key<input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
-            <button id="apiSave" class="btn">Guardar</button>
+          <div id="subpane-chat" hidden>
+            <div class="api-config">
+              <label>Proveedor<select id="apiProvider">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="gemini">Google Gemini</option>
+              </select></label>
+              <label>Modelo<input id="apiModel" list="modelList" placeholder="gpt-4o-mini"><datalist id="modelList"></datalist></label>
+              <label>API key<input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+              <button id="apiSave" class="btn">Guardar</button>
+            </div>
+            <p class="hint small">La key se guarda solo en este navegador (<code>fde_dojo_api_v1</code>) y las llamadas van directas del navegador al proveedor. Si tu red bloquea CORS, usa la Opción A.</p>
+            <div id="chatLog" class="chatlog"></div>
+            <div class="voicebar">
+              <label>Voz<select id="speechLang">
+                <option value="es-CL">Español (CL)</option>
+                <option value="en-US">English (US)</option>
+              </select></label>
+              <button id="voiceBtn" class="btn" type="button">🎙️ Hablar (Push-to-Talk)</button>
+              <span id="voiceStatus" class="hint small">Pulsa para dictar tu intervención; vuelve a pulsar para detener.</span>
+            </div>
+            <div class="chatbar">
+              <textarea id="chatInput" rows="2" placeholder="Escribe tu intervención… (/evaluar para auditar)"></textarea>
+              <button id="chatSend" class="btn primary">Enviar</button>
+              <button id="chatEval" class="btn warn">Evaluar ahora</button>
+              <button id="chatReset" class="btn ghost">Nueva sesión</button>
+            </div>
+            <div id="chatMeta" class="hint small" style="margin-top:8px"></div>
           </div>
-          <p class="hint small">La key se guarda solo en este navegador (<code>fde_dojo_api_v1</code>) y las llamadas van directas del navegador al proveedor. Si tu red bloquea CORS, usa la Opción A.</p>
-          <div id="chatLog" class="chatlog"></div>
-          <div class="voicebar">
-            <label>Voz<select id="speechLang">
-              <option value="es-CL">Español (CL)</option>
-              <option value="en-US">English (US)</option>
-            </select></label>
-            <button id="voiceBtn" class="btn" type="button">🎙️ Hablar (Push-to-Talk)</button>
-            <span id="voiceStatus" class="hint small">Pulsa para dictar tu intervención; vuelve a pulsar para detener.</span>
-          </div>
-          <div class="chatbar">
-            <textarea id="chatInput" rows="2" placeholder="Escribe tu intervención… (/evaluar para auditar)"></textarea>
-            <button id="chatSend" class="btn primary">Enviar</button>
-            <button id="chatEval" class="btn warn">Evaluar ahora</button>
-            <button id="chatReset" class="btn ghost">Nueva sesión</button>
-          </div>
-          <div id="chatMeta" class="hint small" style="margin-top:8px"></div>
         </div>
         <div id="rubricResult"></div>
       </div>
@@ -972,6 +1037,47 @@ function nodePill(id, extraClass = "") {
   if (!n) return "";
   const color = TYPE_COLORS[n.type] || "#8ab4f8";
   return `<button type="button" class="pill node ${extraClass}" data-node="${esc(id)}" style="--c:${color}" title="${esc(n.type)} · ${esc(n.label)}">${esc(n.label)}</button>`;
+}
+
+function formatRichFeedback(text) {
+  if (!text) return "";
+  let s = esc(text);
+  // Match single quotes or escaped quotes or backticks surrounding a node id:
+  s = s.replace(/(?:&#39;|'|`)([a-zA-Z0-9_]+)(?:&#39;|'|`)/g, (match, id) => {
+    if (NODES[id]) return nodePill(id);
+    return match;
+  });
+  // Also match any word in text that exactly matches a known node id
+  s = s.replace(/\b([a-z]{2,4}_[a-z0-9_]+)\b/g, (match, id) => {
+    if (NODES[id]) return nodePill(id);
+    return match;
+  });
+  return s;
+}
+
+function metricImpactExplanation(mKey, delta) {
+  if (!delta) return null;
+  const isPos = delta > 0;
+  const map = {
+    TQ: {
+      pos: "Construiste intimidad y credibilidad profesional: el cliente percibe que buscas su éxito y no una venta rápida.",
+      neg: "Confianza lesionada: el cliente percibió imposición, condescendencia o priorización de tu agenda sobre su realidad."
+    },
+    SIG: {
+      pos: "Extrajiste hechos empíricos y datos no falseados del pasado en vez de opiniones o promesas huecas.",
+      neg: "Caíste en sesgo de validación o datos blandos: aceptaste opiniones de pasillo o cumplidos en vez de evidencia dura."
+    },
+    EVI: {
+      pos: "Enfocaste el esfuerzo en la incertidumbre de mayor valor esperado (EVPI), ahorrando semanas de análisis inútil.",
+      neg: "Inversión de medición o sobreanálisis: te empantanaste midiendo lo fácil o asumiendo riesgos no calibrados."
+    },
+    ADP: {
+      pos: "Pavimentaste el camino y alineaste el contrato 50/50: los operadores adoptarán la herramienta de forma orgánica.",
+      neg: "Fricción operativa garantizada: los usuarios o mandos medios aplicarán resistencia pasiva al sentirse amenazados o ignorados."
+    }
+  };
+  const exp = map[mKey];
+  return exp ? (isPos ? exp.pos : exp.neg) : (isPos ? "Impacto positivo en la dinámica de despliegue." : "Riesgo operativo introducido en el cliente.");
 }
 
 function openNode(id) {
@@ -1397,6 +1503,7 @@ function renderScenario(s) {
           </button>`).join("")}
       </div>
     </div>
+    <div class="step" id="step3" hidden></div>
     <div id="outcome"></div>`;
 
   $$("#diagOptions .opt").forEach((btn) => {
@@ -1445,7 +1552,6 @@ function chooseAction(s, optId) {
   const chosen = s.action_options.find((o) => o.id === optId);
   if (!chosen) return;
   REFLEX.actionChoice = chosen;
-  REFLEX.finished = true;
   const best = s.action_options.find((o) => o.is_best);
   $$("#actionOptions .opt").forEach((btn) => {
     const opt = s.action_options.find((o) => o.id === btn.getAttribute("data-action"));
@@ -1461,69 +1567,278 @@ function chooseAction(s, optId) {
 
   const diagOk = !!(REFLEX.diagChoice && REFLEX.diagChoice.is_correct);
   const actionOk = !!chosen.is_best;
-  const gained = 5 + (diagOk ? 10 : 0) + (actionOk ? 20 : 0) + (diagOk && actionOk ? 10 : 0);
 
-  applyDeltas(chosen.deltas, { silent: true });
-  addXP(gained);
-  touchStudyDay();
+  if (actionOk) {
+    // Optimal Action Chosen!
+    REFLEX.finished = true;
+    const gained = 5 + (diagOk ? 10 : 0) + 20 + (diagOk ? 10 : 0);
+    applyDeltas(chosen.deltas, { silent: true });
+    addXP(gained);
+    touchStudyDay();
 
-  const st = state.scenarios[s.id] || (state.scenarios[s.id] = {
-    attempts: 0, diagRight: 0, diagTries: 0, bestRight: 0, actionTries: 0, box: 0
-  });
-  st.attempts = (st.attempts || 0) + 1;
-  st.diagTries = (st.diagTries || 0) + 1;
-  st.actionTries = (st.actionTries || 0) + 1;
-  if (diagOk) st.diagRight = (st.diagRight || 0) + 1;
-  if (actionOk) st.bestRight = (st.bestRight || 0) + 1;
-  st.lastAt = Date.now();
-  st.lastDiag = diagOk;
-  st.lastAction = actionOk;
-  scheduleReview(st, diagOk && actionOk);
+    const st = state.scenarios[s.id] || (state.scenarios[s.id] = {
+      attempts: 0, diagRight: 0, diagTries: 0, bestRight: 0, actionTries: 0, box: 0
+    });
+    st.attempts = (st.attempts || 0) + 1;
+    st.diagTries = (st.diagTries || 0) + 1;
+    st.actionTries = (st.actionTries || 0) + 1;
+    if (diagOk) st.diagRight = (st.diagRight || 0) + 1;
+    st.bestRight = (st.bestRight || 0) + 1;
+    st.lastAt = Date.now();
+    st.lastDiag = diagOk;
+    st.lastAction = true;
+    scheduleReview(st, diagOk);
 
-  state.log.push({ id: s.id, at: Date.now(), diagOk, actionOk, xp: gained });
-  if (state.log.length > 40) state.log = state.log.slice(-40);
-  saveState();
+    state.log.push({ id: s.id, at: Date.now(), diagOk, actionOk: true, xp: gained });
+    if (state.log.length > 40) state.log = state.log.slice(-40);
+    saveState();
 
-  renderHUD();
-  renderOutcome(s, chosen, best, diagOk, actionOk, gained);
-  renderReflexSide();
-  $("#outcome").scrollIntoView({ behavior: "smooth", block: "start" });
+    renderHUD();
+    renderReflexSide();
+    renderOutcome(s, chosen, best, diagOk, true, gained, null);
+    $("#outcome").scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    // Suboptimal Action -> Live Stakeholder Pushback & Step 3 Damage Control
+    REFLEX.step = 3;
+    applyDeltas(chosen.deltas, { silent: true });
+    renderHUD();
+    renderDamageControl(s, chosen, best, diagOk);
+  }
 }
 
-function renderOutcome(s, chosen, best, diagOk, actionOk, gained) {
+function renderDamageControl(s, chosen, best, diagOk) {
+  const step3 = $("#step3");
+  step3.hidden = false;
+
+  const pushbackLines = [
+    `“Un momento... Estás asumiendo cosas sobre mi operación que no son ciertas y tomando decisiones por encima de mi equipo. Si seguimos por este camino, esto va a fracasar y no pienso poner mi reputación en juego.”`,
+    `“Espera un segundo. Eso suena muy bonito en un slide, pero mis supervisores no van a aceptar que un externo les imponga cómo trabajar. No me convence nada esta postura.”`,
+    `“Veo que vienes con tu propia agenda preconcebida. Si esto no resuelve nuestro dolor inmediato y solo nos genera más burocracia, prefiero cancelar la colaboración aquí mismo.”`
+  ];
+  const pushback = pushbackLines[Math.abs(hashString(s.id)) % pushbackLines.length];
+
+  const dcOptions = [
+    {
+      id: "dc_fde",
+      is_best: true,
+      title: "🛡️ Maniobra Flawless Consulting (Recuperación Óptima · Peter Block)",
+      stance: "Nombrar la resistencia sin juzgar, restaurar la responsabilidad 50/50 y pausar la imposición de la solución.",
+      script: "“Tiene toda la razón en detener esto. He cometido el error de apresurarme a proponer una acción antes de acordar las condiciones reales con usted y su equipo. Si este proyecto no protege la operación de su gente, no debemos hacerlo. Pongamos una pausa: ¿qué tendría que pasar para que usted se sienta 100% seguro con este piloto?”",
+      outcome: "¡Crisis contenida con maestría! El stakeholder baja la guardia ante tu honestidad y madurez consultiva. Se restaura la confianza y se acuerda un marco seguro.",
+      deltas: { TQ: 10, ADP: 10 }
+    },
+    {
+      id: "dc_defense",
+      is_best: false,
+      title: "💥 Justificación Técnica y Apelación al Mandato Ejecutivo (Empeora)",
+      stance: "Defender tu propuesta insistiendo en el rigor del modelo y citando las expectativas de la dirección ejecutiva.",
+      script: "“Entiendo su preocupación, pero los datos del análisis son irrefutables y el comité ejecutivo espera resultados este trimestre. Si no intervenimos ahora, el costo de inacción será mucho peor para la empresa.”",
+      outcome: "Fricción crítica: Polarizaste la reunión. El stakeholder percibe una amenaza jerárquica y convoca a su equipo para blindar y boicotear el proyecto.",
+      deltas: { TQ: -10 }
+    },
+    {
+      id: "dc_submissive",
+      is_best: false,
+      title: "🏳️ Capitulación de Par de Manos (Pérdida de autoridad estratégica)",
+      stance: "Disculparse excesivamente y prometer hacer todo el trabajo operativo sin condiciones ni límites.",
+      script: "“Lamentamos muchísimo la molestia, díganos exactamente qué quiere que hagamos y nos adaptamos al 100% a lo que usted ordene sin discutir absolutamente nada.”",
+      outcome: "Pérdida de estatus: Pasaste de consultor estratégico a par de manos sin criterio. El cliente te asigna tareas manuales menores y el impacto queda anulado.",
+      deltas: { ADP: -10 }
+    }
+  ];
+
+  step3.innerHTML = `
+    <div class="step-head">
+      <span class="stepnum">3</span>
+      <h3>⚠️ Tensión en la Sala &amp; Control de Daños FDE</h3>
+    </div>
+    <div class="step-stakeholder bad">
+      <div class="stakeholder-badge">🚨 Objeción en Vivo · ${esc(s.stakeholder_role)}</div>
+      <p class="stakeholder-speech">${esc(pushback)}</p>
+    </div>
+    <p class="q">Tu intervención detonó fricción en la sala. En el terreno, un FDE no huye ni se atrinchera: ejecuta una maniobra de recuperación táctica. <b>¿Cómo salvas la relación y el proyecto?</b></p>
+    <div class="options" id="dcOptions">
+      ${dcOptions.map((opt, i) => `
+        <button type="button" class="opt" data-dc="${opt.id}">
+          <span class="opt-letter">${i + 1}</span>
+          <span class="opt-body">
+            <span class="opt-label"><b>${esc(opt.title)}</b><br><span class="muted small">${esc(opt.stance)}</span></span>
+            <span class="script" style="margin-top:6px;display:block;font-style:italic">${esc(opt.script)}</span>
+          </span>
+        </button>
+      `).join("")}
+    </div>
+    <div id="dcFeedback" style="margin-top:12px"></div>
+  `;
+
+  step3.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  $$("#dcOptions .opt").forEach((btn) => {
+    btn.onclick = () => {
+      const dcId = btn.getAttribute("data-dc");
+      const chosenDC = dcOptions.find((o) => o.id === dcId);
+      if (!chosenDC) return;
+      REFLEX.damageChoice = chosenDC;
+      REFLEX.finished = true;
+
+      $$("#dcOptions .opt").forEach((b) => {
+        const o = dcOptions.find((x) => x.id === b.getAttribute("data-dc"));
+        b.disabled = true;
+        if (o.is_best) b.classList.add("correct");
+        else if (o.id === chosenDC.id) b.classList.add("wrong");
+        else b.classList.add("dim");
+      });
+
+      applyDeltas(chosenDC.deltas, { silent: true });
+      const dcGained = chosenDC.is_best ? 15 : 5;
+      const totalGained = 5 + (diagOk ? 10 : 0) + dcGained;
+      addXP(totalGained);
+      touchStudyDay();
+
+      const st = state.scenarios[s.id] || (state.scenarios[s.id] = {
+        attempts: 0, diagRight: 0, diagTries: 0, bestRight: 0, actionTries: 0, box: 0
+      });
+      st.attempts = (st.attempts || 0) + 1;
+      st.diagTries = (st.diagTries || 0) + 1;
+      st.actionTries = (st.actionTries || 0) + 1;
+      if (diagOk) st.diagRight = (st.diagRight || 0) + 1;
+      st.lastAt = Date.now();
+      st.lastDiag = diagOk;
+      st.lastAction = false;
+      scheduleReview(st, false);
+
+      state.log.push({ id: s.id, at: Date.now(), diagOk, actionOk: false, xp: totalGained });
+      if (state.log.length > 40) state.log = state.log.slice(-40);
+      saveState();
+
+      renderHUD();
+      renderReflexSide();
+
+      $("#dcFeedback").innerHTML = `
+        <div class="feedback ${chosenDC.is_best ? "ok" : "bad"}">
+          <b>${chosenDC.is_best ? "✓ Recuperación FDE Exitosa:" : "✗ Maniobra Ineficaz:"}</b> ${esc(chosenDC.outcome)}
+        </div>
+      `;
+
+      renderOutcome(s, chosen, best, diagOk, false, totalGained, chosenDC);
+      $("#outcome").scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+  });
+}
+
+function renderOutcome(s, chosen, best, diagOk, actionOk, gained, recovery) {
   const pitfallPills = (s.active_pitfalls || []).map((id) => nodePill(id)).join("");
   const techniquePills = (s.target_techniques || []).map((id) => nodePill(id)).join("");
   const practicePill = nodePill(s.target_practice);
   const supportPills = (s.supporting_nodes || []).map((id) => nodePill(id)).join("");
-  const deltaChips = METRICS.map((m) => {
-    const d = Number(chosen.deltas[m.key] || 0);
-    return `<span class="delta ${d < 0 ? "down" : ""}" style="--c:${m.color}">${m.key} ${d > 0 ? "+" : ""}${d}</span>`;
-  }).join("");
+
+  // Translate all metric deltas into human operational terms
+  const allDeltas = { ...chosen.deltas };
+  if (recovery && recovery.deltas) {
+    Object.keys(recovery.deltas).forEach((k) => {
+      allDeltas[k] = (allDeltas[k] || 0) + recovery.deltas[k];
+    });
+  }
+
+  const metricImpactCards = METRICS.map((m) => {
+    const d = Number(allDeltas[m.key] || 0);
+    if (!d) return "";
+    const explanation = metricImpactExplanation(m.key, d);
+    return `
+      <div class="impact-chip">
+        <div class="ih">
+          <span class="delta ${d < 0 ? "down" : ""}" style="--c:${m.color}">${m.key} ${d > 0 ? "+" : ""}${d}</span>
+          <b style="font-size:12px;color:${m.color}">${esc(m.label)}</b>
+        </div>
+        <div class="ib">${esc(explanation)}</div>
+      </div>
+    `;
+  }).filter(Boolean).join("");
+
+  const statusTitle = actionOk
+    ? (diagOk ? "🌟 Victoria Táctica Completa" : "✓ Jugada Acertada (Diagnóstico Mejorable)")
+    : (recovery && recovery.is_best ? "🛡️ Crisis Contenida con Maniobra FDE" : "⚠️ Contrato Comprometido · Necesita Refuerzo");
 
   $("#outcome").innerHTML = `
     <div class="outcome">
       <div class="outcome-head">
-        <h3>Resultado del combate</h3>
+        <div>
+          <h3 style="margin:0 0 4px;font-size:18px">${statusTitle}</h3>
+          <p class="muted small" style="margin:0">Masterclass Táctica · Desglose paso a paso del combate de campo</p>
+        </div>
         <span class="xp">+${gained} XP</span>
       </div>
-      <div class="result-badges">
+
+      <div class="result-badges" style="margin:10px 0">
         <span class="pill book" style="--c:${BOOK_COLORS[s.book]}">${esc(BOOKS[s.book])}</span>
         <span class="pill ${diagOk ? "ok" : "bad"}" style="--c:${diagOk ? "var(--ok)" : "var(--danger)"}">Diagnóstico ${diagOk ? "✓" : "✗"}</span>
-        <span class="pill ${actionOk ? "ok" : "bad"}" style="--c:${actionOk ? "var(--ok)" : "var(--danger)"}">Acción ${actionOk ? "óptima" : "mejorable"}</span>
-        <span class="pill ${diagOk && actionOk ? "ok" : "warn"}" style="--c:${diagOk && actionOk ? "var(--ok)" : "var(--warn)"}">${diagOk && actionOk ? "Repaso desbloqueado" : "A la cola de repaso"}</span>
+        <span class="pill ${actionOk ? "ok" : "bad"}" style="--c:${actionOk ? "var(--ok)" : "var(--danger)"}">Acción ${actionOk ? "óptima" : "subóptima"}</span>
+        ${recovery ? `<span class="pill ${recovery.is_best ? "ok" : "bad"}" style="--c:${recovery.is_best ? "var(--ok)" : "var(--danger)"}">Control de Daños: ${recovery.is_best ? "Exitoso" : "Fallido"}</span>` : ""}
+        <span class="pill ${actionOk && diagOk ? "ok" : "warn"}" style="--c:${actionOk && diagOk ? "var(--ok)" : "var(--warn)"}">${actionOk && diagOk ? "Repaso desbloqueado" : "A la cola de repaso"}</span>
       </div>
-      <div class="delta-grid">${deltaChips}</div>
-      <div class="feedback ${actionOk ? "ok" : "bad"}">${esc(chosen.feedback)}</div>
-      ${actionOk ? "" : `<div class="script-block" style="margin-top:12px"><div class="script-label">La respuesta que faltaba</div><p class="script">${esc(best.script)}</p></div>`}
-      <div class="nodes-ref">
-        <h4>Trampas activas</h4><div class="pills">${pitfallPills}</div>
-        <h4>Técnicas objetivo</h4><div class="pills">${techniquePills}</div>
-        <h4>Práctica FDE</h4><div class="pills">${practicePill}</div>
-        ${supportPills ? `<h4>Conceptos de apoyo</h4><div class="pills">${supportPills}</div>` : ""}
+
+      ${actionOk ? `
+        <div class="step-stakeholder ok" style="margin:10px 0">
+          <div class="stakeholder-badge">🤝 Concesión en Sala · ${esc(s.stakeholder_role)}</div>
+          <p class="stakeholder-speech">“De acuerdo... tiene sentido acotar el riesgo y sentarnos en el Gemba sin imponer nada. Si me garantizas esa salvaguarda, tienes mi respaldo. Empecemos el lunes.”</p>
+        </div>
+      ` : ""}
+
+      <div style="margin:14px 0">
+        <h4 style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)">Impacto Real en el Negocio &amp; Dinámica de Despliegue</h4>
+        <div class="metric-impact-grid">${metricImpactCards || `<div class="muted small">Sin cambios significativos en el HUD.</div>`}</div>
       </div>
-      <div class="row">
+
+      <div class="masterclass-grid">
+        <div class="mc-card yours ${actionOk ? "ok" : ""}">
+          <div class="mc-head">
+            <h4 style="color:${actionOk ? "var(--ok)" : "var(--danger)"}">${actionOk ? "✓ Tu Jugada Óptima" : "✗ Tu Jugada Inicial"}</h4>
+            <span class="pill small">${actionOk ? "Efectiva" : "Generó Fricción"}</span>
+          </div>
+          <div class="mc-body">
+            <p class="script">${esc(chosen.script)}</p>
+            <div class="mc-rationale">
+              <b>Análisis Táctico:</b> ${formatRichFeedback(chosen.feedback)}
+            </div>
+          </div>
+        </div>
+
+        <div class="mc-card master">
+          <div class="mc-head">
+            <h4 style="color:var(--accent)">🏆 La Jugada Maestra FDE</h4>
+            <span class="pill small ok">Gold Standard</span>
+          </div>
+          <div class="mc-body">
+            <p class="script">${esc(best.script)}</p>
+            <div class="mc-breakdown">
+              <div class="mc-breakdown-item">
+                <b>🛡️ Salvaguarda de Reversa:</b> Reduce la auto-orientación y protege al sponsor de quedar expuesto ante fallos.
+              </div>
+              <div class="mc-breakdown-item">
+                <b>🎯 Foco Pareto:</b> Ataca la incertidumbre crítica de mayor valor de información (EVPI) antes de invertir en escala.
+              </div>
+              <div class="mc-breakdown-item">
+                <b>⏱️ Velocidad &amp; Time-to-Value:</b> Acota el experimento a días en vez de meses, reduciendo la parálisis por análisis.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nodes-ref" style="border-top:1px solid var(--border);padding-top:12px;margin-top:16px">
+        <h4>🛑 Trampas activas en este combate</h4>
+        <div class="pills">${pitfallPills || '<span class="muted small">Ninguna trampa mayor</span>'}</div>
+        <h4>🛠️ Técnicas objetivo aplicadas</h4>
+        <div class="pills">${techniquePills}</div>
+        <h4>🏆 Práctica FDE de referencia</h4>
+        <div class="pills">${practicePill}</div>
+        ${supportPills ? `<h4>📚 Conceptos de apoyo del grafo</h4><div class="pills">${supportPills}</div>` : ""}
+      </div>
+
+      <div class="row" style="margin-top:18px">
         <button class="btn primary" id="nextScenarioBtn">Siguiente escenario →</button>
         <button class="btn ghost" id="retryScenarioBtn">↺ Repetir este</button>
+        ${s.book && s.book !== "fde" ? `<button class="btn" id="studyBookBtn">📖 Estudiar Playbook de ${esc(BOOKS[s.book] || s.book)}</button>` : ""}
       </div>
     </div>`;
 
@@ -1535,6 +1850,8 @@ function renderOutcome(s, chosen, best, diagOk, actionOk, gained) {
     $("#scenarioCard").scrollIntoView({ behavior: "smooth", block: "start" });
   };
   $("#retryScenarioBtn").onclick = () => loadScenario(s.id);
+  const studyBtn = $("#studyBookBtn");
+  if (studyBtn) studyBtn.onclick = () => openPlaybook(s.book);
 }
 
 function loadScenario(id) {
@@ -1544,6 +1861,7 @@ function loadScenario(id) {
   REFLEX.step = 1;
   REFLEX.diagChoice = null;
   REFLEX.actionChoice = null;
+  REFLEX.damageChoice = null;
   REFLEX.finished = false;
   const pos = REFLEX.order.findIndex((x) => x.id === id);
   if (pos >= 0) REFLEX.idx = pos;
@@ -2630,7 +2948,7 @@ const SPAR = {
   pitfalls: [null, null],
   objectionId: null,
   spoiler: true,
-  tab: "prompt",
+  tab: "native",
   chat: { history: [], visible: [], turns: 0, busy: false, evaluated: false, evaluation: null, system: null, token: null }
 };
 
@@ -3135,11 +3453,374 @@ function syncSparControls() {
   $("#sparSpoiler").checked = SPAR.spoiler;
 }
 
+/* ---------- 100% Native Browser-Based Sparring Engine ---------- */
+const SPAR_NATIVE = {
+  active: false,
+  turn: 0,
+  history: [],
+  score: 0,
+  lastChoice: null,
+  finished: false,
+  evaluation: null
+};
+
+function resetNativeSparring() {
+  SPAR_NATIVE.active = false;
+  SPAR_NATIVE.turn = 0;
+  SPAR_NATIVE.history = [];
+  SPAR_NATIVE.score = 0;
+  SPAR_NATIVE.lastChoice = null;
+  SPAR_NATIVE.finished = false;
+  SPAR_NATIVE.evaluation = null;
+  const rubric = $("#rubricResult");
+  if (rubric && SPAR.tab === "native") rubric.innerHTML = "";
+  renderNativeSparring();
+}
+
+function startNativeSparring() {
+  const m = mission();
+  SPAR_NATIVE.active = true;
+  SPAR_NATIVE.turn = 1;
+  SPAR_NATIVE.history = [];
+  SPAR_NATIVE.score = 0;
+  SPAR_NATIVE.finished = false;
+  SPAR_NATIVE.evaluation = null;
+
+  const openingLine = `“Soy ${m.context.stakeholder_role}. ${m.context.brief} En este momento, ${m.context.pressure.toLowerCase()} Ya han venido dos consultoras a prometernos modelos mágicos y no pienso arriesgar a mi equipo ni quemar presupuesto en otro experimento que muera en un slide. ¿Qué vienes a ofrecernos realmente?”`;
+
+  SPAR_NATIVE.history.push({
+    role: "stakeholder",
+    speaker: m.context.stakeholder_role,
+    text: openingLine
+  });
+
+  renderNativeSparring();
+}
+
+function getNativeStances(m, turn) {
+  if (turn === 1) {
+    return [
+      {
+        id: "st_fde_1",
+        score: 25,
+        title: "🛡️ [FDE · Flawless Consulting & Trusted Advisor] Contrato 50/50 y Gemba Directo",
+        text: "“No vengo a venderte software ni a prometer que un algoritmo arreglará tu operación mágicamente. Si este proyecto no resuelve tu dolor real o perjudica a tu equipo, debemos apagarlo. El lunes vengo a sentarme en el Gemba con tu gente: 50% de responsabilidad de cada lado y un experimento acotado a 10 días.”"
+      },
+      {
+        id: "st_vendor_1",
+        score: -10,
+        title: "💥 [Vendedor Técnico · Pitfall ta_need_to_be_right] Sobrevender la Tecnología",
+        text: "“Entiendo su escepticismo, pero nuestra plataforma de IA de última generación utiliza redes neuronales avanzadas con 95% de precisión que eliminan el error humano y optimizan el proceso automáticamente sin que usted tenga que preocuparse.”"
+      },
+      {
+        id: "st_hands_1",
+        score: -10,
+        title: "🏳️ [Par de Manos · Pitfall fc_instant_compliance] Aceptar Todo sin Criterio",
+        text: "“Tiene toda la razón, los consultores anteriores lo hicieron muy mal. Dígame exactamente qué reportes necesita y nosotros nos encargamos de programarlos sin causarle ninguna molestia ni cuestionar nada.”"
+      }
+    ];
+  } else if (turn === 2) {
+    return [
+      {
+        id: "st_fde_2",
+        score: 25,
+        title: "🛡️ [FDE · Salvaguarda de Reversa & Hubbard EVPI] Acotar el Riesgo y Falsación Rápida",
+        text: "“Sospeche de cualquiera que le garantice éxito 100%. Lo que yo le ofrezco es una salvaguarda de reversa: si en 10 días no detectamos una reducción medible en el cuello de botella que tu propio equipo valide, cancelamos el piloto inmediatamente sin costo político para ti ni para tu área.”"
+      },
+      {
+        id: "st_threat_2",
+        score: -20,
+        title: "💥 [Apelación Jerárquica · Pitfall fc_fighting_resistance] Presionar con el Directorio",
+        text: "“El CEO y el Board ya aprobaron la iniciativa corporativa y esperan resultados este trimestre. Si su área bloquea el acceso, tendré que reportar la falta de colaboración en el próximo comité directivo.”"
+      },
+      {
+        id: "st_overprom_2",
+        score: -10,
+        title: "🏳️ [Promesas Vacías] Asumir Toda la Responsabilidad a Ciegas",
+        text: "“Le garantizo personalmente que no fallará. Si algo sale mal, yo me presentaré ante el comité para asumir toda la responsabilidad y eximir a su equipo de cualquier problema.”"
+      }
+    ];
+  }
+  return [];
+}
+
+function chooseNativeStance(stanceId) {
+  const m = mission();
+  const currentStances = getNativeStances(m, SPAR_NATIVE.turn);
+  const chosen = currentStances.find((s) => s.id === stanceId);
+  if (!chosen) return;
+
+  SPAR_NATIVE.history.push({
+    role: "fde",
+    speaker: "Tú (FDE)",
+    text: chosen.text
+  });
+  SPAR_NATIVE.score += chosen.score;
+  SPAR_NATIVE.lastChoice = chosen;
+
+  if (SPAR_NATIVE.turn === 1) {
+    SPAR_NATIVE.turn = 2;
+    let reactionText = "";
+    if (chosen.score > 0) {
+      reactionText = `“Admito que nadie antes nos había propuesto sentarse en el Gemba sin echarnos la culpa... Pero seamos completamente honestos: ‘${m.objection.line}’. Llevo 5 años aquí y mi prestigio depende de este proceso. ¿Cómo me garantizas que no saldré expuesto si el piloto tropieza?”`;
+    } else {
+      reactionText = `“Pura palabrería técnica. Ya nos prometieron 'modelos perfectos' antes y nos dejaron un desastre que tuvimos que limpiar a mano. Mis supervisores no confían en algoritmos de caja negra. Si no me demuestras que entiendes nuestra operación, no pienso abrirte las puertas de mi área.”`;
+    }
+    SPAR_NATIVE.history.push({
+      role: "stakeholder",
+      speaker: m.context.stakeholder_role,
+      text: reactionText
+    });
+    renderNativeSparring();
+  } else if (SPAR_NATIVE.turn === 2) {
+    SPAR_NATIVE.turn = 3;
+    SPAR_NATIVE.finished = true;
+    let verdictText = "";
+    if (SPAR_NATIVE.score >= 30) {
+      verdictText = `“De acuerdo. Tienes criterio, respetas mi tiempo y no vienes a vender humo. Tienes 10 días y el lunes a primera hora pongo a mi supervisor líder a trabajar contigo en el Gemba. Si esto reduce el cuello de botella, seré tu principal sponsor en el comité ejecutivo. Tienes mi palabra.”`;
+    } else {
+      verdictText = `“Lo siento, pero esto no me da ninguna tranquilidad. Veo mucho riesgo político y muy pocas garantías para mi equipo. Prefiero congelar el piloto hasta que el CEO aclare las prioridades. Gracias por tu tiempo.”`;
+    }
+    SPAR_NATIVE.history.push({
+      role: "stakeholder",
+      speaker: m.context.stakeholder_role,
+      text: verdictText
+    });
+    evaluateNativeSparring();
+    renderNativeSparring();
+  }
+}
+
+function analyzeCustomIntervention(text) {
+  const t = text.toLowerCase();
+  let score = 5;
+  const positives = ["50/50", "gemba", "contrato", "resistencia", "acotar", "riesgo", "experimento", "falsaci", "escuchar", "equipo", "piloto", "salvaguarda", "reversa", "proteger", "hechos", "pasado"];
+  const negatives = ["95%", "100%", "garantizo", "perfecto", "ceo me ordenó", "culpa", "mágico", "no se preocupe", "no hay riesgo"];
+  positives.forEach((w) => { if (t.includes(w)) score += 4; });
+  negatives.forEach((w) => { if (t.includes(w)) score -= 8; });
+  return clamp(score, -15, 25);
+}
+
+function sendCustomNativeIntervention() {
+  const input = $("#nativeCustomInput");
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+
+  const customScore = analyzeCustomIntervention(text);
+  const m = mission();
+
+  SPAR_NATIVE.history.push({
+    role: "fde",
+    speaker: "Tú (FDE)",
+    text: text
+  });
+  SPAR_NATIVE.score += customScore;
+
+  if (SPAR_NATIVE.turn === 1) {
+    SPAR_NATIVE.turn = 2;
+    let reactionText = customScore > 0
+      ? `“Entiendo tu punto y aprecio el enfoque sensato... Pero hay algo que me preocupa: ‘${m.objection.line}’. ¿Cómo protegemos a mi equipo si los datos no responden?”`
+      : `“Eso suena a más de lo mismo. Me estás pidiendo confianza sin acotar el riesgo para mi gente. ¿Por qué debería dejarte tocar mis procesos?”`;
+    SPAR_NATIVE.history.push({
+      role: "stakeholder",
+      speaker: m.context.stakeholder_role,
+      text: reactionText
+    });
+    renderNativeSparring();
+  } else {
+    SPAR_NATIVE.turn = 3;
+    SPAR_NATIVE.finished = true;
+    let verdictText = SPAR_NATIVE.score >= 20
+      ? `“Está bien. Me has demostrado que tienes los pies en la tierra y cuidas la relación. El lunes empezamos el gemba de 10 días.”`
+      : `“No me parece suficiente garantía. No voy a comprometer a mi equipo en esto. Lo dejamos aquí.”`;
+    SPAR_NATIVE.history.push({
+      role: "stakeholder",
+      speaker: m.context.stakeholder_role,
+      text: verdictText
+    });
+    evaluateNativeSparring();
+    renderNativeSparring();
+  }
+}
+
+function evaluateNativeSparring() {
+  const m = mission();
+  const rawScore = SPAR_NATIVE.score;
+  const overall = clamp(Math.round(40 + (rawScore / 50) * 55), 20, 98);
+  const win = overall >= 70;
+
+  const dimScores = [
+    { label: "Trust & Contracting", weight: 20, score: clamp(Math.round((overall / 100) * 20), 4, 20), desc: "Contrato 50/50 acordado y resistencia validada." },
+    { label: "Signal Quality", weight: 20, score: clamp(Math.round((overall / 100) * 19), 3, 20), desc: "Enfoque en hechos del gemba y objeciones de campo." },
+    { label: "Information Value & EVPI", weight: 20, score: clamp(Math.round((overall / 100) * 20), 4, 20), desc: "Acotamiento a 10 días y falsación rápida." },
+    { label: "Adoption & Change", weight: 20, score: clamp(Math.round((overall / 100) * 20), 3, 20), desc: "Reducción de la amenaza percibida y facilitación del camino." },
+    { label: "Executive Synthesis", weight: 20, score: clamp(Math.round((overall / 100) * 19), 4, 20), desc: "Comunicación directa, empática y libre de jerga técnica." }
+  ];
+
+  const gainedXP = win ? 45 : 20;
+  addXP(gainedXP);
+  touchStudyDay();
+
+  const deltas = win
+    ? { TQ: 15, ADP: 15, SIG: 10, EVI: 10 }
+    : { TQ: -10, ADP: -10 };
+  applyDeltas(deltas, { silent: true });
+  renderHUD();
+
+  const sparRecord = {
+    at: Date.now(),
+    overall,
+    contextId: m.context.id,
+    contextLabel: m.context.label,
+    practiceId: m.practice ? m.practice.id : null,
+    win,
+    xp: gainedXP
+  };
+  state.sparring.push(sparRecord);
+  if (state.sparring.length > 20) state.sparring = state.sparring.slice(-20);
+  saveState();
+
+  SPAR_NATIVE.evaluation = { overall, win, dimScores, gainedXP, deltas };
+}
+
+function renderNativeSparring() {
+  const m = mission();
+  const status = $("#nativeStatus");
+  const dialogue = $("#nativeDialogue");
+  const controls = $("#nativeControls");
+  if (!status || !dialogue || !controls) return;
+
+  status.innerHTML = `
+    <span class="pill book" style="--c:${TYPE_COLORS.FDEPractice}">🎯 ${esc(m.practice ? m.practice.label : "Práctica FDE")}</span>
+    <span class="pill">Contexto: ${esc(m.context.label)}</span>
+    <span class="pill">Interlocutor: ${esc(m.context.stakeholder_role)}</span>
+    <span class="pill ${SPAR_NATIVE.active ? "ok" : ""}">${SPAR_NATIVE.active ? `Turno ${Math.min(SPAR_NATIVE.turn, 2)}/2` : "Listo"}</span>
+  `;
+
+  if (!SPAR_NATIVE.active) {
+    dialogue.innerHTML = `
+      <div class="empty" style="border:none;background:transparent;padding:34px 14px;text-align:center">
+        <h3 style="font-size:19px;margin:0 0 6px">🥊 Simulador de Negociación Táctica FDE (100% Offline)</h3>
+        <p class="lead" style="max-width:540px;margin:0 auto 14px;color:#cbd3e1;font-size:13px">
+          Ponte a prueba frente a <b>${esc(m.context.stakeholder_role)}</b>. Supera la objeción secreta y pacta un piloto con salvaguardas reales. <b>Cero API keys necesarias.</b>
+        </p>
+        <div class="row" style="justify-content:center">
+          <button class="btn primary" id="startNativeSparBtn" style="font-size:14px;padding:10px 22px" type="button">▶ Iniciar Combate Táctico</button>
+        </div>
+      </div>
+    `;
+    controls.innerHTML = "";
+    const startBtn = $("#startNativeSparBtn");
+    if (startBtn) startBtn.onclick = startNativeSparring;
+    return;
+  }
+
+  // Render dialogue history
+  dialogue.innerHTML = SPAR_NATIVE.history.map((t) => `
+    <div class="spar-turn ${t.role}">
+      <div class="spar-turn-head">${t.role === "stakeholder" ? "👤" : "🥋"} ${esc(t.speaker)}</div>
+      <div class="spar-bubble">${esc(t.text)}</div>
+    </div>
+  `).join("");
+  dialogue.scrollTop = dialogue.scrollHeight;
+
+  // Render controls
+  if (!SPAR_NATIVE.finished) {
+    const stances = getNativeStances(m, SPAR_NATIVE.turn);
+    controls.innerHTML = `
+      <div class="spar-stances">
+        <div style="font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px">
+          Paso ${SPAR_NATIVE.turn} de 2 · Selecciona tu postura consultiva o escribe tu respuesta:
+        </div>
+        ${stances.map((st) => `
+          <button type="button" class="stance-opt" data-native-stance="${st.id}">
+            <span class="st-title">${esc(st.title)}</span>
+            <p class="st-text">${esc(st.text)}</p>
+          </button>
+        `).join("")}
+      </div>
+      <div class="chatbar" style="margin-top:10px">
+        <textarea id="nativeCustomInput" rows="2" placeholder="O escribe tu intervención personalizada aquí…"></textarea>
+        <button id="nativeCustomSendBtn" class="btn primary" type="button">Enviar</button>
+        <button id="nativeRestartBtn" class="btn ghost" type="button">Reiniciar</button>
+      </div>
+    `;
+
+    $$("[data-native-stance]").forEach((btn) => {
+      btn.onclick = () => chooseNativeStance(btn.getAttribute("data-native-stance"));
+    });
+    const sendBtn = $("#nativeCustomSendBtn");
+    if (sendBtn) sendBtn.onclick = sendCustomNativeIntervention;
+    const restartBtn = $("#nativeRestartBtn");
+    if (restartBtn) restartBtn.onclick = resetNativeSparring;
+    const textInput = $("#nativeCustomInput");
+    if (textInput) {
+      textInput.onkeydown = (ev) => {
+        if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); sendCustomNativeIntervention(); }
+      };
+    }
+  } else {
+    // Finished! Render Scorecard
+    const ev = SPAR_NATIVE.evaluation;
+    controls.innerHTML = `
+      <div class="audit-scorecard">
+        <div class="audit-score-head">
+          <div>
+            <h3 style="margin:0 0 3px;font-size:18px;color:${ev.win ? "var(--ok)" : "var(--danger)"}">
+              ${ev.win ? "🏆 Negociación Exitosa · Piloto Desbloqueado" : "⚠️ Negociación Bloqueada · Necesita Repaso"}
+            </h3>
+            <p class="muted small" style="margin:0">Auditoría de Sparring FDE (5 Dimensiones de Campo) · +${ev.gainedXP} XP</p>
+          </div>
+          <div style="font-size:28px;font-weight:900;color:${ev.win ? "var(--ok)" : "var(--danger)"}">${ev.overall}/100</div>
+        </div>
+
+        <div class="audit-dim-grid">
+          ${ev.dimScores.map((d) => `
+            <div class="audit-dim-row">
+              <div class="audit-dim-info">
+                <span>${esc(d.label)}</span>
+                <div class="muted small" style="font-weight:normal">${esc(d.desc)}</div>
+              </div>
+              <div class="audit-dim-bar">
+                <div class="audit-dim-fill" style="width:${(d.score / d.weight) * 100}%;background:${d.score >= 15 ? "var(--ok)" : d.score >= 10 ? "var(--warn)" : "var(--danger)"}"></div>
+              </div>
+              <div class="audit-dim-score">${d.score}/${d.weight}</div>
+            </div>
+          `).join("")}
+        </div>
+
+        <div class="nodes-ref" style="margin-top:10px">
+          <h4>🛑 Trampas ocultas de la misión</h4>
+          <div class="pills">
+            ${m.pitfalls.map((p) => nodePill(p.id)).join("")}
+          </div>
+          <p class="muted small" style="margin-top:4px">
+            ${ev.win ? "✓ Evitaste caer en estas trampas mediante un contrato 50/50 y salvaguardas de reversa." : "⚠️ Caíste en sobreconfianza o combate de resistencia, alienando al sponsor."}
+          </p>
+        </div>
+
+        <div class="row" style="margin-top:14px">
+          <button class="btn primary" id="nativePlayAgainBtn" type="button">🔄 Repetir este combate</button>
+          <button class="btn warn" id="nativeBossBtn" type="button">🎲 Random Boss Fight</button>
+        </div>
+      </div>
+    `;
+
+    const playAgain = $("#nativePlayAgainBtn");
+    if (playAgain) playAgain.onclick = startNativeSparring;
+    const bossBtn = $("#nativeBossBtn");
+    if (bossBtn) bossBtn.onclick = () => { randomBossFight(); startNativeSparring(); };
+  }
+}
+
 function renderSparring() {
   syncSparControls();
   renderMission();
   renderPrompt();
   renderChat();
+  renderNativeSparring();
   renderSparStats();
 }
 
@@ -3164,6 +3845,7 @@ function onMissionChange() {
   }
   SPAR.pitfalls = [p1, p2];
   resetChatState();
+  resetNativeSparring();
   renderMission();
   renderPrompt();
   renderSparStats();
@@ -3194,6 +3876,7 @@ function randomBossFight() {
   SPAR.objectionId = rnd(objections).id;
   syncSparControls();
   resetChatState();
+  resetNativeSparring();
   renderMission();
   renderPrompt();
   renderSparStats();
@@ -3258,7 +3941,8 @@ function initVoiceInput() {
       toast("Espera a que termine el turno antes de dictar.", "warn");
       return;
     }
-    baseText = $("#chatInput").value;
+    const activeInput = SPAR.tab === "native" ? ($("#nativeCustomInput") || $("#chatInput")) : $("#chatInput");
+    baseText = activeInput.value;
     recognition = new SpeechRecognition();
     recognition.lang = lang.value;
     recognition.interimResults = true;
@@ -3274,7 +3958,7 @@ function initVoiceInput() {
         transcript += event.results[i][0].transcript + " ";
       }
       const merged = (baseText ? baseText.trim() + " " : "") + transcript.trim();
-      $("#chatInput").value = merged.replace(/\s+/g, " ").replace(/^\s+/, "");
+      activeInput.value = merged.replace(/\s+/g, " ").replace(/^\s+/, "");
     };
     recognition.onerror = (event) => {
       const messages = {
@@ -3329,14 +4013,36 @@ function initSparring() {
   $("#sparSpoiler").onchange = () => { SPAR.spoiler = $("#sparSpoiler").checked; renderMission(); };
   $("#sparRandom").onclick = randomBossFight;
 
-  $$(".tabs button").forEach((btn) => {
+  // Sparring main tabs
+  $$(".spar-main > .tabs button").forEach((btn) => {
     btn.onclick = () => {
       SPAR.tab = btn.getAttribute("data-tab");
-      $$(".tabs button").forEach((b) => b.classList.toggle("active", b === btn));
-      $("#tab-prompt").hidden = SPAR.tab !== "prompt";
-      $("#tab-chat").hidden = SPAR.tab !== "chat";
+      $$(".spar-main > .tabs button").forEach((b) => b.classList.toggle("active", b === btn));
+      $("#tab-native").hidden = SPAR.tab !== "native";
+      $("#tab-advanced").hidden = SPAR.tab !== "advanced";
+      if (SPAR.tab === "native") renderNativeSparring();
+      else renderChat();
     };
   });
+
+  // Advanced subtabs
+  const subPrompt = $("#subtabPromptBtn");
+  const subChat = $("#subtabChatBtn");
+  if (subPrompt && subChat) {
+    subPrompt.onclick = () => {
+      subPrompt.classList.add("active"); subPrompt.classList.remove("ghost");
+      subChat.classList.remove("active"); subChat.classList.add("ghost");
+      $("#subpane-prompt").hidden = false;
+      $("#subpane-chat").hidden = true;
+    };
+    subChat.onclick = () => {
+      subChat.classList.add("active"); subChat.classList.remove("ghost");
+      subPrompt.classList.remove("active"); subPrompt.classList.add("ghost");
+      $("#subpane-prompt").hidden = true;
+      $("#subpane-chat").hidden = false;
+      renderChat();
+    };
+  }
 
   $("#copyPrompt").onclick = async () => {
     const ok = await copyText(buildSparringPrompt(mission()));
