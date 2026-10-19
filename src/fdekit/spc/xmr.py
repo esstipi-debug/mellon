@@ -8,6 +8,9 @@ que hace falta para llamar al cliente ANTES de que el llame.
 Regla dura: los limites se calculan sobre la ventana de linea base estable y se
 CONGELAN. Recalcularlos cada semana hace que el proceso se degrade sin que el
 grafico lo note — es el error mas comun de quien implementa SPC por primera vez.
+
+`degradation_alarm` hace cumplir la primera mitad: chequea la linea base antes de
+fijar limites y se niega si una ola o un corrimiento la ensucian.
 """
 
 from __future__ import annotations
@@ -141,6 +144,43 @@ def nelson_rules(values, limits: ControlLimits) -> pd.DataFrame:
     return out.drop_duplicates(subset=["rule", "index"]).sort_values(["index", "rule"]).reset_index(drop=True)
 
 
+# Reglas que descalifican una linea base: un punto fuera de limites, un corrimiento
+# sostenido o una tendencia.
+BASELINE_RULES = (1, 2, 3)
+
+# Fraccion maxima de la linea base que puede marcar esas reglas. Medido sobre
+# procesos estables: con 30 puntos i.i.d. alguna de ellas dispara en el 14% de las
+# corridas, pero la fraccion de puntos marcados supera 0,2 en 0 de 4000 corridas;
+# con autocorrelacion AR(1) de 0,5 supera 1/3 en el 0,6%. Una ola, un escalon o una
+# tendencia la llevan a 0,5-1,0. La regla literal ("alguna dispara") negaria el 14%
+# de los procesos i.i.d. y el 62% de los de autocorrelacion 0,5.
+MAX_BASELINE_FLAGGED_FRACTION = 1 / 3
+
+
+def baseline_stability(baseline) -> dict:
+    """Chequea la linea base antes de fijarle limites.
+
+    Los limites salen de la misma serie que se chequea, asi que las reglas se
+    evaluan con los limites de la propia linea base. Un punto suelto no la invalida:
+    lo que la invalida es que la marque una fraccion grande, porque entonces los
+    limites describen esa forma (la ola, el escalon) y el monitoreo se juzgaria
+    contra la forma equivocada.
+    """
+    x = np.asarray(baseline, float)
+    x = x[~np.isnan(x)]
+    viol = nelson_rules(x, compute_limits(x))
+    criticas = viol[viol["rule"].isin(BASELINE_RULES)] if not viol.empty else viol
+    marcados = int(criticas["index"].nunique()) if not criticas.empty else 0
+    fraccion = marcados / len(x)
+    return {
+        "stable": fraccion <= MAX_BASELINE_FLAGGED_FRACTION,
+        "n": len(x),
+        "points_flagged": marcados,
+        "fraction_flagged": round(fraccion, 3),
+        "detail": criticas.to_dict("records"),
+    }
+
+
 def degradation_alarm(
     baseline, monitoring, direction: str = "lower_is_better", lcl_floor: float | None = None
 ) -> dict:
@@ -149,11 +189,42 @@ def degradation_alarm(
     Congela limites sobre la linea base y evalua la ventana de monitoreo. El
     veredicto distingue tres casos que el cliente confunde todo el tiempo:
     mejora sostenida, ruido, y degradacion real.
+
+    Antes de fijar limites chequea la linea base (`baseline_stability`). Si una ola
+    o un corrimiento la ensucian, no fija nada: `limits` queda en None, el veredicto
+    es 'SIN LIMITES' con las reglas que la marcaron en `baseline_detail`, y el
+    monitoreo no se juzga.
     """
+    base = baseline_stability(baseline)
+    m = np.asarray(monitoring, float)
+    chequeo = {
+        "baseline_stable": base["stable"],
+        "baseline_fraction_flagged": base["fraction_flagged"],
+        "baseline_points_flagged": base["points_flagged"],
+        "baseline_detail": base["detail"],
+    }
+    if not base["stable"]:
+        return {
+            **chequeo,
+            "limits": None,
+            "monitoring_mean": round(float(np.mean(m)), 3),
+            "shift_vs_baseline": None,
+            "shift_sigmas": None,
+            "violations": None,
+            "critical_violations": None,
+            "first_critical_index": None,
+            "verdict": (
+                f"SIN LIMITES: {base['points_flagged']} de {base['n']} puntos de la linea "
+                "base disparan las reglas 1-3 de Nelson. Los limites saldrian de la ola o "
+                "del corrimiento y describirian eso, no el proceso. No hay veredicto de "
+                "degradacion hasta tener una linea base estable."
+            ),
+            "detail": [],
+        }
+
     lim = compute_limits(baseline, lcl_floor)
     viol = nelson_rules(monitoring, lim)
 
-    m = np.asarray(monitoring, float)
     bad_side = 1 if direction == "higher_is_better" else -1
     # Un corrimiento "malo" es hacia arriba si menor es mejor.
     worse = -bad_side
@@ -171,6 +242,7 @@ def degradation_alarm(
         verdict = "cambio favorable sostenido: documentarlo y mover la linea base"
 
     return {
+        **chequeo,
         "limits": lim.as_dict(),
         "monitoring_mean": round(float(np.mean(m)), 3),
         "shift_vs_baseline": round(shift, 3),

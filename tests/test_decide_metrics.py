@@ -386,6 +386,21 @@ def test_el_xmr_corre_con_suficientes_puntos(store):
     assert r["limites"]["n_baseline"] == 12
 
 
+def test_el_xmr_no_fija_limites_sobre_un_escalon_en_la_linea_base(tmp_path):
+    """Una linea base que pasa de 1 toque a 8 no es estable: sus limites describirian
+    el escalon y no el proceso. touches_xmr no fija limites y lo dice."""
+    st = DecideStore(tmp_path / "decide")
+    filas = [(date(2026, 3, 1) + timedelta(days=7 * i), n)
+             for i, n in enumerate([1] * 6 + [8] * 10)]
+    _serie(st, filas)
+
+    r = touches_xmr(st, baseline=12)
+    assert r["ok"] is False
+    assert r["limites"] is None
+    assert r["linea_base_estable"] is False
+    assert r["veredicto"].startswith("SIN LIMITES")
+
+
 # --------------------------------------------------------------- export
 
 

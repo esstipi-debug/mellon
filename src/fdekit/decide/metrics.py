@@ -487,7 +487,9 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE,
     """Grafico de control de toques-para-decidir, con limites CONGELADOS.
 
     Solo desde la reunion ~15: antes es ruido. Los limites salen de la linea
-    base persistida por `freeze_baseline` y no se recalculan nunca.
+    base persistida por `freeze_baseline` y no se recalculan nunca. Si esa linea
+    base no es estable (una ola la ensucia), no fija limites: `ok` queda en False
+    y el veredicto lo dice.
 
     Usa `toques_en_serie` por default, que es la columna de CORPUS. El XmR es la
     metrica de CONTROL, y las de control filtran — las descriptivas no. Con la
@@ -578,16 +580,17 @@ def touches_xmr(store: DecideStore, baseline: int = XMR_BASELINE,
 
     alarm = degradation_alarm(base, mon, direction="lower_is_better", lcl_floor=1.0)
     veredicto = alarm["verdict"]
-    if not congelada:
+    if not congelada and alarm["limits"] is not None:
         veredicto = f"{veredicto} (limites PROVISORIOS: linea base sin congelar)"
     return {
         "puntos": len(orden),
         "baseline": baseline,
-        "ok": True,
+        "ok": alarm["limits"] is not None,
         "congelada": congelada,
         "congelada_el": cuando,
         "columna": col,
         "excluidas": touches_excluidas(store),
+        "linea_base_estable": alarm["baseline_stable"],
         "limites": alarm["limits"],
         "veredicto": veredicto,
         "violaciones_criticas": alarm["critical_violations"],

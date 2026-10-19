@@ -5,7 +5,13 @@ import pytest
 from fdekit.probe.contracts import ContractCheck, check_payload, retry_idempotency_check, timezone_audit
 from fdekit.probe.edi import parse_x12, smoke_report, validate_transaction
 from fdekit.sim import SimConfig, capacity_check, little, mm_c_wait, run_sim, sizing_sweep
-from fdekit.spc.xmr import compute_limits, degradation_alarm, nelson_rules
+from fdekit.spc.xmr import (
+    MAX_BASELINE_FLAGGED_FRACTION,
+    baseline_stability,
+    compute_limits,
+    degradation_alarm,
+    nelson_rules,
+)
 
 
 # ------------------------------------------------------------------- SPC
@@ -67,6 +73,106 @@ def test_limites_congelados_no_se_recalculan():
     r = degradation_alarm(base, [120] * 15, direction="lower_is_better")
     assert r["limits"]["center"] == pytest.approx(float(np.mean(base)), abs=1e-3)
     assert r["shift_sigmas"] > 3
+
+
+# Linea base estable: el chequeo que `degradation_alarm` corre antes de fijar limites.
+# Una ola en la linea base hace que los limites describan la ola y no el proceso.
+
+
+def test_linea_base_estable_no_se_niega():
+    """Un proceso estable pasa el chequeo y sus limites se fijan. El criterio es la
+    fraccion de puntos marcados, no la presencia de una regla: con 30 puntos alguna
+    regla 1-3 dispara en el 14% de los graficos de un proceso estable."""
+    rng = np.random.default_rng(5)
+    r = degradation_alarm(rng.normal(100, 5, 30), [120] * 15, direction="lower_is_better")
+    assert r["baseline_stable"] is True
+    assert r["limits"] is not None
+    assert "DEGRADACION" in r["verdict"]
+
+
+def test_un_punto_suelto_no_invalida_la_linea_base():
+    rng = np.random.default_rng(6)
+    base = rng.normal(100, 5, 30)
+    base[10] = 140  # un punto a 8 sigma: una senal que se investiga, no una ola
+    assert baseline_stability(base)["stable"] is True
+
+
+@pytest.mark.parametrize("forma", ["escalon", "tendencia"])
+def test_escalon_y_tendencia_en_la_linea_base_se_niegan(forma):
+    rng = np.random.default_rng(8)
+    if forma == "escalon":
+        base = np.r_[rng.normal(60, 5, 15), rng.normal(80, 5, 15)]
+    else:
+        base = np.linspace(50, 90, 30) + rng.normal(0, 4, 30)
+    r = degradation_alarm(base, [85] * 15, direction="lower_is_better")
+    assert r["limits"] is None
+    assert r["baseline_fraction_flagged"] > MAX_BASELINE_FLAGGED_FRACTION
+    assert r["verdict"].startswith("SIN LIMITES")
+    assert "DEGRADACION" not in r["verdict"]
+
+
+def test_linea_base_con_la_ola_del_cd_se_niega():
+    """La linea base que usaba la demo: medianas de 30 bloques de pedidos de un dia,
+    con la ola de liberacion adentro. Sus limites salian de la ola y el monitoreo se
+    juzgaba contra ella. Ahora el grafico se niega a fijarlos."""
+    from fdekit.processmining import EventLog
+    from fdekit.synth import DCConfig, generate_dc
+
+    good = generate_dc(DCConfig(seed=57, slotting="abc", dim_error_rate=0.04))
+    ciclo = EventLog(good.events).case_durations()["cycle_time_s"].to_numpy() / 60
+    bloques = [float(np.median(c)) for c in np.array_split(ciclo, 30)]
+
+    r = degradation_alarm(bloques, [200] * 20, direction="lower_is_better")
+    assert r["limits"] is None
+    assert r["baseline_fraction_flagged"] > MAX_BASELINE_FLAGGED_FRACTION
+    assert r["verdict"].startswith("SIN LIMITES")
+
+
+def test_la_linea_base_estable_casi_nunca_se_niega():
+    """Tasa de falsos rechazos sobre procesos estables. Medida en 4000 corridas con
+    30 puntos i.i.d.: ninguna supero el umbral. El test deja margen para el muestreo."""
+    rng = np.random.default_rng(7)
+    negadas = sum(not baseline_stability(rng.normal(100, 5, 30))["stable"] for _ in range(300))
+    assert negadas / 300 < 0.02
+
+
+def test_el_demo_se_juzga_contra_una_linea_base_estable(findings):
+    """Lo que muestra la demo tiene que ser un veredicto calculado, no una negativa.
+    Su linea base son dias sanos, su monitoreo son dias degradados, y la alarma sale
+    de esa diferencia y no de una ola dentro de la linea base."""
+    alarm = findings["degradation_alarm"]
+    assert alarm["baseline_stable"] is True
+    assert alarm["limits"] is not None
+    assert alarm["verdict"].startswith("DEGRADACION")
+
+
+def test_cli_spc_no_dibuja_limites_sobre_una_linea_base_con_ola(tmp_path, capsys):
+    """El CLI imprime la negativa y no dibuja el grafico: un XmR con limites que el
+    propio chequeo declara invalidos no es un diagnostico."""
+    from fdekit.cli import main
+
+    serie = np.r_[np.linspace(7, 140, 15), np.linspace(140, 54, 15), [200.0] * 10]
+    csv, png = tmp_path / "serie.csv", tmp_path / "xmr.png"
+    pd.DataFrame({"minutos": serie}).to_csv(csv, index=False)
+
+    assert main(["spc", "--values", str(csv), "--baseline", "30", "--plot", str(png)]) == 0
+    assert not png.exists()
+    salida = capsys.readouterr()
+    assert '"verdict": "SIN LIMITES' in salida.out
+    assert "sin grafico" in salida.err
+
+
+def test_cli_spc_con_linea_base_estable_dibuja_el_grafico(tmp_path, capsys):
+    from fdekit.cli import main
+
+    rng = np.random.default_rng(9)
+    serie = np.r_[rng.normal(100, 5, 30), rng.normal(120, 5, 10)]
+    csv, png = tmp_path / "serie.csv", tmp_path / "xmr.png"
+    pd.DataFrame({"minutos": serie}).to_csv(csv, index=False)
+
+    assert main(["spc", "--values", str(csv), "--baseline", "30", "--plot", str(png)]) == 0
+    assert png.exists()
+    assert '"baseline_stable": true' in capsys.readouterr().out
 
 
 # ------------------------------------------------------------------- SIM
