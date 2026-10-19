@@ -104,9 +104,21 @@ def _json_safe(obj):
     return obj
 
 
-def _chunk_medians(values: pd.Series, n_chunks: int) -> list[float]:
-    v = np.asarray(values, float)
-    return [float(np.median(c)) for c in np.array_split(v, n_chunks) if len(c)]
+def _medianas_diarias(lay: Layout, n_dias: int, seed0: int, **cfg) -> list[float]:
+    """Mediana del tiempo de ciclo, en minutos, de cada dia simulado.
+
+    La unidad es el dia (un turno en este modelo) y no un bloque de pedidos dentro
+    de un dia. Dentro de uno, la ola de liberacion (313 de 800 pedidos entre las
+    9:00 y las 10:30) lleva la mediana de 7 a 140 minutos sin que el proceso cambie,
+    y una linea base cortada por bloques son los limites de la ola. Cada dia repite
+    la misma ola, asi que la mediana diaria es estable mientras el proceso lo sea.
+    """
+    medianas = []
+    for k in range(n_dias):
+        dc = generate_dc(DCConfig(seed=seed0 + k, layout=lay, **cfg))
+        ciclo = EventLog(dc.events).case_durations()["cycle_time_s"] / 60
+        medianas.append(float(np.median(ciclo)))
+    return medianas
 
 
 def _gemba_demo(out: Path) -> dict:
@@ -400,10 +412,9 @@ def run_full_diagnosis(outdir: str | Path = "out", seed: int = 7, quiet: bool = 
 
     # ------------------------------------------------- 9. SPC
     say("[9/9] control estadistico y monitor de degradacion...")
-    good = generate_dc(DCConfig(seed=seed + 50, layout=lay, slotting="abc", dim_error_rate=0.04))
-    good_cyc = EventLog(good.events).case_durations()["cycle_time_s"] / 60
-    baseline_series = _chunk_medians(good_cyc, 30)
-    monitoring_series = _chunk_medians(cyc, 20)  # el proceso volvio al estado degradado
+    # El proceso volvio al estado degradado: son los dias de monitoreo.
+    baseline_series = _medianas_diarias(lay, 30, seed + 50, slotting="abc", dim_error_rate=0.04)
+    monitoring_series = _medianas_diarias(lay, 20, seed + 200)
 
     alarm = degradation_alarm(baseline_series, monitoring_series, direction="lower_is_better")
     results["degradation_alarm"] = {k: v for k, v in alarm.items() if k != "detail"}

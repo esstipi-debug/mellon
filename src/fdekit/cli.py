@@ -422,8 +422,13 @@ def cmd_spc(a):
     if not mon:
         print("no hay puntos de monitoreo despues de la linea base", file=sys.stderr)
         return 2
-    _print(degradation_alarm(base, mon, direction=a.direction))
-    if a.plot:
+    alarm = degradation_alarm(base, mon, direction=a.direction)
+    _print(alarm)
+    if a.plot and alarm["limits"] is None:
+        # Dibujar la linea base con los limites que se acaban de negar mostraria
+        # limites que el propio chequeo declara invalidos.
+        print("sin grafico: la linea base no es estable y no se fijan limites", file=sys.stderr)
+    elif a.plot:
         plot_xmr(values, compute_limits(base), title="XmR", path=a.plot)
         print(f"grafico en {a.plot}")
     return 0
