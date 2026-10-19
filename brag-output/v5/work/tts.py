@@ -5,7 +5,7 @@ k=Kokoro(D+'kokoro.onnx',D+'voices.bin')
 VOICE,SPEED='am_michael',1.12
 script=json.load(open('work/script.json'))
 SR=24000; t=0.0; scenes=[]; cues=[]
-HEAD={'s0':0.6}; TAIL={'s7':4.0}
+HEAD={'s0':0.6}; TAIL={'s7':5.2}
 for s in script:
     a,sr=k.create(s['text'],voice=VOICE,speed=SPEED,lang='en-us')
     # recorta silencio inicial/final

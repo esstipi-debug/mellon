@@ -1,0 +1,13 @@
+<!doctype html><html><body style="margin:0;background:#000"><canvas id="c" width="1920" height="1080"></canvas>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const r=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true,preserveDrawingBuffer:true});
+r.setSize(1920,1080,false);r.shadowMap.enabled=true;r.toneMapping=THREE.ACESFilmicToneMapping;r.outputColorSpace=THREE.SRGBColorSpace;
+const s=new THREE.Scene();s.background=new THREE.Color('#e9e2d6');const cam=new THREE.PerspectiveCamera(35,16/9,1,5000);cam.position.set(60,55,80);cam.lookAt(0,0,0);
+s.add(new THREE.HemisphereLight('#fff6e8','#8a8070',1.2));const d=new THREE.DirectionalLight('#fff',2.2);d.position.set(40,80,30);d.castShadow=true;d.shadow.mapSize.set(2048,2048);Object.assign(d.shadow.camera,{left:-80,right:80,top:80,bottom:-80});s.add(d);
+const fl=new THREE.Mesh(new THREE.BoxGeometry(120,1,80),new THREE.MeshStandardMaterial({color:'#f2ece1'}));fl.receiveShadow=true;fl.position.y=-.5;s.add(fl);
+const rm=new THREE.MeshStandardMaterial({color:'#c9a77c',roughness:.8});for(let i=0;i<8;i++)for(let j=0;j<4;j++){const m=new THREE.Mesh(new THREE.BoxGeometry(12,6,2.5),rm);m.position.set(-45+j*30*0.5+ (j>1?20:0),3,-30+i*8);m.castShadow=m.receiveShadow=true;s.add(m)}
+window.render=(t)=>{cam.position.set(60*Math.cos(t*.2),55,80*Math.sin(t*.2)+20);cam.lookAt(0,0,0);r.render(s,cam)};
+window.render(0);window.__ready=true;
+</script></body></html>
