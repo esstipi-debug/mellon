@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;background:#0c0f13;overflow:hidden}
+canvas{position:absolute;inset:0}
+.el{position:absolute;left:0;width:1920px;text-align:center;font-family:"Inter Display","Inter",sans-serif;color:#eef1f4;
+ letter-spacing:-0.025em;will-change:opacity,transform,filter;opacity:0;text-shadow:0 0 40px rgba(12,15,19,.9),0 0 12px rgba(12,15,19,.8)}
+.big{font-weight:600;font-size:112px;line-height:1.08}
+.amber{color:#f0b24b}
+.dim{color:#7d8793}
+.title{font-weight:650;font-size:104px;line-height:1.06}
+.sub{font-weight:500;font-size:54px;line-height:1.2;color:#c3cad2;letter-spacing:-0.015em}
+.pair{font-weight:600;font-size:116px;white-space:nowrap}
+.pair .por{font-size:40px;font-weight:500;color:#f0b24b;letter-spacing:.14em;text-transform:uppercase;margin:0 44px;vertical-align:middle;position:relative;top:-6px}
+.pair .r{color:#6a737e;position:relative;display:inline-block}
+.pair .r i{position:absolute;left:-4px;top:54%;height:6px;background:#f0b24b;border-radius:3px;width:0}
+.lock{font-weight:600;font-size:30px;letter-spacing:.2em;text-transform:uppercase;color:#9aa4af}
+</style></head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div class="el big" id="a1" style="top:392px">Donde las reglas son claras,</div>
+<div class="el big" id="a2" style="top:512px">que gane la máquina.</div>
+<div class="el big" id="b1" style="top:392px">Donde no hay reglas,</div>
+<div class="el big amber" id="b2" style="top:512px">ahí estamos nosotros.</div>
+<div class="el title" id="t1" style="top:318px">Manifiesto del Polímata<br>del Siglo XXI</div>
+<div class="el sub" id="s1" style="top:610px">Entrar en la niebla.</div>
+<div class="el sub" id="s2" style="top:682px;color:#f0b24b">Salir con un mapa.</div>
+<div class="el pair" id="p1" style="top:446px">Conectar<span class="por">por sobre</span><span class="r">acumular<i></i></span></div>
+<div class="el pair" id="p2" style="top:446px">Criterio<span class="por">por sobre</span><span class="r">información<i></i></span></div>
+<div class="el pair" id="p3" style="top:446px">Adopción<span class="por">por sobre</span><span class="r">entrega<i></i></span></div>
+<div class="el big" id="e1" style="top:372px">Y cuando nos vamos,</div>
+<div class="el big amber" id="e2" style="top:492px">el mapa se queda.</div>
+<div class="el lock" id="e3" style="top:760px">Manifiesto del Polímata del Siglo XXI</div>
+<script>
+const W=1920,H=1080,cv=document.getElementById('c'),g=cv.getContext('2d');
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>1-Math.pow(1-x,3), ease2=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let r=Math.imul(s^s>>>15,1|s);r=r+Math.imul(r^r>>>7,61|r)^r;return((r^r>>>14)>>>0)/4294967296}}
+
+// ---- map ----
+const N=[[190,860],[430,700],[330,330],[640,190],[760,880],[980,790],[1130,250],[1330,820],[1520,330],[1650,640],[1790,900],[1000,120],[1500,960],[250,1010],[860,980],[1750,200],[120,520],[1840,470]];
+const route=[[0,1],[1,5],[5,7],[7,9],[9,8]];       // ámbar: de aquí al destino
+const routeT=[11.3,13.2,15.1,16.6,17.4];            // cuando se dibuja cada tramo
+const web=[[1,2],[2,3],[3,11],[11,6],[6,8],[1,4],[4,5],[5,14],[14,13],[0,13],[7,12],[12,10],[9,10],[8,15],[9,17],[1,16],[16,2],[6,5],[15,17],[3,6]];
+const webT=web.map((_,i)=>4.2+i*0.52);
+const nodeAt=N.map(()=>99);
+function seen(i,t0){nodeAt[i]=Math.min(nodeAt[i],t0)}
+web.forEach((e,k)=>{seen(e[0],webT[k]);seen(e[1],webT[k]+.3)});
+route.forEach((e,k)=>{seen(e[0],routeT[k]);seen(e[1],routeT[k]+.4)});
+seen(0,4.0);
+
+// ---- niebla ----
+const R=rng(7);
+const blobs=Array.from({length:11},()=>({x:R()*W,y:R()*H,r:360+R()*460,ph:R()*6.28,sp:.15+R()*.25,a:.5+R()*.5}));
+const noise=document.createElement('canvas');noise.width=noise.height=256;
+(()=>{const n=noise.getContext('2d'),d=n.createImageData(256,256),r=rng(3);for(let i=0;i<d.data.length;i+=4){const v=r()*255;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=255}n.putImageData(d,0,0)})();
+
+function fogDensity(t){ // 1 al inicio, se abre entre 3.6 y 7.0, queda tenue
+  const k=ease2(clamp((t-3.4)/3.8)); return 1-k*0.88 + 0.04*Math.sin(t*.8);
+}
+function drawContours(t,a){
+  g.save();g.lineWidth=1.5;
+  const cs=[[520,360,1],[1380,700,1.15],[900,900,.8]];
+  cs.forEach(([cx,cy,s],ci)=>{
+    for(let l=1;l<=6;l++){
+      g.beginPath();
+      for(let i=0;i<=120;i++){
+        const th=i/120*Math.PI*2, r=(70*l+10*l*l*.4)*s*(1+.12*Math.sin(3*th+ci+t*.12)+.07*Math.sin(5*th+l*.6-t*.09));
+        const x=cx+Math.cos(th)*r*1.35,y=cy+Math.sin(th)*r;
+        i?g.lineTo(x,y):g.moveTo(x,y);
+      }
+      g.closePath();g.strokeStyle=`rgba(150,170,190,${a*(0.16-l*.015)})`;g.stroke();
+    }
+  });
+  g.restore();
+}
+function drawMap(t){
+  const clear=1-fogDensity(t);
+  drawContours(t,clamp((t-4.0)/2.5)*0.9);
+  // red tenue
+  web.forEach((e,k)=>{
+    const p=ease(clamp((t-webT[k])/.7)); if(p<=0)return;
+    const a=N[e[0]],b=N[e[1]];
+    g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(a[0]+(b[0]-a[0])*p,a[1]+(b[1]-a[1])*p);
+    g.strokeStyle='rgba(160,176,192,.28)';g.lineWidth=2;g.stroke();
+  });
+  // ruta
+  route.forEach((e,k)=>{
+    const p=ease(clamp((t-routeT[k])/.9)); if(p<=0)return;
+    const a=N[e[0]],b=N[e[1]];
+    g.save();g.shadowColor='rgba(240,178,75,.7)';g.shadowBlur=22;
+    g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(a[0]+(b[0]-a[0])*p,a[1]+(b[1]-a[1])*p);
+    g.strokeStyle='#f0b24b';g.lineWidth=5;g.lineCap='round';g.stroke();g.restore();
+  });
+  // nodos
+  N.forEach((n,i)=>{
+    const p=ease(clamp((t-nodeAt[i])/.5)); if(p<=0)return;
+    const onRoute=route.some(e=>e.includes(i)), lit=onRoute&&t>=routeT[Math.max(0,route.findIndex(e=>e.includes(i)))]+.4;
+    g.beginPath();g.arc(n[0],n[1],(lit?9:6)*p,0,7);
+    g.fillStyle=lit?'#f0b24b':'rgba(190,202,214,.75)';
+    if(lit){g.shadowColor='rgba(240,178,75,.9)';g.shadowBlur=26}
+    g.fill();g.shadowBlur=0;
+  });
+  // destino
+  const dn=N[8], dp=ease(clamp((t-17.4)/.9));
+  if(dp>0){const pulse=(t*.9)%1;
+    g.beginPath();g.arc(dn[0],dn[1],26*dp,0,7);g.strokeStyle=`rgba(240,178,75,${.9*dp})`;g.lineWidth=3;g.stroke();
+    g.beginPath();g.arc(dn[0],dn[1],26+pulse*40,0,7);g.strokeStyle=`rgba(240,178,75,${(1-pulse)*.5*dp})`;g.lineWidth=2;g.stroke();
+  }
+}
+function drawFog(t,d){
+  g.save();g.globalCompositeOperation='screen';
+  blobs.forEach(b=>{
+    const x=b.x+Math.sin(t*b.sp+b.ph)*140, y=b.y+Math.cos(t*b.sp*.8+b.ph)*80;
+    const gr=g.createRadialGradient(x,y,0,x,y,b.r);
+    const al=.20*b.a*d;
+    gr.addColorStop(0,`rgba(176,190,205,${al})`);gr.addColorStop(1,'rgba(176,190,205,0)');
+    g.fillStyle=gr;g.fillRect(0,0,W,H);
+  });
+  g.restore();
+}
+function el(id,tin,tout,din=.55,dout=.35){
+  const e=document.getElementById(id);
+  const a=ease(clamp((t_-tin)/din)), b=ease(clamp((t_-tout)/dout));
+  const o=a*(1-b);
+  e.style.opacity=o;
+  e.style.transform=`translateY(${(1-a)*26-b*14}px)`;
+  e.style.filter=`blur(${(1-a)*12+b*9}px)`;
+}
+let t_=0;
+window.render=function(t){
+  t_=t;
+  g.fillStyle='#0c0f13';g.fillRect(0,0,W,H);
+  // fondo: leve gradiente
+  const bg=g.createRadialGradient(W/2,H*.45,100,W/2,H/2,1300);bg.addColorStop(0,'#131820');bg.addColorStop(1,'#080a0d');
+  g.fillStyle=bg;g.fillRect(0,0,W,H);
+  const d=fogDensity(t);
+  drawMap(t);
+  drawFog(t,d);
+  // grano
+  g.save();g.globalAlpha=.05;g.globalCompositeOperation='overlay';
+  const ox=(Math.floor(t*30)*37)%256,oy=(Math.floor(t*30)*91)%256;
+  for(let x=-256+ox;x<W;x+=256)for(let y=-256+oy;y<H;y+=256)g.drawImage(noise,x,y);
+  g.restore();
+  // viñeta
+  const v=g.createRadialGradient(W/2,H/2,420,W/2,H/2,1150);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.55)');
+  g.fillStyle=v;g.fillRect(0,0,W,H);
+
+  // textos
+  el('a1',.2,3.2);  el('a2',1.0,3.2);
+  el('b1',3.7,6.5); el('b2',4.5,6.5);
+  el('t1',7.2,10.6,.7,.4); el('s1',8.2,10.6); el('s2',9.0,10.6);
+  [['p1',11.1,12.95],['p2',13.0,14.85],['p3',14.9,16.5]].forEach(([id,i,o],k)=>{
+    el(id,i,o,.5,.35);
+    const r=document.querySelector('#'+id+' .r i'), rw=document.querySelector('#'+id+' .r').offsetWidth+8;
+    r.style.width=(ease(clamp((t_-(i+.75))/.5))*rw)+'px';
+  });
+  el('e1',17.0,99);el('e2',17.9,99);el('e3',19.4,99,.7);
+};
+document.fonts.ready.then(()=>{window.render(0);window.__ready=true});
+</script></body></html>
