@@ -981,6 +981,7 @@ function openNode(id) {
   const inc = EDGE_IN[id] || [];
   const resources = (DATA.resources || []).filter((r) => r.node_id === id);
   const training = SCENARIOS.filter((s) => scenarioNodes(s).includes(id));
+  const forgeTraining = (DATA.forge || []).filter((m) => (m.nodes || []).includes(id) || m.practice === id);
   const dossier = DATA.dossiers ? DATA.dossiers[n.book] : null;
 
   const relationList = (edges, dir) => {
@@ -997,6 +998,7 @@ function openNode(id) {
       <span class="pill" style="--c:${TYPE_COLORS[n.type] || "#8ab4f8"}">${esc(n.type)}</span>
       <span class="pill book" style="--c:${BOOK_COLORS[n.book] || "#9aa0aa"}">${esc(BOOKS[n.book] || n.book)}</span>
       ${training.length ? `<span class="pill ok">${training.length} escenario${training.length === 1 ? "" : "s"}</span>` : ""}
+      ${forgeTraining.length ? `<span class="pill" style="--c:var(--accent)">${forgeTraining.length} forja${forgeTraining.length === 1 ? "" : "s"}</span>` : ""}
     </div>
     <h2>${esc(n.label)}</h2>
     <p class="node-desc">${esc(n.description)}</p>
@@ -1009,11 +1011,20 @@ function openNode(id) {
     <div class="row" style="margin-top:14px">
       <a class="btn" href="index.html#${encodeURIComponent(n.id)}" target="_blank" rel="noopener">🕸 Abrir en el grafo</a>
       ${training.length ? `<button class="btn primary" id="trainNodeBtn">🎯 Entrenar este nodo (${training.length})</button>` : ""}
+      ${forgeTraining.length ? `<button class="btn" id="forgeNodeBtn">🛠️ Forjar artefacto (${forgeTraining.length})</button>` : ""}
       ${dossier && n.book !== "fde" ? `<button class="btn" id="nodePlaybookBtn">📖 Field Playbook ${n.book.toUpperCase()}</button>` : ""}
     </div>`;
 
   const trainBtn = $("#trainNodeBtn");
   if (trainBtn) trainBtn.onclick = () => { closeModal("nodeModal"); setNodeFilter(id); };
+  const forgeBtn = $("#forgeNodeBtn");
+  if (forgeBtn) forgeBtn.onclick = () => {
+    closeModal("nodeModal");
+    FORGE.missionId = forgeTraining[0].id;
+    FORGE.lastAudit = null;
+    FORGE.showGold = false;
+    setMode("forge");
+  };
   const pbBtn = $("#nodePlaybookBtn");
   if (pbBtn) pbBtn.onclick = () => openPlaybook(n.book);
   openModal("nodeModal");
@@ -3407,168 +3418,10 @@ function updateModelOptions() {
 /* =====================================================================
    5 · ARTIFACT FORGE & EVPI LAB (DETERMINISTIC LOCAL LINTER)
    ===================================================================== */
-const FORGE_MISSIONS = [
-  {
-    id: "forge_scqa_nhs",
-    archetype: "scqa",
-    archetypeLabel: "Memorando SCQA + Answer-First (Minto + Hubbard)",
-    title: "NHS England: Despliegue de tablero de reasignación con 18% de ruido en tablas",
-    phase: "Executive Synthesis",
-    practice: "fde_exec_recommendation",
-    nodes: ["pp_answer_first", "pp_scq", "pp_mece", "pp_action_titles", "htma_ci90", "x_recommendation_with_uncertainty", "pp_chronological_dump"],
-    rawFacts: [
-      "Pasamos 3 semanas limpiando 14 tablas HL7 de 200 hospitales.",
-      "El 18% de los registros de stock tiene duplicados o un desfase de 48 horas.",
-      "A pesar de ese 18% de ruido, cuando el stock proyectado cae por debajo de 36 horas, la transferencia preventiva entre hospitales vecinos evita entre 11 y 19 cirugías canceladas por semana (IC 90%).",
-      "El comité clínico quiere congelar el lanzamiento 9 meses hasta limpiar el 100% de las tablas.",
-      "Si en el mes 1 las cirugías salvadas en la primera ola de 10 hospitales caen por debajo de 8 por semana, podemos revertir al proceso manual en 24 horas."
-    ],
-    trapWarning: "No narres las 3 semanas limpiando tablas HL7 ('pp_chronological_dump') ni prometas un número único sin incertidumbre ('htma_overconfidence'). Abre con la decisión Go/No-Go.",
-    fields: [
-      { id: "gov", label: "1 · Governing Thought / Título de Acción (Answer-First)", placeholder: "Ej: Recomiendo activar hoy la ola 1 en 10 hospitales bajo umbral de 36h en lugar de esperar 9 meses..." },
-      { id: "sit", label: "2 · S · Situación (Hecho base no controvertido)", placeholder: "Ej: Los 200 hospitales de la red gestionan transferencias críticas de insumos quirúrgicos..." },
-      { id: "com", label: "3 · C · Complicación (El quiebre cuantificado y el costo de esperar)", placeholder: "Ej: Aunque 18% de los registros tiene desfase de 48h, postergar 9 meses por limpieza total..." },
-      { id: "key", label: "4 · Key Line MECE + Rango Calibrado 90% + Gatillo de Reversa", placeholder: "Ej: Tres razones independientes: (1) Impacto: evitamos entre 11 y 19 cirugías canceladas/semana (90% CI); (2) Robustez: el umbral de 36h absorbe el 18% de ruido; (3) Riesgo acotado: si al mes 1 salvamos menos de 8 cirugías/semana, revertimos en 24h." }
-    ],
-    gold: {
-      gov: "Recomiendo aprobar hoy el despliegue en ola 1 (10 hospitales) con umbral de alerta de 36 horas, rechazando la pausa de 9 meses.",
-      sit: "La red de 200 hospitales necesita redistribuir insumos quirúrgicos a tiempo para evitar suspensiones de pabellón.",
-      com: "Aunque el 18% de los registros presenta desfase de 48h, esperar 9 meses por datos perfectos congela un flujo que ya supera el umbral de decisión.",
-      key: "Tres razones MECE sostienen el Go: (1) Impacto: evitamos entre 11 y 19 cirugías canceladas por semana (IC 90%); (2) Margen de seguridad: el gatillo de 36h absorbe el 18% de ruido; (3) Reversibilidad: si al mes 1 evitamos menos de 8 cancelaciones/semana, apagamos el piloto en 24 horas."
-    }
-  },
-  {
-    id: "forge_scqa_airbus",
-    archetype: "scqa",
-    archetypeLabel: "Memorando SCQA + Answer-First (Minto + Hubbard)",
-    title: "Airbus A350: Cuello de botella en Hangar 1 vs. Data Lake Global de 18 meses",
-    phase: "Executive Synthesis",
-    practice: "fde_go_no_go",
-    nodes: ["pp_answer_first", "pp_scq", "pp_mece", "htma_ci90", "fde_go_no_go", "pp_chronological_dump"],
-    rawFacts: [
-      "El VP de Ingeniería propone esperar 18 meses para unificar 15 sistemas SAP/MES en un Data Lake corporativo.",
-      "El 68% del atraso de entrega del A350 ocurre en 2 estaciones de cableado del Hangar 1.",
-      "Integrando solo 3 tablas operativas en 5 días, reducimos el tiempo de resolución de no-conformidades entre 4,2 y 6,8 horas por avión (IC 90%), equivalente a $1,4M–$2,3M USD por trimestre.",
-      "Si al cabo de 4 semanas el ahorro real medido en el Hangar 1 es menor a 3,0 horas por avión, cancelamos la expansión sin costo de infraestructura."
-    ],
-    trapWarning: "Evita empezar explicando cómo conectaste las 3 tablas SAP/MES. Abre con la recomendación ejecutiva, susténtala en 3 pilares MECE, incluye el rango 90% y fija el gatillo de salida.",
-    fields: [
-      { id: "gov", label: "1 · Governing Thought / Título de Acción (Answer-First)", placeholder: "Ej: Recomiendo desplegar esta semana el flujo de resolución en las 2 estaciones del Hangar 1..." },
-      { id: "sit", label: "2 · S · Situación (Hecho base)", placeholder: "Ej: El programa A350 requiere acelerar el cierre de no-conformidades en ensamblaje final..." },
-      { id: "com", label: "3 · C · Complicación (Tensión operativa y costo de oportunidad)", placeholder: "Ej: El 68% del atraso nace en 2 estaciones del Hangar 1, pero esperar 18 meses por el Data Lake global..." },
-      { id: "key", label: "4 · Key Line MECE + Rango Calibrado 90% + Gatillo de Reversa", placeholder: "Ej: (1) Valor cuantificado: ahorramos entre 4,2 y 6,8 horas/avión ($1,4M a $2,3M/trimestre con 90% CI); (2) Foco Pareto: 3 tablas cubren el 68% del cuello de botella; (3) Stop-loss: si en 4 semanas el ahorro baja de 3 horas/avión, paramos." }
-    ],
-    gold: {
-      gov: "Recomiendo desplegar hoy el flujo táctico en las 2 estaciones críticas del Hangar 1 en vez de esperar 18 meses por el Data Lake global.",
-      sit: "El ramp-up del A350 exige eliminar los atrasos por no-conformidades recurrentes de cableado en cabina.",
-      com: "El 68% del retraso se concentra en solo 2 estaciones del Hangar 1; postergar la acción 18 meses para integrar 15 sistemas sacrifica hasta $2,3M trimestrales.",
-      key: "Tres argumentos MECE: (1) Impacto calibrado: recortamos entre 4,2 y 6,8 horas por avión (90% CI, $1,4M–$2,3M/trimestre); (2) Simplicidad: 3 tablas bastan para atacar el 68% del atraso; (3) Gatillo de reversa: si en 4 semanas ahorramos menos de 3 horas por avión, abortamos el escalamiento."
-    }
-  },
-  {
-    id: "forge_mom_tyson",
-    archetype: "mom",
-    archetypeLabel: "Guion de Descubrimiento & Resistencia (Mom Test + Block)",
-    title: "Tyson Foods: Planificadores veteranos que apagan el optimizador y vuelven a Excel",
-    phase: "Resistance & Change",
-    practice: "fde_resistance_playbook",
-    nodes: ["fc_naming_protocol", "fc_handle_resistance", "mom_past_specifics", "mom_workarounds", "mom_commitment", "mom_fluff", "fc_fighting_resistance"],
-    rawFacts: [
-      "Los planificadores con 20 años de antigüedad desactivaron las recomendaciones automáticas al tercer día y volvieron a su planilla Excel.",
-      "Pregunta trampa que quiere hacer tu equipo: '¿Les gustaría que agreguemos un puntaje de confianza del 1 al 100 para que sí usen la herramienta en el futuro?'",
-      "Necesitas: (1) Nombrar de forma neutral la resistencia emocional (pérdida de control / desconfianza en caja negra), (2) Indagar un hecho pasado específico (la última orden donde el recomendador falló), y (3) Cerrar un compromiso concreto hoy (revisar 5 SKUs juntos en modo human-in-the-loop)."
-    ],
-    trapWarning: "Prohibido usar condicionales futuros ('¿usarías?', '¿te gustaría?', '¿crees que sería útil?') o defender el algoritmo con lógica ('nuestro modelo tiene 94% de precisión').",
-    fields: [
-      { id: "name", label: "1 · Nombramiento Neutral de la Resistencia (Peter Block · sin culpar ni defenderse)", placeholder: "Ej: Noto que al tercer día apagaron las sugerencias y volvieron a su planilla; parece que el sistema los obliga a firmar a ciegas..." },
-      { id: "past", label: "2 · Pregunta de Historia Pasada y Workaround (Mom Test + Torres · cero futuro hipotético)", placeholder: "Ej: Cuéntame del último turno en que descartaste una sugerencia: ¿qué lote específico era, qué viste mal y cómo lo corregiste en tu planilla?" },
-      { id: "comm", label: "3 · Moneda de Compromiso y Co-diseño (Avance concreto hoy en terreno)", placeholder: "Ej: Sentémonos 20 minutos hoy a las 15:00 con los 5 SKUs de mayor merma de ayer para configurar juntos la regla de aprobación." }
-    ],
-    gold: {
-      name: "Veo que apagaron las sugerencias el miércoles y volvieron a la planilla; siento que el sistema les pide poner la firma sobre órdenes sin dejarles ver ni ajustar el criterio.",
-      past: "Muéstrame la última orden de esta semana donde la sugerencia chocó con tu experiencia: ¿qué corte era, qué restricción del cliente omitió y cómo lo resolviste en tu Excel?",
-      comm: "Bloqueemos 20 minutos hoy después del cierre de turno para revisar juntos los 5 lotes más críticos de ayer y dejar que tu ajuste manual alimente la regla antes de despachar."
-    }
-  },
-  {
-    id: "forge_mom_pge",
-    archetype: "mom",
-    archetypeLabel: "Guion de Descubrimiento & Resistencia (Mom Test + Block)",
-    title: "PG&E: Capataces que dan cumplidos vacíos y piden 200 funciones móviles",
-    phase: "Discovery & Contracting",
-    practice: "fde_discovery_interview",
-    nodes: ["mom_past_specifics", "mom_compliments", "mom_feature_requests", "mom_workarounds", "mom_commitment", "cdh_story_interviews"],
-    rawFacts: [
-      "Los capataces de cuadrilla eléctrica te dicen: 'Se ve increíble tu plataforma de riesgo de incendio, avísanos cuando esté lista' y te entregan un listado de 200 botones para la app.",
-      "Pregunta trampa a evitar: '¿Cuál de estas 200 funciones usarían más si la programamos el próximo trimestre?'",
-      "Necesitas: (1) Desviar el cumplido y cavar debajo del pedido de features, (2) Anclar en la última alerta fallida del turno pasado y su costo/workaround real, (3) Pedir una moneda de compromiso (sombra en camioneta o datos del último despacho)."
-    ],
-    trapWarning: "No agradezcas el cumplido ni les pidas votar sobre el futuro. Usa la técnica 'Look Before You Zoom' y ancla en el último despacho real en terreno.",
-    fields: [
-      { id: "name", label: "1 · Desviar el Cumplido y Cavar Bajo el Feature Request (Mom Test)", placeholder: "Ej: Dejemos de lado nuestra demo y la lista de 200 botones por un segundo; antes de diseñar pantallas quiero entender qué les quema tiempo hoy..." },
-      { id: "past", label: "2 · Pregunta de Historia Pasada Específica y Costo Real (Último turno crítico)", placeholder: "Ej: En la última alerta de viento fuerte de la semana pasada, ¿cuántas horas perdieron verificando postes que no tenían falla y cómo decidieron a cuál ir primero?" },
-      { id: "comm", label: "3 · Moneda de Compromiso Real (Tiempo, acceso o datos reales hoy)", placeholder: "Ej: ¿Puedo subirme mañana a las 6:00 AM a la camioneta de tu cuadrilla durante dos horas y llevarme el registro de las últimas 10 salidas fallidas?" }
-    ],
-    gold: {
-      name: "Olvidemos la demo y dejemos en pausa la lista de 200 pantallas; si construimos todo eso a ciegas solo les vamos a estorbar en terreno.",
-      past: "Cuéntame de la última alerta roja de viento que atendiste la semana pasada: ¿qué tramo revisaron en vano, cuántas horas de cuadrilla costó ese falso positivo y cómo priorizaron a mano?",
-      comm: "¿Me dejas acompañarte mañana a las 06:30 en el despacho de turno durante 30 minutos y me pasas la planilla con las últimas 10 salidas en falso de este mes?"
-    }
-  },
-  {
-    id: "forge_bps_port",
-    archetype: "bps",
-    archetypeLabel: "Hoja de Problema SMART+ & Árbol MECE + EVPI (Conn & Hubbard)",
-    title: "Terminal Portuaria: Mandato vago de 'poner IA en las grúas' ante multas de demora",
-    phase: "Diagnosis & Measurement",
-    practice: "fde_problem_framing",
-    nodes: ["bps_problem_statement", "bps_issue_tree", "bps_2x2", "htma_define_decision", "htma_rule_of_five", "htma_evi", "cdh_whether_or_not"],
-    rawFacts: [
-      "Mandato vago del cliente: 'Queremos implementar IA en el patio porque los buques tardan 4 horas extra y pagamos $18.000 USD de multa por buque atrasado (30 buques atrasados/mes = $540.000/mes)'.",
-      "TI propone gastar $120.000 USD y 5 meses sensorizando todas las grúas antes de tomar cualquier decisión.",
-      "Necesitas: (1) Redactar la pregunta de decisión SMART+ con dueño, métrica, umbral y horizonte sin atarla a 'IA', (2) Descomponer el atraso de 4 horas en ramas MECE y podar con matriz 2×2, y (3) Aplicar EVPI y Regla del Cinco (5 buques esta semana) para frenar el gasto ciego de $120k."
-    ],
-    trapWarning: "No incluyas la solución ('implementar IA' o 'comprar sensores') dentro de la pregunta del problema ('cdh_whether_or_not'), ni aceptes 5 meses de sensores antes de muestrear 5 buques.",
-    fields: [
-      { id: "smart", label: "1 · Pregunta de Decisión SMART+ (Dueño + Métrica + Umbral + Plazo · sin fijar la tecnología)", placeholder: "Ej: ¿Cómo puede el Director de Operaciones Portuarias reducir el tiempo de estadía en muelle en al menos 2,5 horas por buque dentro de 90 días..." },
-      { id: "mece", label: "2 · Corte MECE de Primer Nivel + Poda 2×2 (Ramas sin traslape y cuál atacar primero)", placeholder: "Ej: Tiempo total en puerto = (1) Espera de atraque y aduana + (2) Ciclo de grúa muelle-patio + (3) Re-manejo en patio. Podamos (1) por baja influencia y atacamos primero (3) por alto impacto..." },
-      { id: "evpi", label: "3 · Frontera EVPI y Muestra Regla del Cinco (Por qué no gastar $120k hoy y qué medir en 48h)", placeholder: "Ej: Antes de gastar $120k y 5 meses en sensores, cronometramos una muestra aleatoria de 5 buques esta semana (93,75% de confianza en la mediana con costo <$2.000) para acotar cuánto pesa el re-manejo." }
-    ],
-    gold: {
-      smart: "¿Qué palancas operativas debe activar el Director de Operaciones para recortar al menos 2,5 de las 4,0 horas de sobretiempo por buque en los próximos 90 días, reduciendo las multas mensuales en más de $300.000 USD sin detener el muelle?",
-      mece: "Descomposición MECE de las 4 horas extra: (1) Demora documental/aduana antes de operar, (2) Tiempo productivo de grúa pórtico, (3) Espera de camión interno por re-manejos en patio. En la matriz 2×2 podamos aduana (fuera de control) y priorizamos la rama (3) por concentrar el mayor impacto accionar.",
-      evpi: "Frenamos los $120.000 USD y 5 meses de telemetría: aplicamos la Regla del Cinco midiendo en terreno 5 buques al azar esta semana (93,75% de confianza sobre la mediana por menos de $2.500 USD) para confirmar si el patio explica más de 2 horas del atraso."
-    }
-  },
-  {
-    id: "forge_bps_pharma",
-    archetype: "bps",
-    archetypeLabel: "Hoja de Problema SMART+ & Árbol MECE + EVPI (Conn & Hubbard)",
-    title: "Farma Cold-Chain: $400k/trimestre en mermas y pedido de 400 sensores satelitales",
-    phase: "Diagnosis & Measurement",
-    practice: "fde_issue_tree",
-    nodes: ["bps_problem_statement", "bps_issue_tree", "bps_heuristics", "htma_decomposition", "htma_rule_of_five", "htma_measurement_inversion"],
-    rawFacts: [
-      "El Director de Supply Chain pide comprar 400 sensores IoT satelitales ($180.000 USD) porque se pierden $400.000 USD por trimestre (6% de merma) en vacunas por ruptura de cadena de frío.",
-      "Nadie sabe qué fracción de la ruptura térmica ocurre en embalaje de bodega, en ruta de camión o en el andén de recepción de la clínica.",
-      "Necesitas: (1) Pregunta de problema SMART+ enfocada en reducir la merma del 6% al <2% en 60 días, (2) Árbol MECE por etapas del flujo físico + priorización 2×2, y (3) Muestreo rápido de 5 a 7 despachos con registradores descartables ($500 USD) antes de gastar $180.000."
-    ],
-    trapWarning: "Evita formular la pregunta como '¿Cómo instalamos 400 sensores satelitales?' y usa la Regla del Cinco para desarmar la compra a ciegas de $180k.",
-    fields: [
-      { id: "smart", label: "1 · Pregunta de Decisión SMART+ (Dueño + Reducción de merma + Plazo · sin prefijar sensores)", placeholder: "Ej: ¿Cómo puede la Dirección de Supply Chain reducir la merma térmica de vacunas del 6% a menos del 2% (ahorrando >$250k/trimestre) en 60 días..." },
-      { id: "mece", label: "2 · Corte MECE del Flujo + Poda 2×2 (Dónde ocurre la excursión térmica)", placeholder: "Ej: Excursión total = (1) Pre-enfriamiento y embalaje en CD + (2) Tránsito en camión + (3) Espera sin refrigeración en recepción de clínica. Priorizamos (1) y (3) en matriz 2×2..." },
-      { id: "evpi", label: "3 · Frontera EVPI y Muestra Regla del Cinco (Experimento de $500 vs. compra de $180k)", placeholder: "Ej: En lugar de gastar $180.000 hoy sin saber si el problema ocurre en el camión, metemos termógrafos de $500 en 7 envíos aleatorios esta semana (98,4% de confianza en la mediana) para aislar en qué eslabón se rompe el frío." }
-    ],
-    gold: {
-      smart: "¿Qué intervención debe ejecutar el Director de Supply Chain en los próximos 60 días para bajar la merma por ruptura de cadena de frío del 6% a menos del 2%, recuperando al menos $260.000 USD por trimestre?",
-      mece: "Corte MECE por etapa física: (1) Embalaje y carga en centro de distribución, (2) Excursión durante tránsito en ruta, (3) Demora en andén de recepción de la clínica. En matriz 2×2 atacamos primero recepción y embalaje antes de asumir que falla el furgón.",
-      evpi: "Congelamos la compra de $180.000 USD en sensores satelitales: con una muestra de 7 despachos esta semana usando registradores de $500 USD obtenemos 98,4% de confianza sobre la mediana del tramo donde sube la temperatura, pagando menos del 1% del EVPI."
-    }
-  }
-];
+const FORGE_MISSIONS = Array.isArray(DATA.forge) && DATA.forge.length ? DATA.forge : [];
 
 const FORGE = {
-  missionId: FORGE_MISSIONS[0].id,
+  missionId: FORGE_MISSIONS[0] ? FORGE_MISSIONS[0].id : "",
   drafts: {},
   lastAudit: null,
   showGold: false
@@ -3598,7 +3451,7 @@ function evaluateForgeArtifact(m, draft) {
 
     // Rule 1: Answer-First in Governing Thought (20 pts)
     const startsWithAction = /^(recomiendo|aprobemos|aprobar|desplegar|despleguemos|activar|activemos|lanzar|lancemos|ejecutar|firmar|pausar|rechazar|proceder|propongo\s+aprobar|propongo\s+desplegar)/i.test(gov);
-    const hasDecisionVerb = /(recomiendo|aprobar|desplegar|activar|ola\s*1|hangar\s*1|rechazando|en\s+vez\s+de\s+esperar|en\s+lugar\s+de\s+esperar|no\s+esperar)/i.test(gov);
+    const hasDecisionVerb = /(recomiendo|aprobar|desplegar|activar|ola\s*1|hangar\s*1|abarrotes|rechazando|descartando|en\s+vez\s+de\s+esperar|en\s+lugar\s+de\s+esperar|no\s+esperar)/i.test(gov);
     const r1Score = startsWithAction ? 20 : (hasDecisionVerb && gov.length >= 25 ? 12 : 0);
     checks.push({
       title: "1 · Answer-First en el Governing Thought (Minto)",
@@ -3613,7 +3466,7 @@ function evaluateForgeArtifact(m, draft) {
     });
 
     // Rule 2: Zero Chronological / Pipeline Dump (20 pts)
-    const chronoDump = /(primero\s+limpiamos|durante\s+las\s+últimas\s+tres\s+semanas|pasamos\s+3\s+semanas|empezamos\s+conectando|luego\s+entrenamos|arquitectura\s+de\s+microservicios|historia\s+del\s+proyecto)/i.test(fullText);
+    const chronoDump = /(primero\s+limpiamos|durante\s+las\s+últimas\s+tres\s+semanas|pasamos\s+3\s+semanas|empezamos\s+conectando|luego\s+entrenamos|ejecutamos\s+gemba_walk|arquitectura\s+de\s+microservicios|historia\s+del\s+proyecto)/i.test(fullText);
     const enoughContent = sit.length >= 20 && com.length >= 25 && key.length >= 35;
     const r2Score = !chronoDump && enoughContent ? 20 : (!chronoDump && fullText.length >= 40 ? 10 : 0);
     checks.push({
@@ -3629,7 +3482,7 @@ function evaluateForgeArtifact(m, draft) {
     });
 
     // Rule 3: Complication Tension + Quantified Cost/Noise (20 pts)
-    const hasTensionWord = /(aunque|pero|sin\s+embargo|pese\s+a|mientras|postergar|esperar|congela|sacrifica|concentra|desfase|ruido|atraso)/i.test(com);
+    const hasTensionWord = /(aunque|pero|sin\s+embargo|pese\s+a|mientras|postergar|esperar|frenar|congela|sacrifica|concentra|desfase|ruido|ráfaga|atraso)/i.test(com);
     const hasComNumber = /\d+\s*(%|meses|horas|h\b|millones|m\b|hospitales|estaciones)/i.test(com);
     const r3Score = hasTensionWord && hasComNumber ? 20 : (hasTensionWord || hasComNumber ? 10 : 0);
     checks.push({
@@ -3639,11 +3492,11 @@ function evaluateForgeArtifact(m, draft) {
       nodes: ["pp_scq"],
       feedback: r3Score === 20
         ? "La Complicación contrasta con nitidez el ruido/plazo contra el costo real de seguir esperando."
-        : "Tu Complicación debe explicitar el quiebre cuantificado (ej. '18% de desfase vs 9 meses de espera' o '68% del atraso vs 18 meses') usando conectores de tensión ('aunque', 'pero', 'esperar...')."
+        : "Tu Complicación debe explicitar el quiebre cuantificado (ej. '18% de desfase vs 9 meses de espera', '68% del atraso vs 18 meses' o '34% de ráfaga vs 6 meses') usando conectores de tensión ('aunque', 'pero', 'esperar...')."
     });
 
     // Rule 4: Calibrated 90% Range instead of Point Estimate (20 pts)
-    const hasRange = /(entre\s+\d+[.,]?\d*\s+y\s+\d+[.,]?\d*|\d+[.,]?\d*\s*(?:a|–|-|hasta)\s*\d+[.,]?\d*|\[\s*\d+[.,]?\d*\s*,\s*\d+[.,]?\d*\s*\])/i.test(fullText);
+    const hasRange = /(entre\s+\$?\d+[.,]?\d*\s*(?:mil|m|k|usd)?\s+y\s+\$?\d+[.,]?\d*|\$?\d+[.,]?\d*\s*(?:a|–|-|hasta)\s*\$?\d+[.,]?\d*|\[\s*\d+[.,]?\d*\s*,\s*\d+[.,]?\d*\s*\])/i.test(fullText);
     const hasCI = /(90\s*%|ic\s*90|confianza|calibrad|rango)/i.test(fullText);
     const r4Score = hasRange && hasCI ? 20 : (hasRange ? 14 : 0);
     checks.push({
@@ -3659,8 +3512,8 @@ function evaluateForgeArtifact(m, draft) {
     });
 
     // Rule 5: MECE Key Line + Reversal / Stop Trigger (20 pts)
-    const hasMeceMarkers = /(\(1\)|1\.|1\)|primero|impacto.*riesgo|tres\s+razones|tres\s+argumentos|por\s+tres)/i.test(key);
-    const hasStopTrigger = /(si\s+al\s+mes|si\s+en\s+\d+|si\s+cae|si\s+baja|menos\s+de\s+\d+|reversa|revertimos|apagamos|abortamos|paramos|detenemos|gatillo)/i.test(key);
+    const hasMeceMarkers = /(\(1\)|1\.|1\)|primero|impacto.*riesgo|tres\s+razones|tres\s+argumentos|tres\s+pilares|por\s+tres)/i.test(key);
+    const hasStopTrigger = /(si\s+al\s+mes|si\s+en\s+\d+|si\s+cae|si\s+baja|si.*supera|menos\s+de\s+\d+|reversa|revertimos|apagamos|abortamos|paramos|detenemos|gatillo|salvaguarda)/i.test(key);
     const r5Score = hasMeceMarkers && hasStopTrigger ? 20 : (hasMeceMarkers || hasStopTrigger ? 10 : 0);
     checks.push({
       title: "5 · Key Line MECE + Gatillo de Reversa (Go/No-Go)",
@@ -3716,7 +3569,7 @@ function evaluateForgeArtifact(m, draft) {
       title: "3 · Anclaje en historia pasada específica (Mom Test + Teresa Torres)",
       score: r3Score,
       max: 20,
-      nodes: ["mom_past_specifics", "cdh_story_interviews"],
+      nodes: ["mom_past_specifics", "cdh_story_interview"],
       feedback: r3Score === 20
         ? "Excelente: anclaste la pregunta en un episodio real del pasado reciente ('la última orden / el último turno / la semana pasada')."
         : "Tu pregunta no ancla en un episodio pasado específico: usa 'Cuéntame de la última vez que...', 'Muéstrame la última orden de esta semana...'."
@@ -3761,7 +3614,7 @@ function evaluateForgeArtifact(m, draft) {
       title: "1 · Pregunta de decisión con dueño y sin fijar la tecnología (Conn + Torres)",
       score: r1Score,
       max: 20,
-      nodes: ["bps_problem_statement", "cdh_whether_or_not"],
+      nodes: ["bps_define", "cdh_whether_or_not"],
       feedback: r1Score === 20
         ? "Bien: definiste actor decisor y verbo de resultado sin encerrar la pregunta en 'cómo instalar IA/sensores'."
         : solutionFixated
@@ -3777,7 +3630,7 @@ function evaluateForgeArtifact(m, draft) {
       title: "2 · Umbral cuantificado y horizonte temporal (SMART+)",
       score: r2Score,
       max: 20,
-      nodes: ["htma_define_decision", "bps_problem_statement"],
+      nodes: ["htma_define_decision", "bps_define"],
       feedback: r2Score === 20
         ? "Tu pregunta fija tanto la magnitud mínima de éxito (horas/%/$) como el plazo exacto en días/meses."
         : "Falta cuantificar el umbral de éxito (ej. 'al menos 2,5 horas' o 'del 6% a <2%') o el plazo temporal ('en 60 / 90 días')."
@@ -3803,10 +3656,10 @@ function evaluateForgeArtifact(m, draft) {
       title: "4 · Poda rápida con matriz 2×2 (Impacto × Influencia)",
       score: r4Score,
       max: 20,
-      nodes: ["bps_2x2", "bps_heuristics"],
+      nodes: ["bps_prioritize_2x2", "bps_heuristics"],
       feedback: r4Score === 20
         ? "Indicaste qué rama podar por baja influencia y cuál atacar primero por alto impacto."
-        : "No basta listar las ramas: declara cuál podas y cuál priorizas primero usando el criterio de Impacto vs. Control del cliente ('bps_2x2')."
+        : "No basta listar las ramas: declara cuál podas y cuál priorizas primero usando el criterio de Impacto vs. Control del cliente ('bps_prioritize_2x2')."
     });
 
     // Rule 5: EVPI Bound & Rule of Five Sample (20 pts)

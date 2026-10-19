@@ -650,6 +650,35 @@ poka-yoke, TWI Job Instruction, Toyota Kata, SPC, MSA, DMAIC.
 
 ---
 
+## El Grafo de Conocimiento y el FDE Field Dojo (`knowledge-graph/`)
+
+Los números del pasillo no se despliegan solos: cada hallazgo cuantitativo de `fdekit` choca contra una reunión de contratación, un incentivo mal alineado, un dato contaminado o un comité ejecutivo de tres minutos. En [`knowledge-graph/`](knowledge-graph/README.md) vive la mitad humana, diagnóstica y estratégica del mismo sistema operativo, sintetizada desde **8 libros fundamentales** en un grafo verificable (**193 nodos · 488 aristas · 12 predicados canónicos**) y un simulador interactivo de 5 modos (**FDE Field Dojo**):
+
+| Fase en terreno (`fdekit`) | Herramientas cuantitativas (`src/fdekit/`) | Marcos del Grafo (`knowledge-graph/`) | Entrenamiento en el Dojo (`out/dojo.html`) |
+|---|---|---|---|
+| **Gemba & Contratación (Días 0–14)** | `1_gemba_walk`, `2_timestudy`, `4_data_quality_gate` | *The Mom Test* (Fitzpatrick), *Flawless Consulting* (Block), *The Trusted Advisor* (Maister) | Escenarios `scen_01`–`scen_04`, `scen_41_fdekit_gemba_dq`, Forja de guiones `forge_mom_*` |
+| **Diagnóstico & Cuantificación (Días 15–30)** | `3_process_mining`, `5_sim_picking` (Monte Carlo) | *Bulletproof Problem Solving* (Conn & McLean), *How to Measure Anything* (Hubbard) | Laboratorio 90% CI + Descomposición Fermi, Calculadora EVPI / Regla del Cinco, `forge_bps_*` |
+| **Línea Base & Piloto (Días 30–75)** | `6_baseline_experiment` (DiD), `7_integration_probe`, `8_standard_work` | *Continuous Discovery Habits* (Torres), *Switch* (Heath & Heath) | 5-Day AIP Bootcamp Gauntlet (2 campañas de lunes a viernes con presupuesto político real) |
+| **Traspaso & Comité Ejecutivo (Días 75–90+)** | `9_spc_control` (XmR / CUSUM), `a3_report`, `value_tracker` | *The Pyramid Principle* (Minto) + *How to Measure Anything* (Hubbard) | Escenario `scen_42_fdekit_value_spc`, Forja SCQA `forge_scqa_pudahuel`, Sparring de 8 turnos |
+
+### Construir y abrir el Grafo + FDE Field Dojo
+
+```bash
+python knowledge-graph/build.py
+```
+
+Genera en `knowledge-graph/out/` (100% offline, cero dependencias externas):
+- **`knowledge-graph/out/index.html`** — Visor interactivo del grafo (193 nodos, filtros por fase/libro/tipo, buscador de caminos BFS y dossiers tácticos completos).
+- **`knowledge-graph/out/dojo.html`** — **FDE Field Dojo** con 5 modos de entrenamiento:
+  1. **🎯 Tactical Reflex Dojo:** 42 escenarios ramificados (incluyendo 6 casos Palantir y 2 casos directos del CD Pudahuel con `fdekit`) que cubren el **100% de los 173 nodos operativos/conceptuales** del grafo con repetición espaciada Leitner.
+  2. **📐 90% CI Calibration Lab:** 20 preguntas calibradas con rueda de apuesta equivalente de Hubbard y pizarra de descomposición Fermi.
+  3. **🏛️ 5-Day AIP Bootcamp Gauntlet:** 2 campañas encadenadas de 5 días donde tus 4 métricas (`TQ`, `SIG`, `EVI`, `ADP`) se arrastran de lunes a viernes.
+  4. **🛠️ Artifact Forge & EVPI Lab:** 7 misiones de redacción estructurada (SCQA/A3, Mom Test + Block, SMART+ / MECE / EVPI) evaluadas por un linter determinista local (0–100 pts) + calculadora interactiva de EVPI y Regla del Cinco.
+  5. **🥊 Stakeholder Sparring:** Roleplay de 8 turnos con voz (Web Speech API), cliente multi-proveedor o modo Copy-Paste con auditoría JSON pegable y rúbrica de 5 dimensiones.
+- **`knowledge-graph/out/neo4j.cypher`** & **`knowledge-graph/out/obsidian/`** — Exportación directa a Neo4j y bóveda Obsidian de 193 notas interconectadas.
+
+---
+
 ## Tests
 
 ```bash

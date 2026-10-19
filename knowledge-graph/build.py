@@ -370,7 +370,7 @@ def load_scenarios(by_id: dict[str, dict], books: dict[str, str]) -> dict:
     except json.JSONDecodeError as exc:
         raise SystemExit(f"BUILD FAILED — scenarios.json is not valid JSON: {exc}") from exc
 
-    for key in ("meta", "scenarios", "calibration_questions", "sparring", "bootcamps"):
+    for key in ("meta", "scenarios", "calibration_questions", "sparring", "bootcamps", "forge_missions"):
         _require(key in bank, f"missing top-level key '{key}'")
 
     scenarios = bank["scenarios"]
@@ -480,11 +480,62 @@ def load_scenarios(by_id: dict[str, dict], books: dict[str, str]) -> dict:
     bootcamps = bank["bootcamps"]
     _validate_bootcamps(bootcamps, by_id)
 
+    forge_missions = bank["forge_missions"]
+    _require(isinstance(forge_missions, list) and len(forge_missions) >= 6,
+             f"needs at least 6 forge_missions, found {len(forge_missions) if isinstance(forge_missions, list) else 0}")
+    fids = [m.get("id") for m in forge_missions]
+    _require(len(fids) == len(set(fids)), f"duplicate forge mission ids: {fids}")
+    for idx, m in enumerate(forge_missions, 1):
+        where = f"forge_mission #{idx} ({m.get('id', '?')})"
+        for key in ("id", "archetype", "archetypeLabel", "title", "phase", "practice", "trapWarning"):
+            _require(isinstance(m.get(key), str) and m[key].strip(), f"{where} missing/blank '{key}'")
+        _require(m["archetype"] in {"scqa", "mom", "bps"}, f"{where} invalid archetype '{m['archetype']}'")
+        _require(m["phase"] in PHASES, f"{where} invalid phase '{m['phase']}'")
+        _check_node_ref(by_id, m["practice"], {"FDEPractice"}, where)
+        _require(isinstance(m.get("nodes"), list) and len(m["nodes"]) >= 3, f"{where} needs at least 3 nodes")
+        for nid in m["nodes"]:
+            _check_node_ref(by_id, nid, None, where)
+        _require(isinstance(m.get("rawFacts"), list) and len(m["rawFacts"]) >= 3, f"{where} needs rawFacts")
+        fields = m.get("fields")
+        gold = m.get("gold")
+        _require(isinstance(fields, list) and len(fields) >= 3, f"{where} needs at least 3 fields")
+        _require(isinstance(gold, dict), f"{where} needs gold dict")
+        for f in fields:
+            fid = f.get("id")
+            _require(fid and f.get("label") and f.get("placeholder"), f"{where} field missing id/label/placeholder")
+            _require(isinstance(gold.get(fid), str) and gold[fid].strip(), f"{where} missing gold standard for '{fid}'")
+
+    # Enforce 100% node coverage across all non-Book / non-Author nodes
+    covered_nodes: set[str] = set()
+    for s in scenarios:
+        covered_nodes.update(s.get("active_pitfalls", []))
+        covered_nodes.update(s.get("target_techniques", []))
+        covered_nodes.update(s.get("supporting_nodes", []))
+        if s.get("target_practice"):
+            covered_nodes.add(s["target_practice"])
+    for c in bootcamps["campaigns"]:
+        for st in c["stages"]:
+            covered_nodes.update(st.get("active_pitfalls", []))
+            covered_nodes.update(st.get("target_techniques", []))
+            covered_nodes.update(st.get("supporting_nodes", []))
+            if st.get("target_practice"):
+                covered_nodes.add(st["target_practice"])
+    for m in forge_missions:
+        covered_nodes.update(m.get("nodes", []))
+        if m.get("practice"):
+            covered_nodes.add(m["practice"])
+
+    trainable_nodes = {nid for nid, n in by_id.items() if n["type"] not in {"Book", "Author"}}
+    uncovered = sorted(trainable_nodes - covered_nodes)
+    _require(not uncovered, f"trainable graph nodes missing from Dojo scenarios/bootcamps/forge: {uncovered}")
+
     print(
         f"OK dojo bank: {len(scenarios)} scenarios ({len(palantir_cases)} Palantir), "
         f"{len(questions)} calibration questions, {len(sparring['contexts'])} contexts, "
         f"{len(bootcamps['campaigns'])} bootcamps / "
-        f"{sum(len(c['stages']) for c in bootcamps['campaigns'])} stages, {len(rubric)} rubric dimensions"
+        f"{sum(len(c['stages']) for c in bootcamps['campaigns'])} stages, "
+        f"{len(forge_missions)} forge missions, "
+        f"{len(trainable_nodes)}/{len(trainable_nodes)} trainable nodes covered (100%)"
     )
     return bank
 
@@ -664,6 +715,7 @@ def build_dojo(data: dict, dossiers: dict[str, dict[str, str]], bank: dict) -> N
         },
         "sparring": bank["sparring"],
         "bootcamps": bank["bootcamps"],
+        "forge": bank["forge_missions"],
         "counts": {
             "nodes": len(data["nodes"]),
             "edges": len(data["edges"]),
@@ -674,6 +726,7 @@ def build_dojo(data: dict, dossiers: dict[str, dict[str, str]], bank: dict) -> N
             "contexts": len(bank["sparring"]["contexts"]),
             "bootcamps": len(bank["bootcamps"]["campaigns"]),
             "bootcamp_stages": sum(len(c["stages"]) for c in bank["bootcamps"]["campaigns"]),
+            "forge": len(bank["forge_missions"]),
             "dossiers": len(dossiers),
         },
     }
