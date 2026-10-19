@@ -1,0 +1,345 @@
+window.TL={
+ "total": 139.629,
+ "scenes": [
+  {
+   "id": "s0",
+   "start": 0.0,
+   "voice_at": 0.6,
+   "voice_dur": 6.456,
+   "dur": 7.456
+  },
+  {
+   "id": "s1",
+   "start": 7.456,
+   "voice_at": 7.806,
+   "voice_dur": 7.042,
+   "dur": 7.792
+  },
+  {
+   "id": "s2",
+   "start": 15.248,
+   "voice_at": 15.598,
+   "voice_dur": 10.414,
+   "dur": 11.164
+  },
+  {
+   "id": "s3",
+   "start": 26.412,
+   "voice_at": 26.762,
+   "voice_dur": 8.893,
+   "dur": 9.643
+  },
+  {
+   "id": "s4",
+   "start": 36.055,
+   "voice_at": 36.405,
+   "voice_dur": 8.524,
+   "dur": 9.274
+  },
+  {
+   "id": "s5",
+   "start": 45.329,
+   "voice_at": 45.679,
+   "voice_dur": 12.415,
+   "dur": 13.165
+  },
+  {
+   "id": "s6",
+   "start": 58.494,
+   "voice_at": 58.844,
+   "voice_dur": 9.115,
+   "dur": 9.865
+  },
+  {
+   "id": "s7",
+   "start": 68.359,
+   "voice_at": 68.709,
+   "voice_dur": 8.466,
+   "dur": 9.216
+  },
+  {
+   "id": "s8",
+   "start": 77.575,
+   "voice_at": 77.925,
+   "voice_dur": 10.299,
+   "dur": 11.049
+  },
+  {
+   "id": "s9",
+   "start": 88.624,
+   "voice_at": 88.974,
+   "voice_dur": 9.281,
+   "dur": 10.031
+  },
+  {
+   "id": "s10",
+   "start": 98.655,
+   "voice_at": 99.005,
+   "voice_dur": 9.515,
+   "dur": 10.265
+  },
+  {
+   "id": "s11",
+   "start": 108.92,
+   "voice_at": 109.27,
+   "voice_dur": 10.268,
+   "dur": 11.018
+  },
+  {
+   "id": "s12",
+   "start": 119.938,
+   "voice_at": 120.288,
+   "voice_dur": 10.854,
+   "dur": 11.604
+  },
+  {
+   "id": "s13",
+   "start": 131.542,
+   "voice_at": 131.892,
+   "voice_dur": 6.037,
+   "dur": 8.087
+  }
+ ],
+ "cues": [
+  {
+   "t0": 0.6,
+   "t1": 3.262,
+   "text": "Where the rules are clear, let the machine win."
+  },
+  {
+   "t0": 3.262,
+   "t1": 5.753,
+   "text": "Where there are none, that is where we work."
+  },
+  {
+   "t0": 5.753,
+   "t1": 7.056,
+   "text": "The Polymath Manifesto."
+  },
+  {
+   "t0": 7.806,
+   "t1": 10.671,
+   "text": "One. Walk into the fog, and walk out with a map:"
+  },
+  {
+   "t0": 10.671,
+   "t1": 13.177,
+   "text": "a well-posed problem, a scope, a deadline,"
+  },
+  {
+   "t0": 13.177,
+   "t1": 14.848,
+   "text": "and a value you can measure."
+  },
+  {
+   "t0": 15.598,
+   "t1": 17.246,
+   "text": "Two. Breadth needs roots."
+  },
+  {
+   "t0": 17.246,
+   "t1": 20.278,
+   "text": "Go deep in one or two fields, then branch out."
+  },
+  {
+   "t0": 20.278,
+   "t1": 26.012,
+   "text": "A conventional base plus a small dose of the unusual nearly doubled the odds of impact."
+  },
+  {
+   "t0": 26.762,
+   "t1": 28.654,
+   "text": "Three. Connect, don't collect."
+  },
+  {
+   "t0": 28.654,
+   "t1": 30.294,
+   "text": "Anyone can look things up."
+  },
+  {
+   "t0": 30.294,
+   "t1": 35.087,
+   "text": "The advantage is seeing that a technical problem is really about incentives,"
+  },
+  {
+   "t0": 35.087,
+   "t1": 35.654,
+   "text": "or trust."
+  },
+  {
+   "t0": 36.405,
+   "t1": 37.826,
+   "text": "Four. Think in systems."
+  },
+  {
+   "t0": 37.826,
+   "t1": 40.667,
+   "text": "Look for feedback loops, second-order effects,"
+  },
+  {
+   "t0": 40.667,
+   "t1": 42.458,
+   "text": "and every actor's incentives."
+  },
+  {
+   "t0": 42.458,
+   "t1": 44.929,
+   "text": "Ask what structure produces this result."
+  },
+  {
+   "t0": 45.679,
+   "t1": 47.272,
+   "text": "Five. Doubt with method."
+  },
+  {
+   "t0": 47.272,
+   "t1": 50.658,
+   "text": "In a test of seven hundred fifty-eight consultants,"
+  },
+  {
+   "t0": 50.658,
+   "t1": 52.783,
+   "text": "AI lifted quality forty percent."
+  },
+  {
+   "t0": 52.783,
+   "t1": 54.177,
+   "text": "Outside its frontier,"
+  },
+  {
+   "t0": 54.177,
+   "t1": 58.094,
+   "text": "accuracy fell from eighty-four to sixty or seventy percent."
+  },
+  {
+   "t0": 58.844,
+   "t1": 61.075,
+   "text": "Six. AI amplifies, judgment steers."
+  },
+  {
+   "t0": 61.075,
+   "t1": 64.007,
+   "text": "A machine can generate a thousand connections."
+  },
+  {
+   "t0": 64.007,
+   "t1": 67.959,
+   "text": "Choosing the one that matters, and answering for it, is on us."
+  },
+  {
+   "t0": 68.709,
+   "t1": 71.343,
+   "text": "Seven. The human side is half the problem."
+  },
+  {
+   "t0": 71.343,
+   "t1": 72.723,
+   "text": "In nineteen fifty-one,"
+  },
+  {
+   "t0": 72.723,
+   "t1": 77.176,
+   "text": "coal mines showed that technology and people must be designed together."
+  },
+  {
+   "t0": 77.925,
+   "t1": 79.959,
+   "text": "Eight. Translate between worlds."
+  },
+  {
+   "t0": 79.959,
+   "t1": 83.646,
+   "text": "The board speaks value and risk, the engineer feasibility,"
+  },
+  {
+   "t0": 83.646,
+   "t1": 85.363,
+   "text": "the operator daily reality."
+  },
+  {
+   "t0": 85.363,
+   "t1": 88.224,
+   "text": "We carry the meaning across, and we persuade."
+  },
+  {
+   "t0": 88.974,
+   "t1": 91.825,
+   "text": "Nine. The body and the terrain know things too."
+  },
+  {
+   "t0": 91.825,
+   "t1": 95.525,
+   "text": "Go where the work happens and sit beside the person doing it."
+  },
+  {
+   "t0": 95.525,
+   "t1": 98.255,
+   "text": "The real problem is never only in the report."
+  },
+  {
+   "t0": 99.005,
+   "t1": 100.908,
+   "text": "Ten. Build, and answer for it."
+  },
+  {
+   "t0": 100.908,
+   "t1": 104.587,
+   "text": "An idea never tested is no different from a hallucination."
+  },
+  {
+   "t0": 104.587,
+   "t1": 108.52,
+   "text": "We ask not just can we, but should we, and who does it affect."
+  },
+  {
+   "t0": 109.27,
+   "t1": 112.844,
+   "text": "Eleven. We are measured by what happens after we leave."
+  },
+  {
+   "t0": 112.844,
+   "t1": 115.704,
+   "text": "If people don't use it, the failure is ours."
+  },
+  {
+   "t0": 115.704,
+   "t1": 119.538,
+   "text": "Train, document, hand over, until the team runs without us."
+  },
+  {
+   "t0": 120.288,
+   "t1": 122.298,
+   "text": "Twelve. Learning is the craft."
+  },
+  {
+   "t0": 122.298,
+   "t1": 126.05,
+   "text": "Our only lasting edge is how fast and how well we learn."
+  },
+  {
+   "t0": 126.05,
+   "t1": 129.802,
+   "text": "We build small prototypes and test them with real users,"
+  },
+  {
+   "t0": 129.802,
+   "t1": 131.142,
+   "text": "in days, not months."
+  },
+  {
+   "t0": 131.892,
+   "t1": 134.359,
+   "text": "Where the rules are clear, let the machine win."
+  },
+  {
+   "t0": 134.359,
+   "t1": 136.197,
+   "text": "Where there are none, we are there."
+  },
+  {
+   "t0": 136.197,
+   "t1": 137.929,
+   "text": "And when we leave, the map stays."
+  }
+ ]
+};

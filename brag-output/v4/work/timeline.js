@@ -1,0 +1,332 @@
+window.TL={
+ "total": 123.679,
+ "scenes": [
+  {
+   "id": "s0",
+   "start": 0.0,
+   "voice_at": 0.6,
+   "voice_dur": 10.755,
+   "dur": 11.755
+  },
+  {
+   "id": "s1",
+   "start": 11.755,
+   "voice_at": 12.105,
+   "voice_dur": 11.339,
+   "dur": 12.089
+  },
+  {
+   "id": "s2",
+   "start": 23.844,
+   "voice_at": 24.194,
+   "voice_dur": 16.288,
+   "dur": 17.038
+  },
+  {
+   "id": "s3",
+   "start": 40.882,
+   "voice_at": 41.232,
+   "voice_dur": 10.898,
+   "dur": 11.648
+  },
+  {
+   "id": "s4",
+   "start": 52.53,
+   "voice_at": 52.88,
+   "voice_dur": 12.313,
+   "dur": 13.063
+  },
+  {
+   "id": "s5",
+   "start": 65.593,
+   "voice_at": 65.943,
+   "voice_dur": 8.589,
+   "dur": 9.339
+  },
+  {
+   "id": "s6",
+   "start": 74.932,
+   "voice_at": 75.282,
+   "voice_dur": 11.372,
+   "dur": 12.122
+  },
+  {
+   "id": "s7",
+   "start": 87.054,
+   "voice_at": 87.404,
+   "voice_dur": 12.076,
+   "dur": 12.826
+  },
+  {
+   "id": "s8",
+   "start": 99.88,
+   "voice_at": 100.23,
+   "voice_dur": 10.661,
+   "dur": 11.411
+  },
+  {
+   "id": "s9",
+   "start": 111.291,
+   "voice_at": 111.641,
+   "voice_dur": 8.838,
+   "dur": 12.388
+  }
+ ],
+ "cues": [
+  {
+   "t0": 0.6,
+   "t1": 3.321,
+   "text": "The client's system says every order goes:"
+  },
+  {
+   "t0": 3.321,
+   "t1": 6.302,
+   "text": "release, pick, consolidate, pack, check, ship."
+  },
+  {
+   "t0": 6.302,
+   "t1": 7.403,
+   "text": "You open the log."
+  },
+  {
+   "t0": 7.403,
+   "t1": 8.828,
+   "text": "Fifty-four percent do."
+  },
+  {
+   "t0": 8.828,
+   "t1": 11.355,
+   "text": "Why do the rest find thirty other ways?"
+  },
+  {
+   "t0": 12.105,
+   "t1": 12.986,
+   "text": "That's the fog."
+  },
+  {
+   "t0": 12.986,
+   "t1": 15.806,
+   "text": "So before any analysis, you define the decision:"
+  },
+  {
+   "t0": 15.806,
+   "t1": 18.979,
+   "text": "cut the waiting in half, at one site, in twelve weeks."
+  },
+  {
+   "t0": 18.979,
+   "t1": 20.976,
+   "text": "If it matters, it can be observed."
+  },
+  {
+   "t0": 20.976,
+   "t1": 23.444,
+   "text": "If it can be observed, it can be measured."
+  },
+  {
+   "t0": 24.194,
+   "t1": 27.056,
+   "text": "Three people arrive with the same problem."
+  },
+  {
+   "t0": 27.056,
+   "t1": 29.033,
+   "text": "One writes a fifty-page deck."
+  },
+  {
+   "t0": 29.033,
+   "t1": 29.714,
+   "text": "It's good."
+  },
+  {
+   "t0": 29.714,
+   "t1": 30.805,
+   "text": "Nothing changes."
+  },
+  {
+   "t0": 30.805,
+   "t1": 33.054,
+   "text": "One builds the perfect dashboard."
+  },
+  {
+   "t0": 33.054,
+   "t1": 34.144,
+   "text": "Nobody opens it."
+  },
+  {
+   "t0": 34.144,
+   "t1": 38.029,
+   "text": "The third sees it like an anthropologist, a psychologist,"
+  },
+  {
+   "t0": 38.029,
+   "t1": 40.482,
+   "text": "a historian, and brings an engineer."
+  },
+  {
+   "t0": 41.232,
+   "t1": 43.239,
+   "text": "You don't ask what they would want."
+  },
+  {
+   "t0": 43.239,
+   "t1": 45.534,
+   "text": "You ask for the last time it went wrong."
+  },
+  {
+   "t0": 45.534,
+   "t1": 47.943,
+   "text": "You watch what they do, not what they say."
+  },
+  {
+   "t0": 47.943,
+   "t1": 49.262,
+   "text": "Then the floor answers:"
+  },
+  {
+   "t0": 49.262,
+   "t1": 52.13,
+   "text": "a hundred and fifty-seven meters walked per order."
+  },
+  {
+   "t0": 52.88,
+   "t1": 53.822,
+   "text": "Then you doubt."
+  },
+  {
+   "t0": 53.822,
+   "t1": 56.335,
+   "text": "A quarter of the products have bad data,"
+  },
+  {
+   "t0": 56.335,
+   "t1": 59.288,
+   "text": "give or take five points, checked on the floor,"
+  },
+  {
+   "t0": 59.288,
+   "t1": 60.418,
+   "text": "not on the screen."
+  },
+  {
+   "t0": 60.418,
+   "t1": 61.863,
+   "text": "AI drafts the analysis,"
+  },
+  {
+   "t0": 61.863,
+   "t1": 65.193,
+   "text": "and someone on your side is paid to argue against it."
+  },
+  {
+   "t0": 65.943,
+   "t1": 68.253,
+   "text": "You draw the system, not the org chart."
+  },
+  {
+   "t0": 68.253,
+   "t1": 71.096,
+   "text": "Sixty-one percent of the wait sits in one queue."
+  },
+  {
+   "t0": 71.096,
+   "t1": 74.532,
+   "text": "You ask what incentive, or what structure, keeps it there."
+  },
+  {
+   "t0": 75.282,
+   "t1": 78.623,
+   "text": "The operators hear automation, and feel replacement."
+  },
+  {
+   "t0": 78.623,
+   "t1": 80.614,
+   "text": "A team is not a list of people."
+  },
+  {
+   "t0": 80.614,
+   "t1": 83.57,
+   "text": "You name the fear, without judgment, and wait."
+  },
+  {
+   "t0": 83.57,
+   "t1": 86.654,
+   "text": "The director gets the answer first, on one page."
+  },
+  {
+   "t0": 87.404,
+   "t1": 90.624,
+   "text": "You test the riskiest assumption first, in one zone,"
+  },
+  {
+   "t0": 90.624,
+   "t1": 93.04,
+   "text": "with a control group agreed in advance."
+  },
+  {
+   "t0": 93.04,
+   "t1": 96.384,
+   "text": "A meeting only counts if someone commits to something."
+  },
+  {
+   "t0": 96.384,
+   "t1": 97.127,
+   "text": "And you ask:"
+  },
+  {
+   "t0": 97.127,
+   "t1": 99.48,
+   "text": "can we, should we, who does it affect?"
+  },
+  {
+   "t0": 100.23,
+   "t1": 101.563,
+   "text": "In nineteen fifty-one,"
+  },
+  {
+   "t0": 101.563,
+   "t1": 105.439,
+   "text": "coal miners showed that changing the machine can break the team."
+  },
+  {
+   "t0": 105.439,
+   "t1": 108.71,
+   "text": "At week twelve you leave a runbook, and signed sheets."
+  },
+  {
+   "t0": 108.71,
+   "t1": 110.891,
+   "text": "Success is what they do without you."
+  },
+  {
+   "t0": 111.641,
+   "t1": 112.276,
+   "text": "One person."
+  },
+  {
+   "t0": 112.276,
+   "t1": 113.258,
+   "text": "Many disciplines."
+  },
+  {
+   "t0": 113.258,
+   "t1": 113.72,
+   "text": "One map."
+  },
+  {
+   "t0": 113.72,
+   "t1": 116.435,
+   "text": "Where the rules are clear, let the machine win."
+  },
+  {
+   "t0": 116.435,
+   "t1": 118.515,
+   "text": "Where there are none, you are there."
+  },
+  {
+   "t0": 118.515,
+   "t1": 120.479,
+   "text": "And when you leave, the map stays."
+  }
+ ]
+};

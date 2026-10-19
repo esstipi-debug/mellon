@@ -1,0 +1,42 @@
+[
+ {
+  "id": "s0",
+  "text": "Every deployment starts with a list of reasonable requests. Add people. Retrain the slow ones. Enforce the process. Run a pilot. Each one is what a good specialist would do. In this case, each one would have been a mistake. This is how you would know."
+ },
+ {
+  "id": "s1",
+  "text": "A distribution center. Synthetic, generated with fdekit, but every number here is real and reproducible. Eight hundred orders. Only fifty-four percent follow the flow everyone signed off on."
+ },
+ {
+  "id": "s2",
+  "text": "Request one: we are slow, add pickers. You don't argue. You model the queue. Five pickers, thirty-nine minutes. Six, twelve. Seven, nine point six. That is where they are. An eighth picker: still nine point six. The money goes to the peak window, not to headcount."
+ },
+ {
+  "id": "s3",
+  "text": "Request two: retrain the slow operators. So you line up all seven. Their medians sit within six percent of each other. And every one of them has the same long tail, past an hour. There is no slow operator. There is a slow system, and seven people standing in it."
+ },
+ {
+  "id": "s4",
+  "text": "Request three: thirty-one paths means people are breaking the process. Enforce the flow. Instead, you ask for the last time it went wrong, and the log answers. One order in six hits a pick at the wrong location. Almost a third get their carton repacked. Orders that touch a wrong product dimension are reworked two point three times as often. The detours are workarounds for bad data. Enforce the flow, and you punish the only people covering for the system."
+ },
+ {
+  "id": "s5",
+  "text": "Then the thing nobody asked for. A hundred and fifty-seven meters walked per order. You only see why by walking it. Two thirds of all visits go to the fast movers, and barely one in seven of those visits lands near the dock, at waist height. Move them, and the model says the average distance per visit drops by thirty percent. No software. A layout."
+ },
+ {
+  "id": "s6",
+  "text": "Request four: run a quick pilot, zone A against zone B. Orders on the same day are not independent. The naive sample is three hundred and forty-three orders per group. The measured design effect is thirty-six. You need twelve and a half thousand. Skip that, and you will declare victory on noise."
+ },
+ {
+  "id": "s7",
+  "text": "And the part no number shows. The operators hear automation, and they feel replacement. So you name it, out loud, without judgment. The standard work is written with them and signed by them. The control limits are frozen, so if the gain decays, the chart says so before the client does."
+ },
+ {
+  "id": "s8",
+  "text": "Only now does the engineer start building. Five requests became three builds: fix the master data, move the products, watch the line. Nothing for the other two. Not because anyone said no. Because the evidence did."
+ },
+ {
+  "id": "s9",
+  "text": "That is the deployed strategist. Not someone who knows a little about everything. Someone whose every branch of knowledge changes a decision, before it becomes code. Where the rules are clear, let the machine win. Where there are none, you are there. And when you leave, the map stays."
+ }
+]

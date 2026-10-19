@@ -1,0 +1,400 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1350px;background:#ece5d8;overflow:hidden}
+canvas{position:absolute;inset:0}
+.ov{position:absolute;font-family:"Inter Display","Inter",sans-serif;opacity:0}
+#kick{left:40px;top:40px;max-width:1000px;background:rgba(22,26,32,.88);padding:16px 24px 18px;border-radius:16px}
+#kick .k{font-size:22px;font-weight:600;letter-spacing:.24em;color:#f0b24b;margin-bottom:8px}
+#kick .q{font-size:40px;line-height:1.15;font-weight:600;color:#f4f1ea;letter-spacing:-.02em}
+#why{left:40px;top:190px;width:1000px;background:rgba(22,26,32,.88);padding:14px 22px;border-radius:16px}
+#why .r{font-size:26px;font-weight:600;margin:4px 0;color:#f4f1ea}
+#why .r b{display:inline-block;width:190px;font-size:20px;letter-spacing:.2em}
+#why .e b{color:#6fb7c9}#why .s b{color:#f0b24b}
+#why .cs{margin-top:10px}
+#why .c{display:inline-block;font-size:20px;font-weight:600;letter-spacing:.14em;color:#c9d3dc;border:1.5px solid #6c7783;border-radius:30px;padding:5px 12px;margin:0 6px 0 0}
+#sub{left:50px;width:980px;top:1170px;text-align:center;font-weight:600;font-size:40px;line-height:1.22;color:#fff;letter-spacing:-.012em;text-shadow:0 2px 14px rgba(0,0,0,.85),0 0 3px rgba(0,0,0,.9)}
+</style></head><body>
+<canvas id="w" width="1080" height="1350"></canvas>
+<canvas id="c" width="1080" height="1350"></canvas>
+<div id="kick" class="ov"><div class="k"></div><div class="q"></div></div>
+<div id="why" class="ov"><div class="r e"><b>ENGINEER</b><span class="ev"></span></div><div class="r s"><b>STRATEGIST</b><span class="sv"></span></div><div class="cs"></div></div>
+<div id="sub" class="ov"></div>
+<script src="timeline.js"></script>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const W=1080,H=1350,cv=document.getElementById('c'),G0=cv.getContext('2d');let g=G0;
+const C={bg:'#0c0f13',line:'#8e9aa8',dim:'#3b4450',faint:'rgba(150,165,180,.22)',amber:'#f0b24b',blue:'#6fb7c9',white:'#eef1f4',mute:'#8b96a3'};
+const FONT='"Inter Display","Inter",sans-serif';
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const E3=x=>1-Math.pow(1-cl(x),3), EIO=x=>{x=cl(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const P=(t,a,b)=>cl((t-a)/(b-a));
+const lerp=(a,b,t)=>a+(b-a)*t;
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let r=Math.imul(s^s>>>15,1|s);r=r+Math.imul(r^r>>>7,61|r)^r;return((r^r>>>14)>>>0)/4294967296}}
+
+// ---------- primitives ----------
+function ln(x0,y0,x1,y1,p=1,col=C.line,w=2,a=1,glow=0,dash=null){
+  if(p<=0)return; g.save();g.globalAlpha=a;g.strokeStyle=col;g.lineWidth=w;g.lineCap='round';
+  if(glow){g.shadowColor=col;g.shadowBlur=glow}
+  if(dash)g.setLineDash(dash);
+  g.beginPath();g.moveTo(x0,y0);g.lineTo(lerp(x0,x1,p),lerp(y0,y1,p));g.stroke();g.restore();
+}
+function dot(x,y,r,col=C.line,a=1,glow=0){ if(a<=0||r<=0)return;g.save();g.globalAlpha=a;g.fillStyle=col;if(glow){g.shadowColor=col;g.shadowBlur=glow}g.beginPath();g.arc(x,y,r,0,7);g.fill();g.restore()}
+function ring(x,y,r,col=C.line,w=2,a=1,glow=0){ if(a<=0||r<=0)return;g.save();g.globalAlpha=a;g.strokeStyle=col;g.lineWidth=w;if(glow){g.shadowColor=col;g.shadowBlur=glow}g.beginPath();g.arc(x,y,r,0,7);g.stroke();g.restore()}
+function txt(s,x,y,o={}){ const {size:sz0=30,col=C.white,a=1,align='center',weight=600,ls=0,base='middle'}=o; const size=Math.max(sz0,26); if(a<=0)return;
+  g.save();g.globalAlpha=a;g.fillStyle=col;g.font=`${weight} ${size}px ${FONT}`;g.textAlign=align;g.textBaseline=base;g.letterSpacing=ls+'px';g.fillText(s,x,y);g.restore()}
+function rrect(x,y,w,h,r,fill,stroke,sw=2,a=1,glow=0){ g.save();g.globalAlpha=a;if(glow){g.shadowColor=stroke||fill;g.shadowBlur=glow}
+  g.beginPath();g.roundRect(x,y,w,h,r);if(fill){g.fillStyle=fill;g.fill()}if(stroke){g.strokeStyle=stroke;g.lineWidth=sw;g.stroke()}g.restore()}
+function arrowHead(x,y,ang,s=12,col=C.line,a=1){ g.save();g.globalAlpha=a;g.fillStyle=col;g.translate(x,y);g.rotate(ang);g.beginPath();g.moveTo(0,0);g.lineTo(-s,-s*.55);g.lineTo(-s,s*.55);g.closePath();g.fill();g.restore()}
+function pill(s,x,y,col,a=1,size=24){ g.save();g.font=`600 ${size}px ${FONT}`;g.letterSpacing='3px';const w=g.measureText(s).width+44;g.restore();
+  rrect(x-w/2,y-size*.95,w,size*1.9,size,'rgba(12,15,19,.7)',col,2,a);txt(s,x,y+1,{size,col,a,ls:3}) }
+
+// ---------- network (map) ----------
+const N0=[[190,860],[430,700],[330,330],[640,190],[760,880],[980,790],[1130,250],[1330,820],[1520,330],[1650,640],[1790,900],[1000,120],[1500,960],[250,1010],[860,980],[1750,200],[120,520],[1840,470]];
+const NN=N0.map(([x,y])=>[x,150+y*0.62]);
+const ROUTE=[[0,1],[1,5],[5,7],[7,9],[9,8]];
+const WEB=[[1,2],[2,3],[3,11],[11,6],[6,8],[1,4],[4,5],[5,14],[14,13],[0,13],[7,12],[12,10],[9,10],[8,15],[9,17],[1,16],[16,2],[6,5],[15,17],[3,6]];
+function drawNet(pw,pr,alpha=1){
+  const nw=WEB.length, nr=ROUTE.length, shown=new Array(NN.length).fill(0);
+  WEB.forEach((e,k)=>{const p=E3(cl(pw*(nw+2)-k,0,1)); if(p>0){ln(...NN[e[0]],...NN[e[1]],p,C.line,2,.3*alpha); shown[e[0]]=Math.max(shown[e[0]],p); shown[e[1]]=Math.max(shown[e[1]],p*cl(p*2))}});
+  ROUTE.forEach((e,k)=>{const p=E3(cl(pr*(nr)-k,0,1)); if(p>0){ln(...NN[e[0]],...NN[e[1]],p,C.amber,5,alpha,22); shown[e[0]]=1; shown[e[1]]=Math.max(shown[e[1]],p)}});
+  NN.forEach((n,i)=>{ if(shown[i]<=0)return; const onR=ROUTE.some(e=>e.includes(i)&&pr>0); dot(n[0],n[1],(onR?9:6)*shown[i],onR?C.amber:'#bcc7d3',(onR?1:.7)*alpha,onR?26:0)});
+}
+function destRing(p,t){ if(p<=0)return;const n=NN[8];ring(n[0],n[1],26*p,C.amber,3,p);const ph=(t*.9)%1;ring(n[0],n[1],26+ph*44,C.amber,2,(1-ph)*.5*p)}
+
+// ---------- fog ----------
+const R0=rng(7);const blobs=Array.from({length:7},()=>({x:R0()*W,y:R0()*H,r:420+R0()*420,ph:R0()*6.28,sp:.15+R0()*.2,a:.5+R0()*.5}));
+function fog(t,d,k=1){ if(d<=0)return; g.save();g.globalCompositeOperation='screen';
+  blobs.forEach(b=>{const x=b.x+Math.sin(t*b.sp+b.ph)*140,y=b.y+Math.cos(t*b.sp*.8+b.ph)*80;const gr=g.createRadialGradient(x,y,0,x,y,b.r);
+    gr.addColorStop(0,`rgba(176,190,205,${.2*b.a*d*k})`);gr.addColorStop(1,'rgba(176,190,205,0)');g.fillStyle=gr;g.fillRect(x-b.r,y-b.r,b.r*2,b.r*2)});g.restore()}
+const noise=document.createElement('canvas');noise.width=noise.height=256;
+(()=>{const n=noise.getContext('2d'),d=n.createImageData(256,256),r=rng(3);for(let i=0;i<d.data.length;i+=4){const v=r()*255;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=255}n.putImageData(d,0,0)})();
+const gridc=document.createElement('canvas');gridc.width=gridc.height=60;
+(()=>{const q=gridc.getContext('2d');q.fillStyle='rgba(160,175,190,.5)';q.beginPath();q.arc(30,30,1.4,0,7);q.fill()})();
+
+// ---------- scene state helpers ----------
+function bgLayer(t,u,sid){
+  g.fillStyle=C.bg;g.fillRect(0,0,W,H);
+  const bg=g.createRadialGradient(W/2,H*.45,100,W/2,H/2,1300);bg.addColorStop(0,'#141a22');bg.addColorStop(1,'#080a0d');g.fillStyle=bg;g.fillRect(0,0,W,H);
+  g.save();g.globalAlpha=.16;g.fillStyle=g.createPattern(gridc,'repeat');g.fillRect(0,0,W,H);g.restore();
+}
+function post(t){
+  const v=g.createRadialGradient(W/2,H/2,420,W/2,H/2,1150);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.5)');g.fillStyle=v;g.fillRect(0,0,W,H);
+  g.save();g.globalAlpha=.045;g.globalCompositeOperation='overlay';const f=Math.floor(t*30),ox=(f*37)%256,oy=(f*91)%256;
+  for(let x=-256+ox;x<W;x+=256)for(let y=-256+oy;y<H;y+=256)g.drawImage(noise,x,y);g.restore();
+}
+
+
+
+window.SCRIPT={"s0": "Two people walk into a distribution center. An engineer, and a strategist. On the table, four reasonable requests. Add pickers. Retrain the slow operators. Enforce the process. Measure before and after. Each one is what a good specialist would do. In this case, each one would have been a mistake. This is how they found out.", "s1": "The case is synthetic, generated with fdekit. Every number on screen can be reproduced. Eight hundred orders. Only fifty-four percent follow the declared flow. The other paths are not chaos. Every detour is a repair.", "s2": "Requests one and two: we are slow, so add pickers, and retrain the slow ones. The engineer lines up all seven pickers. Their medians sit within six percent of each other. Picking takes about seventy seconds. But the order waits almost an hour before anyone touches it, and sixty-one percent of all the waiting happens in that one queue. So the strategist asks a different question: when do the orders arrive? Between nine and ten thirty, three hundred and thirteen of the day's eight hundred orders are released in one ninety-minute peak. Statistics says it is not the people. The floor says it is the wave. Together: no retraining, and no extra pickers all day. Level the release against the capacity you already have.", "s3": "Request three: enforce the flow. But look at the detours. A pick at the wrong location. A carton repacked. A shelf refilled. You ask the packer about the last time it went wrong. “The system always sends me the small box for these.” The data agrees. Orders that touch a product with a wrong dimension are reworked two point three times as often. One product in four has bad master data. Fixing only the dimension errors, about one product in five, removes about fourteen percent of the carton rework. Not all of it. Enforcing the flow would have punished the people doing the repairs.", "s4": "Then something nobody asked for. A hundred and fifty-seven meters walked per order. Two thirds of all visits go to the fast movers, and barely one in seven of those lands in the golden zone: next to the dock, at waist height. Move them, and the model estimates thirty percent less distance per visit. But a picker already told you why that is dangerous. “When it's not there, I remember where it usually is. The system doesn't.” The last re-slotting moved products and never updated their locations. So the move ships with the master data update, or not at all.", "s5": "Request four: judge it by before and after. After the pilot, median cycle time in the pilot zone went up fifty-six percent. Kill it? Zone B, untouched, went up sixty-four percent in the same weeks. Something hit both zones at once. Against its control, the pilot looks like it saved about five minutes per order. Without a control group, you kill the one change that worked. And three days of baseline is too few to fully trust it, so the pilot stays, and the baseline grows.", "s6": "And the part no number decides. In a case like this, people hear automation and feel replacement. So you name it, out loud, and the standard work is written with them. They sign it at handover. Then someone has to own the chart. Left in a dashboard nobody opens, a fading gain goes unnoticed. In the shift supervisor's weekly review, with frozen limits, the chart says so before the client does.", "s7": "As asked: hire all day, retrain the slow ones, enforce one flow, judge by before and after. As decided: staff the peak or level the release, fix the master data, move the fast movers with their locations updated, keep the pilot and grow its baseline, and put the chart in front of a shift supervisor every week. The engineer built the analysis and the tools. The client owns the changes. The strategist decided which ones, and owned the cost of being wrong. That is the polymath at work: every branch of knowledge changed a decision. Where the rules are clear, let the machine win. Where there are none, someone has to decide. And when you leave, the map stays."};
+C.ink='#1d2229';const RED='#d9634c',CREAM='#f4efe6';
+let S=null;
+function sc(id){return TL.scenes.find(s=>s.id===id)}
+function absAt(id,ph,off=0){const s=sc(id),tx=SCRIPT[id],i=tx.indexOf(ph);if(i<0)throw new Error('phrase '+id+': '+ph);return s.voice_at+s.voice_dur*(i/tx.length)+off}
+const AT=(ph,off=0)=>absAt(S.id,ph,off)-S.start;
+// ---------- 2D helpers (overlay) ----------
+function panel(x,y,w,h,a,stroke){rrect(x,y,w,h,18,'rgba(22,26,32,.86)',stroke||null,stroke?2:0,a)}
+function stamp(s,x,y,col,a,rot=-.05,size=26){size=Math.max(size,26);if(a<=0)return;g.save();g.globalAlpha=a;g.translate(x,y);g.rotate(rot);const k=1+(1-a)*.35;g.scale(k,k);g.font=`700 ${size}px ${FONT}`;g.letterSpacing='5px';const w=g.measureText(s).width+48;
+  g.fillStyle='rgba(22,26,32,.9)';g.fillRect(-w/2,-size*.95,w,size*1.9);g.strokeStyle=col;g.lineWidth=4;g.strokeRect(-w/2,-size*.95,w,size*1.9);g.fillStyle=col;g.textAlign='center';g.textBaseline='middle';g.fillText(s,0,2);g.restore()}
+function check(x,y,a,col=C.amber,s=1){if(a<=0)return;g.save();g.globalAlpha=a;g.strokeStyle=col;g.lineWidth=5*s;g.lineCap='round';g.beginPath();g.moveTo(x,y);g.lineTo(x+12*s,y+12*s);g.lineTo(x+34*s,y-12*s);g.stroke();g.restore()}
+function tag(s,p,a,col='#f4f1ea',bg='rgba(22,26,32,.86)',size=20,dy=-46){if(a<=0||!p)return;size=Math.max(size,26);g.save();g.font=`600 ${size}px ${FONT}`;g.letterSpacing='0px';const w=g.measureText(s).width+28;g.restore();
+  const x=Math.min(W-w/2-16,Math.max(w/2+16,p[0]));
+  ln(p[0],p[1],x,p[1]+dy+size*.8,a,bg==='rgba(22,26,32,.86)'?'rgba(22,26,32,.7)':bg,2);rrect(x-w/2,p[1]+dy-size*.85,w,size*1.7,size*.85,bg,null,0,a);txt(s,x,p[1]+dy,{size,col,a,weight:600})}
+
+// ---------- 3D ----------
+const RND=new THREE.WebGLRenderer({canvas:document.getElementById('w'),antialias:true,preserveDrawingBuffer:true});
+RND.setPixelRatio(1);RND.setSize(1080,1350,false);RND.shadowMap.enabled=true;RND.shadowMap.type=THREE.PCFSoftShadowMap;RND.toneMapping=THREE.ACESFilmicToneMapping;RND.toneMappingExposure=1.0;RND.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();const BGC=new THREE.Color('#e9e1d3');scene.background=BGC;scene.fog=new THREE.Fog(BGC,170,330);
+const cam=new THREE.PerspectiveCamera(46,1080/1350,.5,900);
+scene.add(new THREE.HemisphereLight('#fff7ea','#a99d8a',1.15));
+const key=new THREE.DirectionalLight('#fff1dc',2.6);key.position.set(-55,95,45);key.castShadow=true;key.shadow.mapSize.set(4096,4096);Object.assign(key.shadow.camera,{left:-70,right:70,top:55,bottom:-55,near:10,far:260});key.shadow.bias=-.0004;key.shadow.radius=3;scene.add(key);
+const fill=new THREE.DirectionalLight('#dde8ff',.55);fill.position.set(70,45,-60);scene.add(fill);
+const M=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.82,metalness:0},o));
+function box(w,h,d,mat,x,y,z,parent=scene,shadow=true){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=shadow;m.receiveShadow=true;parent.add(m);return m}
+// base y suelo
+box(100,3.2,70,M('#4f3c2e',{roughness:.6}),0,-1.75,0);box(92,.3,62,M(CREAM),0,-.15,0,scene,false).receiveShadow=true;
+const WALL=M('#efe8dc');box(92,3,.6,WALL,0,1.5,-31);box(.6,3,62,WALL,-46,1.5,0);box(.6,3,62,WALL,46,1.5,0);
+[[-14,30.7,40],[27,30.7,38]].forEach(([x,z,w])=>box(w,1.1,.6,WALL,x,.55,z));
+// marcas de piso
+const lane=M('#e6dfd2');for(let i=0;i<11;i++)box(3.4,.02,32,lane,-32.75+i*5.5,.011,-7,scene,false);
+const yel=M('#e7c35a',{roughness:.6});box(.25,.03,40,yel,-1,.02,-4,scene,false);
+// racks
+const RACKX=[...Array(10)].map((_,i)=>-30+i*5.5+(i>=5?1.5:0));
+const birch=M('#d9c19c'),postM=M('#bfa47c');const BAYS=12,LEV=[.2,1.35,2.5,3.65];
+RACKX.forEach(x=>{const z0=-22,z1=8;box(1.7,.12,z1-z0,birch,x,LEV[0],(z0+z1)/2);LEV.slice(1).forEach(y=>box(1.7,.1,z1-z0,birch,x,y,(z0+z1)/2));
+  for(let b=0;b<=BAYS;b++){const z=z0+b*(z1-z0)/BAYS;box(.14,4.2,.14,postM,x-.78,2.1,z);box(.14,4.2,.14,postM,x+.78,2.1,z)}});
+// cajas (instanciadas)
+const SLOTS=[];const rr=rng(77);
+RACKX.forEach((x,ri)=>{for(let b=0;b<BAYS;b++)for(let l=0;l<4;l++)for(let k=0;k<2;k++){const z=-22+(b+.27+k*.46)*2.5;const h=.55+rr()*.35;SLOTS.push({x:x+(rr()-.5)*.2,y:LEV[l]+.06+h/2,z,h,w:.9+rr()*.4,d:.95,ri,b,l})}});
+const boxGeo=new THREE.BoxGeometry(1,1,1);const boxMat=M('#ffffff',{roughness:.9});const IB=new THREE.InstancedMesh(boxGeo,boxMat,SLOTS.length);IB.castShadow=true;IB.receiveShadow=true;scene.add(IB);
+const BASEC=SLOTS.map(()=>new THREE.Color().setHSL(.08+rr()*.02,.42+rr()*.1,.55+rr()*.08));
+const dm=new THREE.Object3D();
+// zonas: dock, release, pack, rework, huddle, office
+const DOCKX=[-38,-31,-24];DOCKX.forEach(x=>{box(5,.08,4,M('#d6cfc2'),x,.04,27.5,scene,false);for(let k=0;k<2;k++)box(1.2,.9,1.2,M('#b98e5f'),x-1+k*2.1,.45,28.4)});
+const desk=box(4,1,2,M('#3a4048'),24,.5,21);box(1.6,1,.12,M('#20252c',{emissive:'#6fb7c9',emissiveIntensity:.25}),24,1.5,20.4);
+const PACKX=[2,7,12,17];PACKX.forEach(x=>{box(3.2,.95,1.8,M('#cfc3ad'),x,.475,17);});
+const rework=box(3.2,.95,1.8,M('#d98c74'),9.5,.475,23.5);
+box(9,.06,9,M('#e9dcc4'),37,.03,19,scene,false);const board=box(5,3,.2,M('#fbfaf6'),37,2.1,14.4);
+// oficina con vidrio
+box(10,.05,8,M('#ddd6ca'),39,.03,-25,scene,false);const glass=new THREE.MeshStandardMaterial({color:'#bcd2dc',transparent:true,opacity:.28,roughness:.1});
+box(10,2.6,.1,glass,39,1.3,-21,scene,false);box(.1,2.6,8,glass,34,1.3,-25,scene,false);box(2.4,.8,1.2,M('#5a4f45'),40,.4,-26);const officeMon=box(1.4,.9,.1,M('#1f242b',{emissive:'#6fb7c9',emissiveIntensity:.12}),40,1.3,-26.5);
+// tintes de zona (piloto A / control B)
+const tintA=box(34,.02,33,new THREE.MeshBasicMaterial({color:'#f0b24b',transparent:true,opacity:0}),-17.5,.03,-7,scene,false);
+const tintB=box(34,.02,33,new THREE.MeshBasicMaterial({color:'#6fb7c9',transparent:true,opacity:0}),17.5,.03,-7,scene,false);
+const tape=box(.35,.04,33,M('#e2b93d'),-.2,.04,-7,scene,false);tape.visible=false;
+// personas (peones de maqueta)
+function pawn(col,emi){const gp=new THREE.Group();const mat=M(col,{roughness:.55,emissive:emi||'#000',emissiveIntensity:emi?.25:0});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.3,.42,1.15,24),mat);body.position.y=.6;body.castShadow=true;gp.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.27,24,16),mat);head.position.y=1.43;head.castShadow=true;gp.add(head);
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(.46,.46,.06,24),M('#cbbfae'));base.position.y=.03;gp.add(base);scene.add(gp);return gp}
+const SD=pawn('#f0b24b','#f0b24b'),FDE=pawn('#6fb7c9','#6fb7c9');
+const OPS=[...Array(7)].map(()=>pawn('#faf7f1'));const PACKERS=PACKX.map(()=>pawn('#faf7f1'));
+// pedidos (fichas)
+const NT=320;const TK=new THREE.InstancedMesh(new THREE.BoxGeometry(.42,.42,.42),M('#f0b24b',{emissive:'#f0b24b',emissiveIntensity:.35,roughness:.5}),NT);TK.castShadow=true;scene.add(TK);
+// histograma 3D de liberaciones (log real, por media hora 07:00–14:30)
+const REL=[30,21,46,57,97,110,106,71,45,24,20,22,36,33,36,46];
+const BARS=REL.map((v,i)=>{const m=box(.9,1,.9,M(i>=4&&i<=6?'#f0b24b':'#a7b4c1',{emissive:i>=4&&i<=6?'#f0b24b':'#000',emissiveIntensity:i>=4&&i<=6?.25:0}),14.5+i*1.15,0,26.6);return m});
+// barras de reproceso
+const RW1=box(1.4,1,1.4,M('#f0b24b',{emissive:'#f0b24b',emissiveIntensity:.25}),15,0,22.5),RW2=box(1.4,1,1.4,M('#a7b4c1'),17.2,0,22.5);
+// rutas de caminata (tubos)
+function tubePath(pts,r,col,op=1){const curve=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(...p)),false,'catmullrom',.05);const m=new THREE.Mesh(new THREE.TubeGeometry(curve,140,r,8,false),new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.5,transparent:true,opacity:op}));scene.add(m);return m}
+// fast movers
+const FAST=[];{const R3=rng(9);const cand=SLOTS.map((s,i)=>i).filter(i=>SLOTS[i].b<6&&SLOTS[i].l<=2);for(let k=0;k<16;k++){FAST.push(cand[Math.floor(R3()*cand.length)])}}
+const GOLD=[];{RACKX.slice(0,8).forEach((x,ri)=>{[10,11].forEach(b=>{GOLD.push({x,y:LEV[1]+.5,z:-22+(b+.5)*2.5})})})}
+const WALK=FAST.slice(0,8).map(i=>{const s=SLOTS[i];return tubePath([[-31,.12,26],[s.x+2.6,.12,26],[s.x+2.6,.12,s.z]],.09,'#f0b24b',0)});
+const WALK2=GOLD.slice(0,8).map(gz=>tubePath([[-31,.12,26],[gz.x+2.6,.12,26],[gz.x+2.6,.12,gz.z]],.09,'#f0b24b',0));
+// ruta final (el mapa) sobre el piso
+const ROUTE3=tubePath([[-31,.15,27],[-10,.15,24],[9.5,.15,22],[22,.15,21],[0,.15,9],[-20,.15,5],[-1,.15,-6],[18,.15,-8],[37,.15,17]],.22,'#f0b24b',0);
+ROUTE3.geometry.setDrawRange(0,0);const ROUTE3N=ROUTE3.geometry.index.count;
+const GZ=box(44,.02,5.5,new THREE.MeshBasicMaterial({color:'#f0b24b',transparent:true,opacity:0}),-6,.03,5.2,scene,false);
+
+const v3=new THREE.Vector3();
+function proj(x,y,z){v3.set(x,y,z).project(cam);if(v3.z>1)return null;return[(v3.x+1)/2*W,(1-v3.y)/2*H]}
+function place(o,x,z,rot=0){o.position.set(x,0,z);o.rotation.y=rot}
+function lerp3(a,b,t){return[lerp(a[0],b[0],t),lerp(a[1],b[1],t),lerp(a[2],b[2],t)]}
+function walkPath(pts,u){let L=0,seg=[];for(let i=1;i<pts.length;i++){const l=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(l);L+=l}let d=cl(u)*L;for(let i=1;i<pts.length;i++){if(d<=seg[i-1]){const f=seg[i-1]?d/seg[i-1]:0;return[lerp(pts[i-1][0],pts[i][0],f),lerp(pts[i-1][1],pts[i][1],f)]}d-=seg[i-1]}return pts[pts.length-1]}
+
+// ---------- cámara: llaves absolutas ----------
+const K=[];function key3(t,pos,tgt){K.push({t,pos,tgt})}
+function camKeys(){const s=sc;
+  key3(0,[78,92,128],[0,0,4]);key3(absAt('s0','On the table'),[44,46,78],[-6,0,14]);key3(sc('s1').start-.3,[30,40,66],[2,0,14]);
+  key3(sc('s1').start+1.2,[8,72,78],[0,0,2]);key3(sc('s2').start-.2,[4,66,74],[0,0,2]);
+  key3(absAt('s2','The engineer lines up'),[-2,16,24],[-17,1.6,-2]);key3(absAt('s2','But the order waits'),[4,18,30],[-12,1.6,0]);
+  key3(absAt('s2','sixty-one percent'),[42,20,48],[21,1.4,21]);key3(absAt('s2','So the strategist'),[40,24,52],[21,2,22]);
+  key3(absAt('s2','Statistics says'),[34,22,56],[21,2,22]);key3(sc('s3').start-.2,[32,22,58],[18,2,22]);
+  key3(sc('s3').start+1.4,[20,13,40],[10,1,19]);key3(absAt('s3','Orders that touch'),[22,14,42],[14,1.5,18]);
+  key3(absAt('s3','One product in four'),[-2,22,30],[-14,2,-4]);key3(absAt('s3','Enforcing the flow'),[2,26,40],[-6,2,4]);
+  key3(sc('s4').start+.8,[-6,74,58],[-8,0,2]);key3(absAt('s4','But a picker'),[-6,70,56],[-8,0,2]);
+  key3(absAt('s4','But a picker',2.2),[-16,7,16],[-24.5,2,-2]);key3(absAt('s4','So the move'),[-10,30,38],[-14,1,4]);
+  key3(sc('s5').start+.8,[14,70,70],[12,0,-4]);key3(sc('s6').start-.3,[6,60,70],[4,0,-2]);
+  key3(sc('s6').start+1.5,[46,15,42],[34,1.2,19]);key3(absAt('s6','Then someone'),[52,16,6],[39,1.6,-22]);key3(absAt('s6','In the shift'),[46,15,42],[34,1.4,18]);
+  key3(sc('s7').start+.5,[44,30,62],[20,0,10]);key3(absAt('s7','That is the polymath'),[30,95,110],[0,0,4]);key3(absAt('s7','Where the rules'),[10,110,118],[0,0,2]);key3(TL.total,[0,118,124],[0,0,2]);
+  K.sort((a,b)=>a.t-b.t)}
+function camAt(t){let i=0;while(i<K.length-1&&K[i+1].t<=t)i++;const a=K[i],b=K[Math.min(i+1,K.length-1)];const u=b.t>a.t?EIO((t-a.t)/(b.t-a.t)):0;
+  const p=lerp3(a.pos,b.pos,u),q=lerp3(a.tgt,b.tgt,u);const hx=Math.sin(t*.37)*.35+Math.sin(t*.91)*.15,hy=Math.sin(t*.53)*.25;cam.position.set(p[0]+hx,p[1]+hy,p[2]);cam.lookAt(q[0],q[1],q[2])}
+
+// ---------- pose 3D por tiempo ----------
+const OPSPOS=[0,1,2,3,4,5,6].map(i=>[RACKX[i]+2.75,-14+i*2.6]);
+function pose(T){
+  // SD + FDE: entran desde el dock y luego siguen al lugar de cada beat
+  const stops=[[sc('s0').start,[-31,28]],[absAt('s0','On the table'),[16,22]],[sc('s2').start+1,[-6,4]],[absAt('s2','So the strategist'),[20,23]],[sc('s3').start+1,[9,20]],[sc('s4').start+1,[-21,9]],[absAt('s4','But a picker'),[-22,3]],[sc('s5').start+1,[0,10]],[sc('s6').start+1,[35,20]],[absAt('s6','Then someone'),[37,-20]],[absAt('s6','In the shift'),[35,19]],[sc('s7').start+1,[24,25]]];
+  let sp=stops[0][1];for(let i=1;i<stops.length;i++){const u=EIO(P(T,stops[i][0]-2.2,stops[i][0]));sp=[lerp(sp[0],stops[i][1][0],u),lerp(sp[1],stops[i][1][1],u)]}
+  const bob=Math.abs(Math.sin(T*6))*.06;place(SD,sp[0],sp[1]);SD.position.y=bob;place(FDE,sp[0]-1.4,sp[1]+.9);FDE.position.y=Math.abs(Math.sin(T*6+1))*.06;
+  // operarios: en sus pasillos; en s6 se juntan en la zona de reunión
+  const gat=EIO(P(T,sc('s6').start,sc('s6').start+3));OPS.forEach((o,i)=>{const a=OPSPOS[i],b=[34+Math.cos(i*.9)*2.6,20.5+Math.sin(i*.9)*2.2];const w=Math.sin(T*.8+i)*.4;place(o,lerp(a[0],b[0],gat),lerp(a[1]+w*(1-gat),b[1],gat))});
+  PACKERS.forEach((o,i)=>place(o,PACKX[i],18.6));
+  // cajas: color de base, rojas (maestro malo) en s3, fast movers en s4
+  const red=E3(P(T,absAt('s3','One product in four'),absAt('s3','One product in four',.8)))*(1-E3(P(T,sc('s4').start,sc('s4').start+1)));
+  const fm=E3(P(T,absAt('s4','Two thirds'),absAt('s4','Two thirds',.8))),mv=EIO(P(T,absAt('s4','Move them'),absAt('s4','Move them',2.2)));
+  const fmEnd=1-E3(P(T,sc('s5').start,sc('s5').start+1));
+  const scanT=P(T,absAt('s4','So the move'),absAt('s4','So the move',2.5));
+  const R4=rng(4);const isRed=SLOTS.map(()=>R4()<.256);
+  const missing=FAST[3];
+  SLOTS.forEach((s,i)=>{let x=s.x,y=s.y,z=s.z;const fi=FAST.indexOf(i);let col=BASEC[i].clone();
+    if(fi>=0&&fi<GOLD.length*1){const gz=GOLD[fi%GOLD.length];const mm=fi<GOLD.length?mv:0;x=lerp(s.x,gz.x,mm);y=lerp(s.y,gz.y,mm)+Math.sin(mm*Math.PI)*2.2;z=lerp(s.z,gz.z,mm);col.lerp(new THREE.Color('#f0b24b'),fm*fmEnd)}
+    if(isRed[i])col.lerp(new THREE.Color(RED),red*.85);
+    let sx=s.w,sy=s.h,sz=s.d;if(i===missing){const gone=E3(P(T,absAt('s4','But a picker'),absAt('s4','But a picker',1)))*(1-E3(P(T,absAt('s4','So the move'),absAt('s4','So the move',1))));sx*=1-gone;sy*=1-gone;sz*=1-gone}
+    dm.position.set(x,y,z);dm.scale.set(Math.max(sx,.001),Math.max(sy,.001),Math.max(sz,.001));dm.updateMatrix();IB.setMatrixAt(i,dm.matrix);IB.setColorAt(i,col)});
+  IB.instanceMatrix.needsUpdate=true;IB.instanceColor.needsUpdate=true;
+  // fichas de pedidos
+  let n=0;const flowOn=E3(P(T,sc('s1').start-.3,sc('s1').start+.6))*(1-E3(P(T,sc('s2').start,sc('s2').start+.8)));
+  const pathMain=[[24,21],[-3,21],[-3,-18],[-3,12],[2,15.6],[7,15.6],[12,15.6],[-31,26]];
+  for(let k=0;k<60;k++){const u=((T*.07+k/60)%1);let p=walkPath(pathMain,u);let y=.9;
+    if(k%5===1&&u>.55&&u<.75){p=lerp3([p[0],0,p[1]],[9.5,0,23.5],Math.sin((u-.55)/.2*Math.PI)).filter((_,j)=>j!==1);y=1.2}
+    dm.position.set(p[0],y,p[1]);dm.scale.setScalar(flowOn);dm.updateMatrix();TK.setMatrixAt(n++,dm.matrix)}
+  // cola en la liberación: crece con la ola (s2)
+  const qOn=E3(P(T,absAt('s2','But the order waits'),absAt('s2','But the order waits',.6)))*(1-E3(P(T,sc('s3').start,sc('s3').start+.8)));
+  const qN=Math.floor(lerp(20,240,EIO(P(T,absAt('s2','But the order waits'),absAt('s2','sixty-one percent',1.5)))));
+  for(let k=0;k<240;k++){const c=k%12,r=Math.floor(k/12)%8,lv=Math.floor(k/96);dm.position.set(16+c*.5,.25+lv*.48,22-r*.5);dm.scale.setScalar(k<qN?qOn:0);dm.updateMatrix();TK.setMatrixAt(n++,dm.matrix)}
+  for(;n<NT;n++){dm.scale.setScalar(0);dm.updateMatrix();TK.setMatrixAt(n,dm.matrix)}TK.instanceMatrix.needsUpdate=true;
+  // histograma: sube, luego se nivela
+  const hOn=E3(P(T,absAt('s2','So the strategist'),absAt('s2','Between nine',.8)))*(1-E3(P(T,sc('s3').start,sc('s3').start+.8)));const lev=EIO(P(T,absAt('s2','Level the release'),absAt('s2','Level the release',2.0)));
+  BARS.forEach((m,i)=>{const h=Math.max(.01,lerp(REL[i],50,lev)/110*7*E3(cl(hOn*1.6-i*.04)));m.scale.y=h;m.position.y=h/2;m.visible=hOn>0;
+    m.material.color.set(lev>.5?'#f0b24b':(i>=4&&i<=6?'#f0b24b':'#a7b4c1'))});
+  // barras de reproceso
+  const rb=E3(P(T,absAt('s3','Orders that touch'),absAt('s3','Orders that touch',1.2)))*(1-E3(P(T,absAt('s3','One product in four'),absAt('s3','One product in four',.6))));
+  [[RW1,.598],[RW2,.265]].forEach(([m,v])=>{const h=Math.max(.01,v*10*rb);m.scale.y=h;m.position.y=h/2;m.visible=rb>0});
+  // caminatas
+  const wk=E3(P(T,absAt('s4','A hundred'),absAt('s4','A hundred',.8)))*(1-mv)*(1-E3(P(T,sc('s5').start,sc('s5').start+.6)));
+  WALK.forEach(m=>m.material.opacity=wk*.9);WALK2.forEach(m=>m.material.opacity=mv*(1-E3(P(T,sc('s5').start,sc('s5').start+.6)))*.9);
+  GZ.material.opacity=.28*E3(P(T,absAt('s4','barely one in seven'),absAt('s4','barely one in seven',.6)))*(1-E3(P(T,sc('s5').start,sc('s5').start+.6)));
+  // zonas piloto
+  const zn=E3(P(T,sc('s5').start,sc('s5').start+1.2))*(1-E3(P(T,sc('s6').start,sc('s6').start+.8)));tintA.material.opacity=.22*zn;tintB.material.opacity=.22*zn;tape.visible=zn>.01;
+  officeMon.material.emissiveIntensity=.12+.0;
+  // ruta final
+  const rd=EIO(P(T,absAt('s7','That is the polymath'),absAt('s7','the map stays')));ROUTE3.material.opacity=rd>0?1:0;ROUTE3.geometry.setDrawRange(0,Math.floor(ROUTE3N*rd/3)*3);
+  camAt(T);
+}
+
+// ---------- overlays 2D por escena ----------
+const KICK={s0:['',''],s1:['THE CASE','A synthetic distribution center'],s2:['REQUESTS 1 + 2','“Add pickers. Retrain the slow ones.”'],s3:['REQUEST 3','“Enforce the flow.”'],s4:['NOBODY ASKED','The walk'],s5:['REQUEST 4','“Judge it by before and after.”'],s6:['THE PART NO NUMBER DECIDES','Who runs it, who owns it'],s7:['THE LEDGER','']};
+const WHY={s2:['timed all seven pickers','when do the orders arrive?',['STATISTICS','QUEUEING','FIELD OBSERVATION'],'So the strategist'],
+  s3:['tested rework against product data','what happened the last time?',['FIELD INTERVIEW','DATA QUALITY'],'You ask the packer'],
+  s4:['modeled the walk and the re-slot','why were locations wrong before?',['FIELD INTERVIEW','LAYOUT','DATA QUALITY'],'But a picker'],
+  s5:['ran the before / after','where is the control group?',['EXPERIMENTAL DESIGN'],'Zone B'],
+  s6:['wrote the standard work with the operators','who owns it after we leave?',['PSYCHOLOGY','OWNERSHIP'],'Then someone']};
+const OV={};
+const BAND=880; // franja inferior de datos (subtítulos desde 1170)
+const OPM=[67.3,67.5,68.2,69.0,69.2,70.5,71.4];
+// s0 · gancho: la pregunta está visible desde el primer cuadro
+OV.s0=(t)=>{const hook=1-E3(P(t,AT('would have been a mistake',-.2),AT('would have been a mistake',.5)));
+  panel(60,120,960,210,hook,C.amber);
+  txt('FOUR REASONABLE REQUESTS',540,170,{size:28,col:C.amber,ls:5,a:hook,weight:700});
+  txt('Which one would you approve?',540,252,{size:58,col:C.white,a:hook,ls:-2});
+  txt('Each one is what a good specialist would do.',540,302,{size:26,col:C.mute,a:hook,weight:500});
+  const tk=[['Add pickers','Add pickers'],['Retrain the slow operators','Retrain'],['Enforce the process','Enforce'],['Measure before and after','Measure']];
+  tk.forEach(([s,ph],i)=>{const t0=AT(ph),a=E3(P(t,t0-.1,t0+.45));if(a<=0)return;const x=290+(i%2)*500,y=560+Math.floor(i/2)*250-(1-a)*30;const r=[-.035,.03,.025,-.03][i];
+    g.save();g.globalAlpha=a;g.translate(x,y);g.rotate(r);g.shadowColor='rgba(0,0,0,.35)';g.shadowBlur=26;g.fillStyle='#fbf3dc';g.fillRect(-200,-80,400,160);g.shadowBlur=0;g.fillStyle='#d64b3a';g.beginPath();g.arc(0,-64,9,0,7);g.fill();
+    g.fillStyle='#1d2229';g.font=`700 36px ${FONT}`;g.textAlign='center';g.textBaseline='middle';const w=s.split(' ');if(s.length>14){const m=Math.ceil(w.length/2);g.fillText(w.slice(0,m).join(' '),0,-6);g.fillText(w.slice(m).join(' '),0,36)}else g.fillText(s,0,12);g.restore();
+    stamp('REASONABLE',x,y+118,C.blue,E3(P(t,AT('Each one is what')+i*.18,AT('Each one is what')+i*.18+.35))*(1-E3(P(t,AT('would have been a mistake'),AT('would have been a mistake',.4)))),r,26);
+    stamp('MISTAKE?',x,y+118,RED,E3(P(t,AT('would have been a mistake')+i*.15,AT('would have been a mistake')+i*.15+.35)),r,26)});
+  const lb=E3(P(t,AT('An engineer'),AT('and a strategist',.8)))*(1-E3(P(t,AT('On the table'),AT('On the table',.5))));
+  tag('strategist',proj(SD.position.x,2.1,SD.position.z),lb,C.amber,undefined,26);tag('engineer',proj(FDE.position.x,2.1,FDE.position.z),lb,C.blue,undefined,26,-100)};
+// s1 · el caso
+OV.s1=(t)=>{const r=E3(P(t,AT('Every detour'),AT('Every detour',.6)));
+  [['RELEASE',24,1.5,21],['PICK',-3,4.5,-14],['PACK',9,1.2,17],['SHIP',-31,1.5,27]].forEach(([s,x,y,z],i)=>tag(s,proj(x,y,z),E3(P(t,.3+i*.3,.9+i*.3)),C.amber,undefined,26));
+  const b=E3(P(t,AT('Only fifty-four'),AT('Only fifty-four',.6)));
+  panel(140,170,800,230,b);txt('54.12%',540,262,{size:110,col:C.white,a:b,ls:-3});txt('of 800 orders follow the declared flow',540,336,{size:30,col:C.mute,a:b,weight:500});
+  txt('synthetic case · generated with fdekit · reproducible',540,372,{size:26,col:C.mute,a:b,weight:500});
+  tag('REPAIR · carton redone',proj(9.5,1.2,23.5),r,'#fff',RED,26)};
+// s2 · dos peticiones, una cola
+OV.s2=(t)=>{const a1=E3(P(t,AT('The engineer lines up'),AT('The engineer lines up',1)))*(1-E3(P(t,AT('sixty-one percent'),AT('sixty-one percent',.5))));
+  OPS.forEach((o,i)=>tag(OPM[i]+' s',proj(o.position.x,1.9,o.position.z),a1*E3(P(t,AT('The engineer lines up')+i*.1,AT('The engineer lines up')+.5+i*.1)),C.white,undefined,26,-40));
+  const w6=E3(P(t,AT('within six percent'),AT('within six percent',.5)))*a1*(1-E3(P(t,AT('But the order waits'),AT('But the order waits',.25))));
+  panel(240,BAND,600,170,w6);txt('within 6%',540,BAND+70,{size:64,col:C.amber,a:w6,ls:-2});txt('median time per pick ≈ 70 s',540,BAND+130,{size:26,col:C.white,a:w6,weight:500});
+  const qw=E3(P(t,AT('But the order waits'),AT('But the order waits',.8)))*(1-E3(P(t,AT('sixty-one percent',-.3),AT('sixty-one percent',-.05))));
+  panel(240,BAND,600,170,qw,RED);txt('58 min',540,BAND+72,{size:72,col:RED,a:qw,ls:-2});txt('median wait before anyone picks the order',540,BAND+134,{size:26,col:C.white,a:qw,weight:500});
+  const dn=E3(P(t,AT('sixty-one percent',.1),AT('sixty-one percent',.6)))*(1-E3(P(t,AT('So the strategist',-.1),AT('So the strategist',.3))));
+  panel(200,BAND,680,200,dn);
+  if(dn>0){const cx=340,cy=BAND+100;ring(cx,cy,64,'rgba(255,255,255,.2)',20,dn);g.save();g.globalAlpha=dn;g.strokeStyle=C.amber;g.lineWidth=20;g.beginPath();g.arc(cx,cy,64,-Math.PI/2,-Math.PI/2+Math.PI*2*.612*dn);g.stroke();g.restore();txt('61%',cx,cy,{size:34,col:C.amber,a:dn});txt('of all waiting',450,cy-22,{size:30,col:C.white,a:dn,weight:600,align:'left'});txt('happens in this one queue',450,cy+22,{size:26,col:C.white,a:dn,weight:500,align:'left'})}
+  const hb=E3(P(t,AT('Between nine'),AT('Between nine',.6)))*(1-E3(P(t,AT('Statistics says',-.6),AT('Statistics says',-.2))));
+  panel(140,BAND,800,190,hb,C.amber);txt('313 of 800 orders',540,BAND+70,{size:56,col:C.amber,a:hb,ls:-1});txt('released 9:00–10:30 · per half hour, event log',540,BAND+130,{size:26,col:C.white,a:hb,weight:500});
+  const c1=E3(P(t,AT('Statistics says'),AT('Statistics says',.5))),c2=E3(P(t,AT('The floor says'),AT('The floor says',.5)));
+  panel(60,BAND-10,960,90,c1);txt('STATISTICS: not the people',300,BAND+35,{size:28,col:C.blue,a:c1});txt('THE FLOOR: it is the wave',780,BAND+35,{size:28,col:C.amber,a:c2});
+  const v=E3(P(t,AT('no retraining'),AT('no retraining',.5)));panel(60,BAND+95,960,170,v,C.amber);txt('No retraining. No extra pickers all day.',540,BAND+150,{size:34,col:C.white,a:v,ls:-1});
+  txt('Level the release against capacity.',540,BAND+210,{size:34,col:C.amber,a:E3(P(t,AT('Level the release'),AT('Level the release',.5))),weight:700})};
+// s3 · las desviaciones son reparaciones
+OV.s3=(t)=>{const reps=[['A pick at the wrong location','16.6% of orders','A pick at'],['A carton repacked','30.8% of orders','A carton'],['A shelf refilled','7.0% of orders','A shelf']];
+  const ro=1-E3(P(t,AT('You ask the packer'),AT('You ask the packer',.5)));
+  reps.forEach(([s,n,ph],i)=>{const p=E3(P(t,AT(ph),AT(ph,.45)))*ro;panel(60,BAND+i*96,960,84,p,C.amber);txt(s,90,BAND+42+i*96,{size:30,col:C.white,a:p,align:'left'});txt(n,990,BAND+42+i*96,{size:28,col:C.amber,a:p,align:'right',weight:600})});
+  const q=E3(P(t,AT('You ask the packer'),AT('You ask the packer',.6)))*(1-E3(P(t,AT('Orders that touch',-.2),AT('Orders that touch'))));
+  panel(60,BAND,960,200,q,C.amber);txt('“The system always sends me',540,BAND+60,{size:38,col:C.white,a:q});txt('the small box for these.”',540,BAND+110,{size:38,col:C.white,a:q});txt('— packer · field note',540,BAND+160,{size:26,col:C.amber,a:q});
+  const b1=E3(P(t,AT('Orders that touch'),AT('Orders that touch',1)))*(1-E3(P(t,AT('One product in four',-.3),AT('One product in four',-.05))));
+  tag('59.8% reworked',proj(15,6.3,22.5),b1,'#1d2229',C.amber,26,-20);tag('26.5% · other orders',proj(17.2,2.9,22.5),b1,'#fff',undefined,26,-20);
+  const x23=E3(P(t,AT('two point three'),AT('two point three',.4)))*b1;
+  panel(140,BAND,800,200,b1);txt('orders touching a wrong dimension',540,BAND+50,{size:28,col:C.white,a:b1,weight:500});txt('2.3× more rework',540,BAND+125,{size:72,col:C.amber,a:x23,ls:-2});
+  const md=E3(P(t,AT('One product in four'),AT('One product in four',.6)))*(1-E3(P(t,AT('Enforcing',-.6),AT('Enforcing',-.2))));
+  panel(60,BAND,960,150,md);txt('1 in 4 products: bad master data',540,BAND+58,{size:36,col:C.white,a:md,weight:600});txt('25.6% · 95% CI 21.1–30.8 · sample of 317 SKUs',540,BAND+108,{size:26,col:C.mute,a:md});
+  const r=E3(P(t,AT('Fixing only'),AT('Fixing only',.6)))*(1-E3(P(t,AT('Enforcing',-.3),AT('Enforcing',-.05))));
+  panel(60,BAND+165,960,110,r);txt('dimension errors alone: ~14% of carton rework',540,BAND+208,{size:30,col:C.amber,a:r,weight:600});txt('not all of it',540,BAND+250,{size:26,col:C.white,a:r*E3(P(t,AT('Not all of it'),AT('Not all of it',.4))),weight:500});
+  stamp('ENFORCE → NO · FIX THE DATA',540,BAND+80,RED,E3(P(t,AT('Enforcing the flow'),AT('Enforcing the flow',.5))),-.03,28)};
+// s4 · la caminata: nadie lo pidió
+OV.s4=(t)=>{const m=E3(P(t,AT('A hundred'),AT('A hundred',.6)))*(1-E3(P(t,AT('Move them',-.3),AT('Move them',-.05))));panel(60,BAND,460,190,m);txt('157 m',290,BAND+85,{size:80,col:C.amber,a:m,ls:-2});txt('walked per order (median)',290,BAND+150,{size:26,col:C.white,a:m,weight:500});
+  const w=E3(P(t,AT('Two thirds'),AT('Two thirds',.6)))*(1-E3(P(t,AT('But a picker',-.3),AT('But a picker',-.05))));panel(560,BAND,460,190,w);txt('68 of 100 visits',790,BAND+60,{size:40,col:C.amber,a:w,weight:700});txt('go to the fast movers',790,BAND+102,{size:26,col:C.white,a:w,weight:500});
+  txt('only 9 land in the golden zone',790,BAND+150,{size:26,col:C.white,a:w*E3(P(t,AT('barely one in seven'),AT('barely one in seven',.4))),weight:600});
+  const mv=E3(P(t,AT('Move them',.1),AT('Move them',.6)))*(1-E3(P(t,AT('But a picker',-.3),AT('But a picker',-.05))));panel(60,BAND,460,190,mv,C.amber);txt('49.4 → 34.6 m',290,BAND+80,{size:50,col:C.amber,a:mv,ls:-1});txt('per visit · −30% · model estimate',290,BAND+140,{size:26,col:C.white,a:mv});
+  const q=E3(P(t,AT('When it'),AT('When it',.6)))*(1-E3(P(t,AT('So the move',-.6),AT('So the move',-.2))));panel(60,BAND-20,960,190,q,C.amber);
+  txt('“When it’s not there, I remember',540,BAND+38,{size:38,col:C.white,a:q});txt('where it usually is. The system doesn’t.”',540,BAND+86,{size:38,col:C.white,a:q});txt('— picker · field note',540,BAND+136,{size:26,col:C.amber,a:q});
+  const pk=proj(-24.6,2.6,-1.5);tag('?',pk,E3(P(t,AT('But a picker',.8),AT('But a picker',1.4)))*(1-E3(P(t,AT('So the move',-.6),AT('So the move',-.2)))),'#fff',RED,44,-30);
+  const wh=E3(P(t,AT('The last re-slotting'),AT('The last re-slotting',.6)))*(1-E3(P(t,AT('So the move',-.6),AT('So the move',-.2))));panel(60,BAND+185,960,96,wh);txt('5 whys → the last re-slotting moved products',540,BAND+222,{size:26,col:C.white,a:wh,weight:600});txt('and never updated their locations',540,BAND+256,{size:26,col:C.white,a:wh,weight:600});
+  const st=E3(P(t,AT('So the move'),AT('So the move',.6)));panel(60,BAND,960,190,st,C.amber);txt('MOVE + UPDATE THE MASTER DATA',540,BAND+80,{size:40,col:C.amber,a:st,weight:700,ls:2});txt('or not at all',540,BAND+138,{size:30,col:C.white,a:st,weight:500})};
+// s5 · la prueba: antes/después contra control (mediana, datos del panel)
+OV.s5=(t)=>{const x0=200,x1=900,y0=BAND+76,y1=BAND+206,v0=50,v1=90;const Y=v=>y1-(v-v0)/(v1-v0)*(y1-y0);const xp=[x0+40,x1-90];
+  const pa=E3(P(t,-.2,.6));panel(60,BAND-30,960,320,pa);
+  ln(x0,y1,x1,y1,pa,'rgba(255,255,255,.25)',2);[50,70,90].forEach(v=>txt(v+' min',x0-14,Y(v),{size:26,col:C.mute,a:pa,align:'right'}));
+  txt('BEFORE',xp[0],y1+30,{size:26,col:C.mute,ls:5,a:pa});txt('AFTER',xp[1],y1+30,{size:26,col:C.mute,ls:5,a:pa});
+  tag('PILOT ZONE A',proj(-17,.2,-7),E3(P(t,.4,1.2)),'#1d2229',C.amber,26,-10);tag('ZONE B · control',proj(17,.2,-7),E3(P(t,.7,1.5)),'#1d2229',C.blue,26,-10);
+  const big=E3(P(t,AT('went up fifty-six'),AT('went up fifty-six',.4)))*(1-E3(P(t,AT('Against its control',-.3),AT('Against its control',-.05))));
+  const p1=E3(P(t,AT('After the pilot'),AT('went up fifty-six',.4)));if(p1>0){ln(xp[0],Y(53.8),xp[1],Y(83.8),p1,C.amber,5,1,10);dot(xp[0],Y(53.8),8,C.amber,1)}
+  txt('+56%',xp[1]+40,Y(83.8)+40,{size:44,col:RED,a:big,ls:-2});
+  txt('Kill it?',540,BAND+30,{size:40,col:C.white,a:E3(P(t,AT('Kill it'),AT('Kill it',.3)))*big,weight:700});
+  const p2=E3(P(t,AT('Zone B'),AT('Zone B',.8)));if(p2>0){ln(xp[0],Y(54.6),xp[1],Y(89.3),p2,C.blue,5,1,10);dot(xp[0],Y(54.6),8,C.blue,1);txt('+64%',xp[1]+40,Y(89.3)-24,{size:44,col:C.blue,a:p2*big,ls:-2})}
+  const did=E3(P(t,AT('Against its control',.1),AT('Against its control',.6)));
+  txt('−4.7 min per order vs. control',540,BAND+30,{size:40,col:C.amber,a:did,weight:700});
+  stamp('KEEP THE PILOT · GROW THE BASELINE',540,800,C.amber,E3(P(t,AT('so the pilot stays'),AT('so the pilot stays',.5))),-.03,26);
+  txt('median order cycle time · 3-day baseline · trends unverified',540,y1+56,{size:26,col:C.mute,a:pa})};
+// s6 · las personas y la revisión semanal
+OV.s6=(t)=>{const b1=E3(P(t,AT('hear automation'),AT('hear automation',.4))),b2=E3(P(t,AT('feel replacement'),AT('feel replacement',.4)));const cp=proj(34,2.6,20.5);
+  if(cp){tag('“automation”',cp,b1*(1-b2),'#fff',C.blue,30,-80);tag('replacement?',cp,b2*(1-E3(P(t,AT('So you name it'),AT('So you name it',.5)))),'#fff',RED,32,-80)}
+  const dsh=E3(P(t,AT('Left in a dashboard'),AT('Left in a dashboard',.5)))*(1-E3(P(t,AT('In the shift',-.3),AT('In the shift',-.05))));
+  txt('a dashboard nobody opens',540,520,{size:30,col:C.mute,a:dsh,weight:500});ln(300,536,780,536,dsh,RED,4,.9);
+  const wr=E3(P(t,AT('In the shift'),AT('In the shift',.8)));
+  panel(60,330,960,320,wr,C.amber);
+  txt('WEEKLY REVIEW · SHIFT SUPERVISOR',540,378,{size:28,col:C.amber,ls:4,a:wr,weight:700});
+  txt('Limits frozen. Chart reviewed every week.',540,452,{size:36,col:C.white,a:wr,weight:600,ls:-1});
+  const cs=E3(P(t,AT('the chart says so',-.2),AT('the chart says so',.4)));
+  txt('The chart says so before the client does.',540,530,{size:36,col:C.amber,a:cs,weight:700,ls:-1});
+  txt('Chart owner: FDE',540,600,{size:30,col:C.mute,a:cs,weight:500});
+  const nm=E3(P(t,AT('So you name it'),AT('So you name it',.5)))*(1-E3(P(t,AT('Then someone'),AT('Then someone',.4))));
+  panel(60,BAND,960,260,nm,C.amber);txt('STANDARD WORK · PICK · written with the operators',540,BAND+44,{size:26,col:C.amber,ls:2,a:nm,weight:600});
+  for(let i=0;i<2;i++)ln(110,BAND+84+i*30,970-(i%2)*120,BAND+84+i*30,nm,'rgba(255,255,255,.35)',3);
+  const sg=P(t,AT('They sign it'),AT('They sign it',1.4));
+  for(let k=0;k<7;k++){const p=cl(sg*7-k,0,1);if(p<=0)continue;const y=BAND+170+Math.floor(k/4)*48,x=120+(k%4)*220;g.save();g.globalAlpha=nm;g.strokeStyle='#9cc8ff';g.lineWidth=3;g.beginPath();for(let s=0;s<=16*p;s++){const u=s/16;s?g.lineTo(x+u*150,y+Math.sin(u*14+k)*9*Math.sin(u*3.14)):g.moveTo(x,y)}g.stroke();g.restore()}
+  txt('signed at handover',540,BAND+240,{size:26,col:C.mute,a:E3(P(t,AT('They sign it'),AT('They sign it',.6)))*nm})};
+// s7 · el libro de cuentas y el cierre
+OV.s7=(t)=>{const out=E3(P(t,AT('That is the polymath'),AT('That is the polymath',.6)));const la=1-out;
+  const asked=[['Hire pickers all day','hire all day'],['Retrain the slow ones','retrain the slow'],['Enforce one flow','enforce one flow'],['Judge by before / after','judge by before']];
+  const dec=[['Staff the peak, or level the release','client ops lead','staff the peak'],['Fix the master data','client data lead','fix the master data'],['Move fast movers + update locations','FDE + data lead','move the fast movers'],['Keep the pilot, grow the baseline','FDE','keep the pilot'],['Chart reviewed weekly with the supervisor','FDE','put the chart']];
+  panel(40,300,1000,840,E3(P(t,-.3,.5))*la);
+  txt('AS ASKED',90,350,{size:26,col:C.mute,ls:8,a:E3(P(t,-.3,.5))*la,align:'left'});
+  asked.forEach(([s,ph],i)=>{const p=E3(P(t,AT(ph,-.1),AT(ph,.3)))*la;const y=405+i*56;txt(s,90,y,{size:32,col:'#aeb6bf',a:p,align:'left'});ln(80,y+2,520,y+2,E3(P(t,AT('As decided')+i*.15,AT('As decided')+i*.15+.4))*la,RED,4,.9)});
+  txt('AS DECIDED',90,650,{size:26,col:C.amber,ls:8,a:E3(P(t,AT('As decided'),AT('As decided',.4)))*la,align:'left'});
+  dec.forEach(([s,o,ph],i)=>{const p=E3(P(t,AT(ph,-.1),AT(ph,.3)))*la;const y=705+i*58;check(90,y,p);txt(s,140,y,{size:30,col:C.white,a:p,align:'left'});txt(o,1000,y,{size:26,col:C.amber,a:p,align:'right',ls:1})});
+  const e=E3(P(t,AT('The engineer built'),AT('The engineer built',.5)))*la,c=E3(P(t,AT('The client owns'),AT('The client owns',.5)))*la,sx=E3(P(t,AT('The strategist decided'),AT('The strategist decided',.5)))*la;
+  dot(100,1010,10,C.blue,e);txt('engineer: built the analysis and the tools',122,1010,{size:26,col:C.blue,a:e,align:'left',weight:600});
+  dot(100,1050,10,'#f4f1ea',c);txt('client: owns the changes',122,1050,{size:26,col:'#f4f1ea',a:c,align:'left',weight:600});
+  dot(100,1090,11,C.amber,sx);txt('strategist: decided which, owned the cost of being wrong',122,1090,{size:26,col:C.amber,a:sx,align:'left',weight:600});
+  const dd=[['STATS → staff the peak',[22,1,21]],['INTERVIEW + DATA → fix the data',[9.5,1,23.5]],['INTERVIEW + LAYOUT → move',[-20,1,5]],['EXPERIMENT DESIGN → keep the pilot',[-1,1,-6]],['PSYCHOLOGY → the owner',[37,1,17]]];
+  const dp=out*(1-E3(P(t,AT('Where the rules'),AT('Where the rules',.6))));
+  dd.forEach(([k,w3],i)=>{const p=E3(P(t,AT('every branch')+i*.3,AT('every branch')+.5+i*.3))*dp;tag(k,proj(...w3),p,'#1d2229',C.amber,26,[-40,-110,-40,-40,-180][i])});
+  const eb=E3(P(t,AT('every branch'),AT('every branch',.6)))*dp;panel(60,300,960,90,eb,C.amber);txt('every branch of knowledge changed a decision',540,345,{size:31,col:C.amber,a:eb,weight:700});
+  const cta=E3(P(t,S.voice_at-S.start+S.voice_dur+.2,S.voice_at-S.start+S.voice_dur+.9));
+  if(cta>0){panel(60,330,960,600,cta,C.amber);txt('Look at your last four',540,460,{size:48,col:C.white,a:cta,ls:-1});txt('deployment requests.',540,518,{size:48,col:C.white,a:cta,ls:-1});
+    txt('Which one should',540,630,{size:66,col:C.amber,a:cta,ls:-2});txt('have been a NO?',540,705,{size:66,col:C.amber,a:cta,ls:-2});
+    txt('The Polymath Manifesto of the 21st century',540,820,{size:26,col:'#c9d3dc',a:cta,weight:500});txt('synthetic case built with fdekit · all figures reproducible',540,860,{size:26,col:C.mute,a:cta})}};
+
+const kick=document.getElementById('kick'),why=document.getElementById('why'),sub=document.getElementById('sub');let lastK='';
+function hud(T,scn,lt){const k=KICK[scn.id];if(lastK!==scn.id){kick.querySelector('.k').textContent=k[0];kick.querySelector('.q').textContent=k[1];kick.querySelector('.q').style.display=k[1]?'block':'none';
+    const w=WHY[scn.id];if(w){why.querySelector('.ev').textContent=w[0];why.querySelector('.sv').textContent=w[1];why.querySelector('.cs').innerHTML=w[2].map(s=>'<span class="c">'+s+'</span>').join('')}lastK=scn.id}
+  const a=E3(P(lt,.2,.7))*(1-E3(P(lt,scn.dur-.45,scn.dur-.1)));why.style.top=(kick.offsetHeight+56)+'px';let ka=a;if(scn.id==='s7')ka=a*(1-E3(P(T,absAt('s7','That is the polymath'),absAt('s7','That is the polymath',.5))));kick.style.opacity=k[0]?ka:0;
+  const w=WHY[scn.id];why.style.opacity=w?a*E3(P(T,absAt(scn.id,w[3]),absAt(scn.id,w[3])+.5)):0;
+  const c=TL.cues.find(c=>T>=c.t0&&T<c.t1);if(c){if(sub.dataset.t!==c.text){sub.textContent=c.text;sub.dataset.t=c.text}sub.style.opacity=E3((T-c.t0)/.18)*(1-E3((T-(c.t1-.12))/.12))}else sub.style.opacity=0}
+camKeys();
+window.render=function(T){
+  pose(T);RND.render(scene,cam);
+  g=G0;g.clearRect(0,0,W,H);
+  const L=TL.scenes;let i=L.findIndex(s=>T>=s.start&&T<s.start+s.dur);if(i<0)i=L.length-1;const scn=L[i];
+  S=Object.assign({},scn);const lt=T-scn.start;
+  // viñeta suave para que el texto respire
+  const v=g.createRadialGradient(W/2,H/2,520,W/2,H/2,1200);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(40,30,20,.28)');g.fillStyle=v;g.fillRect(0,0,W,H);
+  const sg=g.createLinearGradient(0,H-260,0,H);sg.addColorStop(0,'rgba(20,16,12,0)');sg.addColorStop(1,'rgba(20,16,12,.6)');g.fillStyle=sg;g.fillRect(0,H-260,W,260);
+  // la superposición de la escena se desvanece en las fronteras
+  const fa=(i===0?1:E3(P(lt,.15,.6)))*(i===L.length-1?1:1-E3(P(lt,scn.dur-.6,scn.dur-.25)));
+  g.save();g.globalAlpha=1;const GA=fa;const saved=g.globalAlpha;
+  const off=document.createElement('canvas');
+  OVBUF.getContext('2d').clearRect(0,0,W,H);g=OVBUF.getContext('2d');OV[scn.id](lt);g=G0;g.globalAlpha=fa;g.drawImage(OVBUF,0,0);g.globalAlpha=1;g.restore();
+  hud(T,scn,lt);
+};
+const OVBUF=document.createElement('canvas');OVBUF.width=W;OVBUF.height=H;
+Promise.all([document.fonts.load('600 40px "Inter Display"'),document.fonts.load('700 40px "Inter Display"'),document.fonts.load('500 40px "Inter Display"')]).then(()=>document.fonts.ready).then(async()=>{await RND.compileAsync(scene,cam);window.render(0);window.__ready=true}).catch(e=>{console.error('INIT',e.message);window.__ready=true});
+</script></body></html>

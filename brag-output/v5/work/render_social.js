@@ -1,0 +1,20 @@
+const {chromium}=require('/opt/node22/lib/node_modules/playwright');
+const fs=require('fs'),path=require('path');
+(async()=>{
+  const [,, htmlPath, outDir, mode, a, b]=process.argv;
+  fs.mkdirSync(outDir,{recursive:true});
+  const br=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
+  const p=await br.newPage({viewport:{width:1080,height:1350}});
+  p.on('console',m=>{if(m.type()==='error')console.error('CONSOLE',m.text())});p.on('pageerror',e=>{console.error('PAGEERR',e.message);process.exitCode=2});
+  await p.goto('http://localhost:8765/'+htmlPath);
+  await p.waitForFunction('window.__ready===true',null,{timeout:120000});
+  let list;
+  if(mode==='range'){list=[];for(let i=+a;i<+b;i++)list.push([i,i/30,'jpg'])}
+  else list=a.split(',').map(s=>[s,Number(s),'png']);
+  for(const [i,t,ext] of list){
+    await p.evaluate(t=>window.render(t),t);
+    const name=ext==='jpg'?`f_${String(i).padStart(5,'0')}.jpg`:`still_${i}.png`;
+    await p.screenshot(ext==='jpg'?{path:path.join(outDir,name),type:'jpeg',quality:92}:{path:path.join(outDir,name)});
+  }
+  await br.close();
+})();
