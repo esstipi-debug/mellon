@@ -45,3 +45,25 @@ Referencia de costo en OpenArt (a configuración por defecto): económica ≈ 8�
 1. ¿Firma Mytra FDE en el cierre y se menciona `fdekit`? (Entonces la escena 7 puede mostrar el comando.)
 2. ¿Dejamos la estratega sin género ni nombre (segunda persona), o quieres un personaje con nombre?
 3. ¿Opción económica o equilibrada?
+
+---
+
+# v3.1: el contraste que demuestra la tesis ("tres llegadas")
+
+**Decisión:** no se contrasta al SD contra el FDE (son una dupla en el manifiesto y el kit es para FDEs). Se contrasta *el mandato*: tres perfiles llegan al mismo problema el mismo día. Primero se muestra la fortaleza de cada uno; la falla es de mandato, no de competencia.
+
+| Perfil | Qué hace bien | Por qué no cambia nada | Qué le falta (principio) |
+|---|---|---|---|
+| Consultor de diapositivas | 50 páginas, claras, el viernes | Nadie responde por que algo cambie | Raíces: sin profundidad no hay criterio (II) |
+| Analista / especialista | Dashboard exacto: 54 % | Nadie lo abre; el operario no está en el modelo | Amplitud y mandato de adopción (III, VII) |
+| SD (con ingeniero) | Se sienta en el turno, sale con un mapa | Responde por el problema **y** la adopción | Es la dupla: el FDE construye (X) |
+
+La IA hace en minutos lo de las dos primeras filas; eso lo une con el hilo "donde hay reglas claras, que gane la máquina".
+
+**Escena nueva (≈22 s, tras la niebla):** *"Three people arrive with the same problem. The first writes a fifty-page deck by Friday. It's good. Nothing changes. The second builds the perfect dashboard. It says fifty-four percent. Nobody opens it. The third doesn't open a laptop. You take a seat at the shift change, and you bring an engineer."* Visual: tres carriles en pantalla dividida; el tercero se sale del cuadro hacia el pasillo.
+
+**Línea de tiempo v3.1 (≈2:20):** 0 gancho 10 s · 1 niebla 14 s · **2 tres llegadas 22 s** (absorbe raíces y conexión SKU→cartón) · 3 terreno + duda + IA 28 s · 4 estructura/cola 12 s · 5 humanos y tres lenguas, con el FDE como aliado 14 s · 6 piloto y ética 14 s · 7 salida y aprendizaje 14 s · 8 cierre 12 s.
+
+**Riesgos y cómo se evitan:** (a) hombres de paja → mostrar el "está bien" de cada uno; (b) tono arrogante → la frase es "nadie responde por el cambio", no "ellos son peores"; (c) el FDE como villano → aparece como aliado en la escena 2 y en la 5.
+
+**Pregunta abierta:** ¿a quién queremos que convenza el video: a empresas que deberían contratar un SD, a personas que quieren ser SD, o a ambos? Cambia el cierre y la llamada a la acción.
