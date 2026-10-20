@@ -36,6 +36,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 markers = [
     "vision: necesita OpenCV y un video de muestra",
     "audio: necesita torch + transformers y baja un modelo Whisper",
