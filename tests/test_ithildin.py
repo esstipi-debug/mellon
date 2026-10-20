@@ -1,4 +1,4 @@
-"""Pruebas unitarias para fdekit.ithildin (guards, probes, triggers)."""
+"""Unit tests for fdekit.ithildin (guards, probes, triggers)."""
 
 from datetime import datetime, timezone
 import pytest
@@ -16,12 +16,12 @@ from fdekit.ithildin import (
 )
 
 
-# --- Tests para IthildinGuard ---
+# --- Tests for IthildinGuard ---
 
 
 def test_guard_requires_sufficient_entropy():
-    with pytest.raises(ValueError, match="al menos 16 bytes"):
-        IthildinGuard(secret_key=b"demasiado-corto")
+    with pytest.raises(ValueError, match="at least 16 bytes"):
+        IthildinGuard(secret_key=b"too-short")
 
 
 def test_staging_action_validation():
@@ -47,7 +47,7 @@ def test_staging_action_validation():
 
 
 def test_guard_signature_and_tamper_detection():
-    secret = b"clave-secreta-super-segura-2026"
+    secret = b"super-secure-secret-key-2026-entropy"
     guard = IthildinGuard(secret)
 
     action = StagingAction(
@@ -63,12 +63,12 @@ def test_guard_signature_and_tamper_detection():
     assert token.startswith("ithildin-v1-")
     assert guard.verify_signature(action, token) is True
 
-    # Intento de tamper en el payload
+    # Tampering with payload
     tampered_action = StagingAction(
         action_id="act-101",
         risk_level=RiskLevel.REVERSIBLE,
         target_system="WMS_MANHATTAN",
-        payload={"order_id": "ORD-99", "status": "CANCELLED"},  # alterado
+        payload={"order_id": "ORD-99", "status": "CANCELLED"},  # altered
         idempotency_key="idemp-101",
         timestamp_utc="2026-10-20T12:00:00Z",
     )
@@ -76,7 +76,7 @@ def test_guard_signature_and_tamper_detection():
 
 
 def test_guard_evaluation_flow_and_idempotency():
-    secret = b"clave-secreta-super-segura-2026"
+    secret = b"super-secure-secret-key-2026-entropy"
     guard = IthildinGuard(secret)
 
     action = StagingAction(
@@ -89,13 +89,13 @@ def test_guard_evaluation_flow_and_idempotency():
     )
     token = guard.sign_action(action)
 
-    # 1. Primer commit: debe ser aprobado
+    # 1. First commit: should be approved
     verdict1 = guard.evaluate_and_commit(action, token)
     assert verdict1.approved is True
     assert verdict1.code == "APPROVED_FOR_WRITEBACK"
     assert len(guard.audit_ledger) == 1
 
-    # 2. Intento duplicado con la misma idempotency_key: debe rechazarse
+    # 2. Duplicate attempt with identical idempotency key: should be rejected
     verdict2 = guard.evaluate_and_commit(action, token)
     assert verdict2.approved is False
     assert verdict2.code == "REJECTED_DUPLICATE_IDEMPOTENCY"
@@ -103,10 +103,10 @@ def test_guard_evaluation_flow_and_idempotency():
 
 
 def test_guard_rejects_irreversible_without_rollback():
-    secret = b"clave-secreta-super-segura-2026"
+    secret = b"super-secure-secret-key-2026-entropy"
     guard = IthildinGuard(secret)
 
-    # Sin rollback plan
+    # Without rollback plan
     action_no_rb = StagingAction(
         action_id="act-danger-1",
         risk_level=RiskLevel.IRREVERSIBLE,
@@ -121,7 +121,7 @@ def test_guard_rejects_irreversible_without_rollback():
     assert v1.approved is False
     assert v1.code == "REJECTED_IRREVERSIBLE_WITHOUT_ROLLBACK"
 
-    # Con rollback plan
+    # With rollback plan
     action_with_rb = StagingAction(
         action_id="act-danger-2",
         risk_level=RiskLevel.IRREVERSIBLE,
@@ -137,7 +137,7 @@ def test_guard_rejects_irreversible_without_rollback():
     assert v2.code == "APPROVED_FOR_WRITEBACK"
 
 
-# --- Tests para PassiveEventProbe ---
+# --- Tests for PassiveEventProbe ---
 
 
 def test_passive_probe_empty_records():
@@ -179,18 +179,18 @@ def test_passive_probe_clean_data():
 def test_passive_probe_detects_anomalies():
     probe = PassiveEventProbe()
     records = [
-        # Falta location, timestamp sin tz
+        # Missing location, tz-naive timestamp
         {
             "case_id": "CASE-2",
             "activity": "PICK",
             "timestamp": "2026-10-20T11:00:00",
             "resource": "OP-01",
         },
-        # Timestamp corrupto
+        # Corrupt timestamp
         {
             "case_id": "CASE-2",
             "activity": "PACK",
-            "timestamp": "fecha-invalida",
+            "timestamp": "invalid-datetime-string",
             "resource": "OP-02",
         },
     ]
@@ -201,7 +201,7 @@ def test_passive_probe_detects_anomalies():
     assert report.is_safe_for_inference is False
 
 
-# --- Tests para ConditionalTrigger y Registry ---
+# --- Tests for ConditionalTrigger and Registry ---
 
 
 def test_conditional_trigger_illumination_and_cooldown():
@@ -211,21 +211,21 @@ def test_conditional_trigger_illumination_and_cooldown():
         cooldown_seconds=10.0,
     )
 
-    # 1. No cumple predicado
+    # 1. Does not meet predicate
     res1 = trigger.evaluate({"latency_ms": 120}, current_epoch=1000.0)
     assert res1.illuminated is False
 
-    # 2. Cumple predicado -> Iluminado
+    # 2. Meets predicate -> Illuminated
     res2 = trigger.evaluate({"latency_ms": 750}, current_epoch=1001.0)
     assert res2.illuminated is True
     assert res2.silenced_by_cooldown is False
 
-    # 3. Cumple predicado antes del cooldown -> Silenciado
+    # 3. Meets predicate during cooldown -> Silenced
     res3 = trigger.evaluate({"latency_ms": 800}, current_epoch=1005.0)
     assert res3.illuminated is False
     assert res3.silenced_by_cooldown is True
 
-    # 4. Cumple predicado tras expirar cooldown -> Iluminado
+    # 4. Meets predicate after cooldown expiry -> Illuminated
     res4 = trigger.evaluate({"latency_ms": 900}, current_epoch=1012.0)
     assert res4.illuminated is True
     assert res4.silenced_by_cooldown is False

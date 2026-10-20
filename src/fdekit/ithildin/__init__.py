@@ -1,8 +1,8 @@
-"""fdekit.ithildin: Capa de telemetria pasiva, guardarrailes criptograficos y triggers condicionales.
+"""fdekit.ithildin: Passive telemetry, cryptographic guardrails, and conditional triggers.
 
-El patron Ithildin modela soluciones tacticas de automatizacion pasiva:
-operan invisibles en la sombra bajo condiciones nominales y solo se revelan
-ante estimulos externos calificados, violaciones de contrato o riesgos operacionales.
+The Ithildin pattern models tactical passive automation solutions:
+operating invisibly in the dark under nominal conditions and revealing themselves
+only upon qualified external stimuli, contract violations, or operational risks.
 """
 
 from __future__ import annotations

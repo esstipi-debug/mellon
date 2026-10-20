@@ -1,10 +1,10 @@
-"""Inspeccion pasiva y telemetria silenciosa de logs de eventos.
+"""Passive inspection and silent telemetry for event logs.
 
-El Patron Ithildin:
-El probe opera en modo solo-lectura y bajo overhead.
-Evalua la salud de un flujo de eventos contra el contrato de 5 columnas estandar
-(case_id, activity, timestamp, resource, location) sin emitir queries agresivas
-ni interrumpir los servicios transaccionales en operacion.
+The Ithildin Pattern:
+The probe operates in read-only mode with minimal overhead.
+It evaluates event stream health against the canonical 5-column contract
+(case_id, activity, timestamp, resource, location) without issuing heavy queries
+or disrupting production transactional systems.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ STANDARD_5_COLUMNS = ("case_id", "activity", "timestamp", "resource", "location"
 
 @dataclass(frozen=True)
 class ProbeReport:
-    """Resultado de la inspeccion pasiva de un flujo de eventos."""
+    """Outcome of passive event stream inspection."""
 
     total_records: int
     missing_columns: tuple[str, ...]
@@ -27,19 +27,19 @@ class ProbeReport:
     unparseable_timestamps: int
     tz_naive_timestamps: int
     out_of_order_cases: int
-    quality_score: float  # De 0.0 (inutilizable) a 1.0 (apto para inferencia determinista)
+    quality_score: float  # From 0.0 (unusable) to 1.0 (ready for deterministic inference)
     is_safe_for_inference: bool
     summary: str
 
 
 class PassiveEventProbe:
-    """Sonda pasiva de eventos operacionales."""
+    """Passive probe for operational event logs."""
 
     def __init__(self, required_columns: Sequence[str] = STANDARD_5_COLUMNS) -> None:
         self.required_columns = tuple(required_columns)
 
     def inspect(self, records: Iterable[Mapping[str, Any]]) -> ProbeReport:
-        """Inspecciona una coleccion o iterador de registros de eventos en streaming."""
+        """Passively inspects an iterable collection of streaming event records."""
         total = 0
         null_counts = {col: 0 for col in self.required_columns}
         unparseable_ts = 0
@@ -54,13 +54,13 @@ class PassiveEventProbe:
             if total == 1:
                 seen_columns.update(r.keys())
 
-            # Chequeo de columnas minimas y nulos
+            # Check required columns and nulls
             for col in self.required_columns:
                 val = r.get(col)
                 if val is None or val == "":
                     null_counts[col] += 1
 
-            # Chequeo de timestamp
+            # Timestamp validation
             raw_ts = r.get("timestamp")
             if raw_ts is not None and raw_ts != "":
                 parsed_dt: datetime | None = None
@@ -76,7 +76,7 @@ class PassiveEventProbe:
                     if parsed_dt.tzinfo is None:
                         tz_naive_ts += 1
 
-                    # Verificacion de orden cronologico por caso
+                    # Check chronological ordering per case_id
                     case_id = str(r.get("case_id", ""))
                     if case_id:
                         prev_dt = last_timestamp_by_case.get(case_id)
@@ -96,28 +96,28 @@ class PassiveEventProbe:
                 out_of_order_cases=0,
                 quality_score=0.0,
                 is_safe_for_inference=False,
-                summary="Flujo vacio. Ningun registro disponible para inspeccion.",
+                summary="Empty event stream. No records available for inspection.",
             )
 
-        # Calculo ponderado de penalidades
+        # Weighted penalty calculation
         penalties = 0.0
 
-        # Falta de columnas estructurales
+        # Missing structural columns
         if missing_cols:
             penalties += len(missing_cols) * 0.25
 
-        # Proporcion de nulos en columnas criticas (case_id, activity, timestamp)
+        # Critical null ratios (case_id, activity, timestamp)
         crit_nulls = sum(null_counts.get(c, 0) for c in ("case_id", "activity", "timestamp"))
         if crit_nulls > 0:
             penalties += min(0.40, (crit_nulls / (total * 3)))
 
-        # Timestamps corruptos o huerfanos de huso horario
+        # Corrupt or timezone-naive timestamps
         if unparseable_ts > 0:
             penalties += min(0.30, unparseable_ts / total)
         if tz_naive_ts > 0:
             penalties += min(0.15, (tz_naive_ts / total) * 0.5)
 
-        # Inversiones cronologicas
+        # Chronological inversions
         if out_of_order_count > 0:
             penalties += min(0.20, out_of_order_count / total)
 
@@ -125,9 +125,9 @@ class PassiveEventProbe:
         is_safe = score >= 0.75 and not missing_cols and unparseable_ts == 0
 
         summary = (
-            f"Inspeccionados {total} registros. Calidad: {score:.2%}. "
-            f"Columnas ausentes: {len(missing_cols)}, Nulos criticos: {crit_nulls}, "
-            f"Timestamps sin TZ: {tz_naive_ts}, Casos desordenados: {out_of_order_count}."
+            f"Inspected {total} records. Quality score: {score:.2%}. "
+            f"Missing columns: {len(missing_cols)}, Critical nulls: {crit_nulls}, "
+            f"TZ-naive timestamps: {tz_naive_ts}, Out-of-order cases: {out_of_order_count}."
         )
 
         return ProbeReport(
