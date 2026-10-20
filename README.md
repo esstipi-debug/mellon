@@ -1,15 +1,25 @@
-# Mytra FDE
+# Mellon 🗝️ & Ithildin 🌌
 
-Kit de terreno para **Forward Deployed Engineers con perfil de supply chain**.
+> **The right word to open any gate.**  
+> *A repository for seamless integration, secure authentication, and deployment strategies that just work.*  
+> **(Un playbook de Deployment Strategist)**
 
-> **Para retomar el trabajo: [`docs/HANDOFF.md`](docs/HANDOFF.md).** Estado,
-> montaje, las 9 reglas duras que no se rompen, y qué sigue.
+---
+
+## 1. El Mito, la Puerta y la Tinta Invisible
+
+En las Puertas de Durin, que custodiaban el acceso occidental a Khazad-dûm (Moria), confluyen dos creaciones inseparables:
+
+$$\text{\textit{Ennyn Durin Aran Moria: pedo mellon a minno.}}$$
+
+1. **La Tinta Invisible (*Ithildin*):** Forjada por Celebrimbor a partir del *mithril*, el Ithildin permanecía completamente invisible a la luz común. Solo reflejaba la luz de las estrellas y de la luna cuando se pronunciaban las condiciones adecuadas. Es la infraestructura pasiva: guardarraíles deterministas ([`fdekit.ithildin`](src/fdekit/ithildin/)), telemetría silenciosa y triggers condicionales.
+2. **La Palabra de Paso (*Mellon*):** Grabada en la puerta con esa tinta, la inscripción decía literalmente: **"Di 'amigo' y entra"**. Gandalf asumió un asedio arcano; la puerta solo pedía invocar una alianza entre quienes construyen juntos. En terreno, el **Deployment Strategist** es el amigo que baja al *Gemba*, se alinea con la operación y erradica el 95% de fracaso en adopción corporativa.
+
+> **Directrices de Desarrollo:** Consultar [`DIRECTRICES-MELLON-ITHILDIN.md`](DIRECTRICES-MELLON-ITHILDIN.md) para la arquitectura de doble riel, guardarraíles HMAC-SHA256 y rubricado de nuevos agentes.  
+> **Doctrina del Rol:** Consultar [`DEPLOYMENT-STRATEGIST.md`](DEPLOYMENT-STRATEGIST.md) para la diferenciación FDE (Delta) vs. Deployment Strategist (Echo).  
+> **Para retomar el trabajo técnico:** [`docs/HANDOFF.md`](docs/HANDOFF.md). Estado, montaje, las 9 reglas duras que no se rompen, y qué sigue.
 >
-> El paquete Python se llama `fdekit` y el directorio local `fde-field-kit`;
-> Mytra FDE es el nombre del proyecto. No se renombró el paquete porque el
-> import aparece en más de mil tests y en cada docstring, y un renombre masivo
-> es exactamente el tipo de cambio que este repo trata de evitar: mucho diff,
-> cero comportamiento nuevo.
+> *Nota de compatibilidad de código:* El paquete Python conserva el identificador canónico `fdekit` para preservar la estabilidad de imports en más de mil tests automatizados, mientras que la suite táctica de seguridad pasiva, guardarraíles criptográficos y triggers reside en [`fdekit.ithildin`](src/fdekit/ithildin/).
 
 Nueve herramientas que llevan un despliegue del log crudo del WMS a un A3 con
 números, en un comando. Incluye un centro de distribución sintético con defectos
@@ -42,6 +52,7 @@ línea base, hojas TWI, runbook y el A3 armado con los hallazgos.
 | 7 | `fdekit.probe` | Validador X12 (940/945/214/856), contratos de API, auditoría de husos horarios, idempotencia | días 45+ |
 | 8 | `fdekit.standardwork` | Hojas TWI Job Instruction y runbook de traspaso | días 45-75 |
 | 9 | `fdekit.spc` | XmR con reglas de Nelson y monitor de degradación con límites congelados | días 75+ |
+| 10 | `fdekit.ithildin` | Telemetría pasiva (5 columnas), guardarraíles deterministas HMAC-SHA256, triggers reactivos y safe-staging | continuo / gobernanza |
 
 Más `fdekit.a3`, que arma el A3 con los hallazgos ya insertados, y
 `fdekit.value`, que convierte los hallazgos en un caso económico con
