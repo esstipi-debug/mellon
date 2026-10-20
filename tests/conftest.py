@@ -47,13 +47,26 @@ def _demo_a_tmp(tmp: Path) -> dict:
 
 
 @pytest.fixture(scope="session")
-def findings(tmp_path_factory) -> dict:
+def _demo_run(tmp_path_factory) -> tuple[Path, dict]:
+    tmp = tmp_path_factory.mktemp("demo")
+    return tmp, _demo_a_tmp(tmp)
+
+
+@pytest.fixture(scope="session")
+def findings(_demo_run) -> dict:
     """El `hallazgos.json` real del demo, generado una vez por sesion.
 
     Determinista por la semilla del generador, y escrito en el temporal de
     pytest — nunca en el repo. Cuesta ~3 s una sola vez.
     """
-    return _demo_a_tmp(tmp_path_factory.mktemp("demo"))
+    return _demo_run[1]
+
+
+@pytest.fixture(scope="session")
+def demo_out(_demo_run) -> Path:
+    """Directorio con los CSV del demo (event_log, auditoria_maestros,
+    dimensionamiento, panel_experimento). Misma corrida que `findings`."""
+    return _demo_run[0]
 
 
 # ----------------------------------------------- guardia de higiene

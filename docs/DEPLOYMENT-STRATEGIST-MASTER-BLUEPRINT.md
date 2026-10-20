@@ -31,6 +31,24 @@ While the **Forward Deployed Software Engineer (FDE / Delta)** owns the *"HOW"* 
 
 ---
 
+## Pillar Status (updated 2026-10-20)
+
+Each pillar now has a built, versioned engineering asset in `fdekit` (repo `mellon`, branch `harness/plan-1`), with code tested under `pytest` (full suite: 1271 passed, 0 failed). **"Asset built" is not the same as the pillar's success metric being met.** Those metrics (board sign-off, 90% adoption at 30 days, finance-approved p < 0.01) can only be met in a live deployment, and they stay pending until one happens.
+
+| Pillar | Status | Built assets | Field metric |
+|---|---|---|---|
+| 1. Gemba & Ground Truth | **Asset built** | [Mom Test interview protocol](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/docs/gemba_interview_protocol_mom_test.md) · `fdekit gemba` capture | Pending: 72 h workaround map on a live site |
+| 2. Executive Decomposition | **Asset built** | [SCQ memo](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/docs/executive_scq_memo.md) · [MECE issue tree](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/docs/mece_issue_tree.mmd) (illustrative figures) | Pending: board sign-off |
+| 3. Data Sanity & AIE | **Asset built** | [`hubbard_evi_calculator.py`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/src/fdekit/hubbard_evi_calculator.py) · [tests (23)](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/tests/test_evi_calculator.py) | Pending: 5-day diagnostic on client data |
+| 4. Cross-Silo Interlocking | **Asset built** | [`launch_readiness_gate.py`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/src/fdekit/launch_readiness_gate.py) · [tests (34)](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/tests/test_launch_gate.py) · [synthetic snapshot](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/examples/launch_gate/README.md) | Pending: zero ad spend on OOS SKUs in production |
+| 5. Deterministic Guardrails | **Asset built** | Kern: 972 guard tests across 39 suites (`KERN-GUARDRAILS-REPORT.md`) · [`fdekit.ithildin`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/src/fdekit/ithildin/guards.py) | Pending: CISO authorization |
+| 6. Frontline Adoption & TWI | **Asset built** | [TWI Job Instruction card](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/docs/twi_job_instruction_card.md) · `out/twi_desglose.md` | Pending: >90% usage at 30 days |
+| 7. Causal Econometrics | **Asset built** | [`diff_in_diff_analysis.py`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/src/fdekit/diff_in_diff_analysis.py) · [tests (15)](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/tests/test_diff_in_diff.py) | Pending: finance-approved p < 0.01 |
+
+**Finding from the Pillar 7 pipeline on the kit's own panel:** the order-level DiD reports p = 0.0056, but with inference clustered by group x day the same effect (−4.96 min) has p = 0.53. Only 3 pre-period days exist, so no placebo lead is testable. The pipeline therefore returns `INCONCLUSIVE`, which is the correct verdict. A real pilot needs a baseline of 21 days or more before any causal claim reaches finance.
+
+---
+
 ## The 7 Core Pillars of an Elite Deployment Strategist
 
 ---
@@ -47,6 +65,7 @@ While the **Forward Deployed Software Engineer (FDE / Delta)** owns the *"HOW"* 
   * **The Mom Test Protocol (Rob Fitzpatrick):** Strictly prohibiting speculative questions (*"Would you like an AI tool?"*); interrogating concrete past actions (*"Walk me through what happened the last time the barcode scanner dropped connection at 2 AM"*).
   * **Spaghetti Diagrams & Shadow Artifact Cataloging:** Auditing local physical spreadsheets, cheat sheets taped to forklifts, and unofficial batching rules.
 * **Key Artifacts:** `gemba_checklist.md`, `gemba_turno_1.jsonl`, `hallazgos.json`, `spaghetti.png`.
+* **Status:** Asset built: [`gemba_interview_protocol_mom_test.md`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/docs/gemba_interview_protocol_mom_test.md). Field metric pending.
 * **Primary Success Metric:** 100% of physical shadow workarounds mapped and quantified within 72 hours of on-site deployment.
 
 ---
@@ -63,6 +82,7 @@ While the **Forward Deployed Software Engineer (FDE / Delta)** owns the *"HOW"* 
   * **Bulletproof Problem Solving (Charles Conn & Robert McLean):** 7-step problem decomposition into **MECE Logic Trees** and **Hypothesis Trees** to isolate EBITDA bleed.
   * **The One-Day Answer:** Synthesizing available data into an initial quantified working hypothesis on Day 1 to guide engineering without analysis paralysis.
 * **Key Artifacts:** `A3.md`, 1-page Executive SCQ Brief, MECE Issue Tree Markdown, P&L Model in Python/Excel.
+* **Status:** Asset built: [`executive_scq_memo.md`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/docs/executive_scq_memo.md), [`mece_issue_tree.mmd`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/docs/mece_issue_tree.mmd). Field metric pending.
 * **Primary Success Metric:** Board-level sign-off on deployment scope, budget, and system access in a single 30-minute executive session.
 
 ---
@@ -79,6 +99,7 @@ While the **Forward Deployed Software Engineer (FDE / Delta)** owns the *"HOW"* 
   * **The Rule of Five:** Applying small-sample non-parametric statistics (5 random observations reduce uncertainty by 93.75%) to bypass IT data-delivery paralysis.
   * **Universal 5-Column Process Contract (`fdekit`):** Ingesting transactional logs using only `case_id, activity, timestamp, resource, location` to reconstruct operational reality via Process Mining (DuckDB, PM4Py, Directly-Follows Graphs).
 * **Key Artifacts:** `event_log.csv`, `auditoria_maestros.csv`, `dfg.mmd`, `edi_smoke.csv`.
+* **Status:** Asset built: [`hubbard_evi_calculator.py`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/src/fdekit/hubbard_evi_calculator.py) (Rule of Five, vectorized Monte Carlo, EVPI/EOL per defect class). Field metric pending.
 * **Primary Success Metric:** Data sanity diagnostic and AI-Readiness determination delivered within 5 business days with zero production database overhead.
 
 ---
@@ -94,6 +115,7 @@ While the **Forward Deployed Software Engineer (FDE / Delta)** owns the *"HOW"* 
   * **Continuous Discovery Habits (Teresa Torres):** Constructing **Opportunity Solution Trees** to validate that software features address systemic commercial-operational tension.
   * **Stochastic Sizing with 90% Confidence Bands:** Moving away from deterministic point forecasts to interval-based safety stock modeling using Pareto and Weibull lead-time distributions.
 * **Key Artifacts:** `dimensionamiento.csv`, Launch-Readiness Gate Simulator (`launch_readiness_gate.py`), Stockout Ad-Waste Forensics Model.
+* **Status:** Asset built: [`launch_readiness_gate.py`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/src/fdekit/launch_readiness_gate.py) (stockout-probability gate, HMAC-signed changesets, 900 s TTL, dispatch-capacity interlock). Field metric pending.
 * **Primary Success Metric:** 100% elimination of marketing ad expenditure allocated to out-of-stock or unreplenishable SKUs.
 
 ---
@@ -114,6 +136,7 @@ While the **Forward Deployed Software Engineer (FDE / Delta)** owns the *"HOW"* 
   * **Static AST Auditing (`test_overrides_no_se_tiran.py`):** Abstract Syntax Tree verification ensuring agent dispatchers never swallow critical user facts.
   * **Constitutional Principle of Loud Degradation:** Missing data is strictly `None`, never `0`. Concealing errors behind silent fallbacks is treated as a critical system outage.
 * **Key Artifacts:** `KERN-GUARDRAILS-REPORT.md`, `nosilo_core/writeback.py`, 972 automated guard tests across 39 suites.
+* **Status:** Asset built: Kern guardrails (972 tests, 39 suites). CISO authorization pending.
 * **Primary Success Metric:** 0% transactional data corruption, 100% auditable rollback capability, and formal CISO deployment authorization.
 
 ---
@@ -131,6 +154,7 @@ While the **Forward Deployed Software Engineer (FDE / Delta)** owns the *"HOW"* 
   * **On-Site Hypercare & Shitsuke (Sustain):** Co-locating in the physical War Room through go-live until the new standard becomes muscle memory.
   * **Brownfield Cutover Execution:** Applying the battle-tested methodology of the AGCO Melbourne WMS cutover across 50,000 SKUs.
 * **Key Artifacts:** `twi_desglose.md`, `runbook.md`, AGCO Cutover Post-Mortem, 4-Step TWI Job Cards.
+* **Status:** Asset built: [`twi_job_instruction_card.md`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/docs/twi_job_instruction_card.md). Field metric pending.
 * **Primary Success Metric:** Frontline active usage rate sustained above 90% at 30 days post-launch with zero unauthorized shadow workarounds.
 
 ---
@@ -146,6 +170,7 @@ While the **Forward Deployed Software Engineer (FDE / Delta)** owns the *"HOW"* 
   * **Statistical Process Control (SPC / XmR Charts):** Monitoring natural process variability within $\pm 3\sigma$ control limits to prove that variance reduction is permanent.
   * **Survival Analysis (Kaplan-Meier / Weibull):** Modeling lead-time reliability and stockout probabilities under severe disruption.
 * **Key Artifacts:** `spec_linea_base.md`, `panel_experimento.csv`, `xmr.png`, Diff-in-Diff Python Regression Script.
+* **Status:** Asset built: [`diff_in_diff_analysis.py`](https://github.com/esstipi-debug/mellon/blob/harness/plan-1/src/fdekit/diff_in_diff_analysis.py) (day-clustered inference, Bonferroni-adjusted placebo leads, charts). Field metric pending.
 * **Primary Success Metric:** Statistically significant ($p < 0.01$) EBITDA expansion and cash liberation verified and approved by client finance leadership.
 
 ---

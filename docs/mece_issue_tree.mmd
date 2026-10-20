@@ -1,0 +1,53 @@
+%% Pillar 2 - MECE issue tree: USD 10.0M/yr EBITDA leakage + USD 15.7M trapped cash.
+%% Illustrative reference case; every leaf is a formula over the inputs in executive_scq_memo.md (Appendix).
+%% MECE split at level 1: income statement (EBITDA, recurring) vs. balance sheet (working capital, one-time).
+%% Render: npx -p @mermaid-js/mermaid-cli mmdc -i mece_issue_tree.mmd -o mece_issue_tree.svg
+flowchart LR
+    ROOT["Value at stake<br/>USD 10.0M/yr EBITDA<br/>+ USD 15.7M one-time cash"]
+
+    ROOT --> PL["A. EBITDA leakage<br/>USD 10.02M/yr"]
+    ROOT --> BS["B. Working capital trapped<br/>USD 15.65M one-time"]
+
+    %% ---------- A. Income statement ----------
+    PL --> CTS["A1. Excess cost-to-serve<br/>USD 4.69M"]
+    PL --> REV["A2. Lost gross margin<br/>USD 2.66M"]
+    PL --> MKT["A3. Wasted commercial spend<br/>USD 1.10M"]
+    PL --> HOLD["A4. Inventory holding opex<br/>USD 1.57M"]
+
+    CTS --> CTS1["A1.1 In-DC handling excess<br/>2.4M orders x USD 1.35<br/>= USD 3.24M"]
+    CTS --> CTS2["A1.2 Expedited outbound freight<br/>USD 1.45M"]
+    CTS1 --> CTS11["Pick exceptions: wrong location<br/>driver: location_mismatch 7.9% of SKUs"]
+    CTS1 --> CTS12["Carton rework / repack<br/>driver: dim_out_of_tol 17.7%"]
+    CTS1 --> CTS13["Overtime from cycle-time queueing<br/>driver: picker utilization > 0.95"]
+
+    REV --> REV1["Fill-rate gap 93.8% vs 97.5%<br/>480M x 3.7% x 30% GM x 50% unrecovered"]
+    REV1 --> REV11["Stock in wrong SKUs<br/>(excess DOH coexists with stockouts)"]
+    REV1 --> REV12["Phantom inventory<br/>(system on-hand not physically there)"]
+
+    MKT --> MKT1["Ads live on OOS SKUs"]
+    MKT --> MKT2["Ads on SKUs unreplenishable<br/>within campaign window"]
+
+    HOLD --> HOLD1["Storage + shrink + obsolescence<br/>15.65M x 10%"]
+
+    %% ---------- B. Balance sheet ----------
+    BS --> DOH["Days on hand 62 vs policy 45<br/>17 days x COGS 336M / 365"]
+    DOH --> DOH1["Safety stock sized on point forecasts<br/>(no lead-time variance)"]
+    DOH --> DOH2["Slow movers never rebalanced"]
+    BS -.-> CAP["Memo: capital charge USD 1.88M/yr<br/>below EBITDA - excluded from A"]
+
+    %% ---------- Interventions (leaf -> asset) ----------
+    CTS11 -. "EVI-ranked cleaning" .-> I1(["hubbard_evi_calculator.py"])
+    CTS12 -. "EVI-ranked cleaning" .-> I1
+    MKT1 -. "signed pause changeset" .-> I2(["launch_readiness_gate.py"])
+    MKT2 -. "signed reduce changeset" .-> I2
+    CTS13 -. "TWI exception job card" .-> I3(["twi_job_instruction_card.md"])
+    PL -. "causal proof" .-> I4(["diff_in_diff_analysis.py"])
+
+    classDef root fill:#1f2937,color:#ffffff,stroke:#111827
+    classDef pl fill:#fee2e2,stroke:#b91c1c,color:#111827
+    classDef bs fill:#dbeafe,stroke:#1d4ed8,color:#111827
+    classDef asset fill:#dcfce7,stroke:#15803d,color:#111827
+    class ROOT root
+    class PL,CTS,REV,MKT,HOLD,CTS1,CTS2,CTS11,CTS12,CTS13,REV1,REV11,REV12,MKT1,MKT2,HOLD1 pl
+    class BS,DOH,DOH1,DOH2,CAP bs
+    class I1,I2,I3,I4 asset
