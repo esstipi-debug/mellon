@@ -13,3 +13,40 @@ out/
 
 # Workspace de subagent-driven-development (ledger, briefs, reportes)
 .superpowers/
+
+# Caches and temporary test directories
+.pytest-tmp/
+.tmp*
+*.tmp
+.hypothesis/
+htmlcov/
+
+# Local sub-repositories & worktrees
+cv-dossier/
+split-wt/
+.playwright-mcp/
+.claude/
+respaldo_whitepapers/
+
+# Internal career strategy, compensation & job application files
+00-ESTADO.md
+01-HALLAZGOS.md
+02-PORTAFOLIO.md
+03-CANALES.md
+04-SERVICIOS-Y-PRECIOS.md
+05-POSICIONAMIENTO-EJECUTIVO.md
+06-EVALUACION-IDONEIDAD.md
+OFERTA-SERVICIOS-Y-CANALES.md
+PROMPT-*.md
+prompt-*.md
+_*.py
+*postulacion*
+*postulaciones*
+*sueldo*
+*salario*
+*compensacion*
+*borrador*
+*expediente*
+CV-*.pdf
+CV-*.md
+PENDIENTES.md
