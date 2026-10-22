@@ -188,14 +188,20 @@ python inventory_mechanics.py
 ## 8. Author & Operational Background
 
 **Marcos Stipicich**  
-*Principal Forward Deployed Architect & Industrial Systems Strategist*  
+*Principal Forward Deployed Architect & Operational Systems Strategist*  
 Santiago, Chile (UTC-3 / Full US Business Hours Overlap) · Bilingual (English C1/C2 · Native Spanish)  
 [GitHub](https://github.com/esstipi-debug) · [LinkedIn](https://linkedin.com/in/marcos-stipicich)
 
-* **13 Years of Frontline Physical Operations:** Deep, hands-on domain expertise spanning industrial supply chains, warehouse layout design, heavy distribution logistics, and enterprise systems integration.
-* **AGCO Melbourne WMS Cutover:** Field-directed cutover and hypercare deployment of tier-1 warehouse management infrastructure across 50,000 active SKUs, maintaining operational continuity through structured TWI (*Training Within Industry*) on-the-job instruction.
-* **Commercial & Working Capital Stewardship:** Managed consolidated P&L across \$30M multi-channel (DTC & wholesale) retail operations, resolving structural tension between commercial volume targets and warehouse holding cost burdens.
-* **Technical Breadth:** Production Python, Pydantic V2, deterministic state machine architecture, relational and dimensional schema design (SAP S/4HANA, DuckDB, PostgreSQL), and causal econometrics (Difference-in-Differences, Wild Cluster Bootstrap).
+### The Systems Philosophy
+Systems break at the boundaries between disconnected silos. Across 13 years at the intersection of physical operations, enterprise finance, and software architecture, my operating principle has remained invariant: **first eliminate manual drudgery on the floor, then translate diffuse, unmeasured friction into deterministic numbers and verifiable models.**
+
+### Core Track Record & Trajectory
+
+* **13 Years of Frontline Operations (Chile, Argentina, Australia):** Led enterprise operations across manufacturing, retail, and heavy distribution. Owned consolidated P&Ls up to $30M (scaling multi-channel e-commerce 300% YoY while releasing ~$5M in working capital), managed multi-site operating budgets ($15M across ~100 personnel), directed end-to-end forecasting and replenishment for 200+ retail locations with 15 planners, and analyzed $100M inventory portfolios.
+* **Gemba Discovery & Incentive Alignment:** Veteran of repeated shop-floor turnarounds where standard operating procedures diverged from reality. Identified and dismantled perverse incentives (such as bonus-linked picking volume quotas that actively manufactured mixed and damaged shipments) and replaced them with binary quality gates and floor-adopted standard work. Directed tier-1 WMS cutovers (including AGCO Melbourne across 50,000 SKUs) by running hypercare directly on the floor alongside operators until manual workarounds disappeared.
+* **Full-Stack SaaS & Biometric Modeling (`Holy Oly`):** Architected and deployed **Holy Oly**, a multi-tenant Olympic weightlifting SaaS and athlete readiness platform on Render (~1,332 test cases, Fastify, Prisma, PostgreSQL, React). Solved operational coach burden by automating 24-macrocycle Prilepin periodization, then researched human physiology to build a mathematical model that quantifies **Central Nervous System (CNS) fatigue**—combining acute/chronic workload EMAs with biometric telemetry (HRV, resting heart rate, subjective soreness) with strict deterministic constraints ensuring missing telemetry never defaults to a false green.
+* **Cross-Silo Control Planes (`nosilo` & `Kern`):** Designed `nosilo-core` and the `Kern` retail supply-chain engine (`linchpin.fly.dev` over Anthropic MCP) to eliminate the systemic blindness between Sales/Marketing and Supply Chain. Enforces deterministic campaign launch-readiness gates so commercial teams cannot schedule promotional surges on SKUs with critical stockout risk or unaligned supplier lead times.
+* **Software Architecture Foundation (C to Modern Applied AI):** Early programming foundation in C, cultivating deep discipline in memory layout, deterministic state machines, and low-level data structures. Built modern applied AI systems in Python, TypeScript, and SQL directly against foundation model APIs (Anthropic, OpenAI): enforcing the strict architectural rule that **the deterministic engine owns state, mathematics, and transactional safety, while the language model acts strictly within a verified structural sandbox.**
 
 ---
 
