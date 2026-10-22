@@ -106,7 +106,7 @@ and flees physical operations      cryptographic deterministic guardrails       
 
 ## 6. Market Validation: FDE Pulse (2026)
 
-Reference: [`investigacion/fde-pulse-forward-deployed-strategist.md`](investigacion/fde-pulse-forward-deployed-strategist.md) (*FDE Pulse*, 2026).
+Reference: [Executive Evidence Dossier (DOC-08)](EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md) and *FDE Pulse Industry Benchmark Report* (2026).
 
 The software industry formally decoupled **FDE** (Forward Deployed Software Engineer) and **FDS** (Forward Deployed Strategist):
 1. **Formal Market Recognition:** Actively recruited at Palantir, ElevenLabs, OpenAI, Salesforce (*Agentforce Strategy Lead*), Databricks, and boutique AI consultancies.

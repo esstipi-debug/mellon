@@ -98,30 +98,39 @@ To optimize cognitive bandwidth, navigate the repository according to your leade
 
 ```mermaid
 flowchart TD
-    Gate["<b>Executive Gateway Brief</b><br/>(This Document)"]
+    Gate["<b>Executive Gateway Brief (L1)</b><br/>(This Document)"]
     
-    Gate -->|For CEOs, Board Directors & Transformation Leads| DOC06["<b>DOC-01 / DOC-06: Master Whitepaper Doctrine</b><br/>DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md<br/>• Full organizational thesis & sociology<br/>• 13 field failure modes of enterprise AI<br/>• 11 structural I/T/C operational distortions<br/>• Executive CEO console & dual governance"]
+    Gate -->|Philosophical Foundations & Engineering Doctrine| L0["<b>L0: The 21st-Century Polymath Manifesto</b><br/>THE-21ST-CENTURY-POLYMATH-MANIFESTO.md<br/>• The death of the hyper-specialist silo<br/>• Renaissance engineering & Gemba mastery<br/>• Deterministic guardrails over unconstrained LLMs"]
     
-    Gate -->|For CFOs, CPOs & Supply Chain VPs| DOC04["<b>DOC-03 / DOC-04: MOQ Governance & Working Capital</b><br/>04_whitepaper_moq_c_level_governance.md<br/>• TCO modeling & carrying cost mechanics<br/>• Three-Lane approval gating (Green, Yellow, Red)<br/>• Multi-SKU consolidation & freight logistics<br/>• Corrected executive KPI scorecards"]
+    Gate -->|For CEOs, Board Directors & Transformation Leads| DOC01["<b>DOC-01 (L2A): Master Whitepaper Doctrine</b><br/>DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md<br/>• Full organizational thesis & sociology<br/>• 13 field failure modes of enterprise AI<br/>• 11 structural I/T/C operational distortions<br/>• Executive CEO console & dual governance"]
     
-    Gate -->|For CTOs, Lead Architects & Security Auditors| DOC07["<b>DOC-07: Formal Mechanics & Code Audit</b><br/>07_formal_mechanics_and_empirical_audit.md<br/>• Theorem 1: Inventory absorption proof E[tau] -> inf<br/>• Pydantic V2 contracts & zero-bypass FSM<br/>• ANSI SQL audit assertion suite for SAP S/4HANA<br/>• Econometric inference pipeline & TOST equivalence"]
+    Gate -->|For CFOs, CPOs & Supply Chain VPs| DOC03["<b>DOC-03 (L2B): MOQ Governance & Working Capital</b><br/>MOQ-WORKING-CAPITAL-GOVERNANCE-WHITEPAPER.md<br/>• TCO modeling & carrying cost mechanics ($i_{holding}$)<br/>• Three-Lane approval gating (Green, Yellow, Red)<br/>• Multi-SKU consolidation & Tweedie frontier<br/>• Corrected executive KPI scorecards"]
     
-    Gate -->|For Investment Committees & Peer Reviewers| DOC08["<b>DOC-08: Executive Evidence Dossier (62 Citations)</b><br/>08_dossier_ejecutivo_y_bibliografia_62.md<br/>• Stanford, MIT, Harvard & RAND empirical evidence<br/>• Comprehensive classified bibliography"]
+    Gate -->|For Deployment Strategists & FDE Field Operators| L2D["<b>DOC-04/05/06 (L2D): 30-Day Frontline Field Toolkit</b><br/>field-toolkit/README.md<br/>• 01: 5-Day Access Agreement (CEO Interlock)<br/>• 02: Gemba Ethnography & Mom Test Guide<br/>• 03: Negative FVA Matrix & MOQ Arbitrage Engine"]
+    
+    Gate -->|For CTOs, Lead Architects & Security Auditors| DOC07["<b>DOC-07 (L3): Formal Mechanics & Code Audit</b><br/>FORMAL-MECHANICS-EMPIRICAL-AUDIT.md<br/>• Theorem 1: Inventory absorption proof E[tau] -> inf<br/>• Pydantic V2 contracts & zero-bypass FSM<br/>• ANSI SQL audit assertion suite for SAP S/4HANA<br/>• Econometric inference pipeline & TOST equivalence"]
+    
+    Gate -->|For Investment Committees & Peer Reviewers| DOC08["<b>DOC-08 (L2C): Executive Evidence Dossier (62 Citations)</b><br/>EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md<br/>• Stanford, MIT, Harvard & RAND empirical evidence<br/>• Comprehensive classified bibliography"]
 ```
 
 ### Consolidated Asset Index
 
-| Asset Code | Document / Script | Canonical Location | Target Role | Reading / Execution Time |
-| :---: | :--- | :--- | :--- | :---: |
-| **DOC-00** | **Executive Memorandum (Gateway Brief)** | [`EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md`](EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md) | Board, CEO, CFO, CIO | 6 min |
-| **DOC-01** | **Master Whitepaper: DS Doctrine & I/T/C Distortions** | [`DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md`](DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md) | CEO, VP Transformation, COO | 35 min |
-| **DOC-03** | **C-Level Whitepaper: MOQs vs. Working Capital** | [`04_whitepaper_moq_c_level_governance.md`](whitepaper-architect/whitepaper/04_whitepaper_moq_c_level_governance.md) | CFO, CPO, Supply Chain Directors | 20 min |
-| **DOC-07** | **Formal Code Mechanics & Empirical Audit** | [`07_formal_mechanics_and_empirical_audit.md`](whitepaper-architect/whitepaper/07_formal_mechanics_and_empirical_audit.md) | Lead Architects, FDEs, Auditors | 45 min |
-| **DOC-08** | **Executive Evidence Dossier (62 Scientific Citations)** | [`08_dossier_ejecutivo_y_bibliografia_62.md`](whitepaper-architect/whitepaper/08_dossier_ejecutivo_y_bibliografia_62.md) | Audit Committees, Peer Reviewers | 25 min |
-| **CODE** | **Mathematical Solver & Tweedie Boundary Engine** | [`inventory_mechanics.py`](inventory_mechanics.py) | Operations Researchers | Executable |
-| **CODE** | **Econometric Pipeline & Wild Cluster Bootstrap** | [`econometric_engine.py`](econometric_engine.py) | Applied Econometricians | Executable |
-| **CODE** | **Gemba Invariant Harness (50,000 Fuzzing Runs)** | [`test_gemba_invariants.py`](test_gemba_invariants.py) | Software Engineers / QA | Executable |
-| **CODE** | **Production SQL Audit Suite for SAP S/4HANA** | [`audit_assertions_sap.sql`](audit_assertions_sap.sql) | Enterprise Database Architects | Executable |
+| Asset Code | Layer | Document / Script | Canonical Location | Target Audience | Function & Reading Time |
+| :---: | :---: | :--- | :--- | :--- | :---: |
+| **DOC-00** | **L1** | **Executive Memorandum (Gateway Brief)** | [`EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md`](EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md) | Board, CEO, CFO, CIO | Executive synthesis & portfolio map (6 min) |
+| **DOC-02** | **L0** | **The 21st-Century Polymath Manifesto** | [`THE-21ST-CENTURY-POLYMATH-MANIFESTO.md`](THE-21ST-CENTURY-POLYMATH-MANIFESTO.md) | Global Founders, C-Level | Foundational epistemology & philosophy (15 min) |
+| **DOC-01** | **L2A** | **Master Whitepaper: DS Doctrine & I/T/C Distortions** | [`DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md`](DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md) | CEO, VP Transformation, COO | Canonical operational doctrine (35 min) |
+| **DOC-03** | **L2B** | **C-Level Whitepaper: MOQs vs. Working Capital** | [`MOQ-WORKING-CAPITAL-GOVERNANCE-WHITEPAPER.md`](MOQ-WORKING-CAPITAL-GOVERNANCE-WHITEPAPER.md) | CFO, CPO, Supply Chain Directors | TCO model, PPV paradox, Tweedie frontier (20 min) |
+| **DOC-08** | **L2C** | **Executive Evidence Dossier (62 Scientific Citations)** | [`EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md`](EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md) | Audit Committees, Peer Reviewers | Academic & industry empirical evidence (25 min) |
+| **DOC-04-06** | **L2D** | **30-Day Frontline Field Toolkit** | [`field-toolkit/`](field-toolkit/README.md) | Deployment Strategists, FDEs | Executable field contracts & protocols (30 min) |
+| **DOC-07** | **L3** | **Formal Code Mechanics & Empirical Audit** | [`FORMAL-MECHANICS-EMPIRICAL-AUDIT.md`](FORMAL-MECHANICS-EMPIRICAL-AUDIT.md) | Lead Architects, FDEs, Auditors | Pydantic contracts, FSM, DiD econometrics (45 min) |
+| **CODE** | **ENG** | **Mathematical Solver & Tweedie Boundary Engine** | [`inventory_mechanics.py`](inventory_mechanics.py) | Operations Researchers | Theorem 1 simulation & Tweedie solver (Executable) |
+| **CODE** | **ENG** | **Econometric Pipeline & Wild Cluster Bootstrap** | [`econometric_engine.py`](econometric_engine.py) | Applied Econometricians | Callaway & Sant'Anna + Wild Bootstrap (Executable) |
+| **CODE** | **ENG** | **Strongly-Typed Event Contracts** | [`core_event_contracts.py`](core_event_contracts.py) | Distributed Systems Engineers | Pydantic V2 & Decimal verification (Executable) |
+| **CODE** | **ENG** | **Poka-Yoke Inbound State Machine** | [`inbound_fsm_guardrail.py`](inbound_fsm_guardrail.py) | Lead Software Architects | Zero-bypass state machine (Executable) |
+| **CODE** | **ENG** | **Gemba Invariant Harness (50,000 Fuzzing Runs)** | [`test_gemba_invariants.py`](test_gemba_invariants.py) | Software Engineers / QA | 50,000 fuzzing transitions (Executable) |
+| **CODE** | **ENG** | **Production SQL Audit Suite for SAP S/4HANA** | [`audit_assertions_sap.sql`](audit_assertions_sap.sql) | Enterprise Database Architects | ANSI SQL S/4HANA assertions (Executable) |
+| **DOJO** | **UI** | **Interactive Simulation & Sensitivity Dojo** | [GitHub Pages Deployment](https://esstipi-debug.github.io/mellon/) | Executive & Technical Teams | Interactive Tweedie & absorption visualization |
 
 ---
 *End of Executive Memorandum — Authorized entry point to the Mellon & Ithildin Enterprise AI Deployment Framework.*

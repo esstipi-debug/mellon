@@ -2,7 +2,7 @@
 ## Field-Executable Artifacts for Gemba Interventions & C-Level Governance
 
 > **Canonical Repository:** `field-toolkit/`  
-> **Purpose:** Provide operational artifacts, legally binding contracts, and forensic protocols to execute the principles of [*The 21st-Century Polymath Manifesto*](THE-21ST-CENTURY-POLYMATH-MANIFESTO.md) and the doctrine of the [*Deployment Strategist Master Whitepaper*](DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md) during the first 30 days of enterprise deployment.
+> **Purpose:** Provide operational artifacts, legally binding contracts, and forensic protocols to execute the principles of [*The 21st-Century Polymath Manifesto*](../THE-21ST-CENTURY-POLYMATH-MANIFESTO.md) and the doctrine of the [*Deployment Strategist Master Whitepaper*](../DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md) during the first 30 days of enterprise deployment.
 
 ---
 
