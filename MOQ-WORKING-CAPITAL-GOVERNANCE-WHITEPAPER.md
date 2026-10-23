@@ -5,7 +5,7 @@
 **Focus:** Return on Invested Capital (ROIC), Integrated Business Planning (IBP) Governance, and Cross-Functional Incentive Alignment.
 
 > **Document Architecture Level: Layer 2B (Financial Case Treatise)**  
-> **Rapid Entry Point:** For a 6-minute synthesis, refer to the [Executive Memorandum (L1)](EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md).  
+> **Rapid Entry Point:** For a 9-minute synthesis, refer to the [Executive Memorandum (L1)](EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md).  
 > **Related Assets:** [Canonical Doctrine (L2A)](DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md) | [Formal Mechanics Monograph (L3)](FORMAL-MECHANICS-EMPIRICAL-AUDIT.md) | [Stochastic Tweedie Solver](inventory_mechanics.py).
 
 ---

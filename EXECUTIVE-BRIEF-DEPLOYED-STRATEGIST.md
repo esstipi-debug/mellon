@@ -2,7 +2,7 @@
 ## The Deployment Strategist Doctrine, The Collapse of Enterprise AI Pilots, and Working Capital Governance in Industrial Supply Chains
 
 **Target Audience:** Board of Directors, Chief Executive Officer (CEO), Chief Financial Officer (CFO), Chief Operating Officer (COO), Chief Information / Technology Officer (CIO/CTO).  
-**Estimated Reading Time:** 6 minutes (1,450 words).  
+**Estimated Reading Time:** 9 minutes (about 2,100 words).  
 **Document Classification:** Level 1 — Canonical Gateway Brief & Executive Navigation Matrix.  
 **Repository Scope:** `mellon` Enterprise AI Deployment Framework.
 
@@ -12,9 +12,9 @@
 
 Over the past decade, manufacturing, distribution, and retail enterprises invested billions of dollars in enterprise software modernizations (SAP S/4HANA migrations), centralized data lakehouses (Snowflake, Databricks), and generative/predictive AI models. Yet empirical operational research demonstrates that income-statement (P&L) impact remains near zero:
 
-* **Systemic Failure Rate:** The **MIT NANDA (2025)** enterprise study documents that **95% of corporate Generative AI initiatives fail to produce measurable P&L returns**. Concurrently, the **RAND Corporation** estimates that over **80% of enterprise AI projects are abandoned prior to production**, double the historical failure rate of standard IT implementations.
+* **Systemic Failure Rate:** In preliminary findings from 52 organizations, 153 senior leaders and 300+ public initiatives, **MIT NANDA (2025)** reports that **95% of organizations are getting zero return from Generative AI**, and that most enterprise tools fail on brittle workflows, lack of contextual learning and **misalignment with day-to-day operations**, not on model quality. **RAND (2024)** cites estimates that **more than 80% of AI projects fail**, about twice the rate of IT projects without AI; its interviews with 65 data scientists and engineers trace most root causes to leadership, data and infrastructure rather than to the model.
 * **The False Root Cause ("Dirty Data"):** Executive committees instinctively attribute this failure to "poor data hygiene" and authorize 18-to-36-month Master Data Management (MDM) overhauls that yield zero frontline operational change.
-* **The Empirical Ground Truth:** Landmark investigations by **Nicholas Bloom et al. (Stanford / SIEPR, 2025)** and **DeHoratius & Raman (Harvard / Management Science, $N = 369,567$ audit records across $K = 37$ stores)** demonstrate that **expanding data volume dampens statistical noise while leaving systematic bias completely intact**. So-called "dirty data" is not a technical ETL defect; it is the **fossilized record of rational human conflict over perverse incentives**.
+* **The Empirical Ground Truth:** **DeHoratius & Raman (Management Science, 2008)** found 65% of $N = 369,567$ inventory records inaccurate across $K = 37$ stores, driven by auditing practice, store complexity and distribution structure. In incentivized forecasting experiments with firms, **Bloom, Codreanu & Fletcher (NBER, 2025)** found that more data mainly reduces noise, while bias proved hard to remove. Cleansing does not stop an organization from producing bad records: wherever a metric pays people to distort the record (Campbell's Law), part of the "dirty data" is the **fossilized record of rational human conflict over perverse incentives**, and no MDM program removes that part.
 
 ```mermaid
 flowchart LR

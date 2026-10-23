@@ -25,6 +25,8 @@ where $Z_{\alpha}$ is the safety service factor associated with the target non-s
 
 #### The Causal Failure Mechanism (DeHoratius & Raman, 2008; Kang & Gershwin, 2005)
 
+> **Attribution note:** the two papers are cited for how common record inaccuracy is (DeHoratius & Raman) and for its effect on replenishment (Kang & Gershwin), not for its origin. The incentive mechanism below is this framework's field hypothesis, grounded in Campbell's Law.
+
 In high-friction physical warehouse and yard operations, floor operators face asymmetric reward functions:
 * **Immediate operational penalty:** Bonus docking, shift reprimands, or managerial escalation for reductions in pick velocity (*picks per hour*) or processing delays (*dock-to-stock latency*).
 * **Deferred or zero penalty:** Halting an active pick wave to record physical damage or declare an inventory discrepancy requires filing a non-conformance notice (ISO 9001 CAPA / deviation report), directly penalizing the operator's shift throughput metrics.
@@ -566,6 +568,8 @@ The empirical pipeline implemented in [`econometric_engine.py`](econometric_engi
 ### 4.2. SQL Assertion Suite for SAP S/4HANA Transaction Tables
 
 Operational verification does not rely on manager questionnaires or self-reported audit checklists. We audit the transactional ERP ledger directly:
+
+> **Scope note:** these are reference queries written against SAP's standard table schema (MKPF/MSEG). They have not been run against a production SAP system.
 
 ```sql
 -- audit_assertions_sap.sql

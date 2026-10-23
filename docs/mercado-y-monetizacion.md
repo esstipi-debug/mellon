@@ -33,11 +33,13 @@ cliente"* no aporta el dominio necesario en conceptos de supply chain.
 > de CD, OR aplicada y código en producción. No es una crítica al rol: es una
 > crítica a quién lo ocupa. Vale citarla en un primer correo.
 
-**El dato incómodo:** el reporte del MIT Media Lab (2025) sobre 300+ despliegues
-encontró que **el 95% de los pilotos de IA generativa no entrega valor de
-negocio medible**. La causa dominante no es técnica. Es que nadie definió la
-unidad económica ni el contrafactual antes de empezar — que es exactamente lo
-que resuelven las herramientas 4, 6 y 9.
+**El dato incómodo:** el reporte preliminar de MIT NANDA (Media Lab, 2025),
+sobre 52 organizaciones y 300+ iniciativas públicas, encontró que **el 95% de
+las organizaciones no obtiene retorno de la IA generativa**. La causa que da el
+informe no es técnica: flujos frágiles, herramientas que no aprenden del
+contexto y desalineación con la operación diaria. Nuestra lectura agrega que
+nadie definió la unidad económica ni el contrafactual antes de empezar — que es
+exactamente lo que resuelven las herramientas 4, 6 y 9.
 
 ### Quién contrata y cómo trabaja
 

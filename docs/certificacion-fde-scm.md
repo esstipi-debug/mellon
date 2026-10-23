@@ -37,10 +37,13 @@ Tres evidencias, todas ya levantadas:
 2. **La crítica de Kinaxis es una descripción de la vacante formativa.** Manik
    Sharma: poner *"ingenieros de 25 años con el cliente"* no aporta el dominio
    de supply chain. Nadie está formando el perfil que responde esa objeción.
-3. **El 95% de los pilotos de IA generativa no entrega valor medible** (MIT
-   Media Lab, 300+ despliegues), y la causa dominante no es técnica: nadie
-   definió la unidad económica ni el contrafactual antes de empezar. El programa
-   es, literalmente, un curso sobre esa causa.
+3. **El 95% de las organizaciones no obtiene retorno de la IA generativa**
+   (MIT NANDA, Media Lab, hallazgos preliminares sobre 52 organizaciones y 300+
+   iniciativas públicas), y la causa que da el informe no es técnica: flujos
+   frágiles, herramientas que no aprenden del contexto y desalineación con la
+   operación diaria. Nuestra lectura agrega una más: nadie definió la unidad
+   económica ni el contrafactual antes de empezar. El programa es, literalmente,
+   un curso sobre esas causas.
 
 Las certificaciones existentes cubren el concepto (CPIM, CSCP), la metodología
 (Lean Six Sigma), o la herramienta de un vendor (Palantir, Kinaxis, Blue Yonder).

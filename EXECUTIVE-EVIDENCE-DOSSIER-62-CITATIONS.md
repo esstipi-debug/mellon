@@ -7,7 +7,7 @@
 **Repository Scope:** `mellon` Enterprise AI Deployment Framework
 
 > **Document Architecture Level: Layer 2C (Executive Evidence Dossier & Master Bibliography)**  
-> **Rapid Entry Point:** For a 6-minute synthesis, refer to the [Executive Memorandum (L1)](EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md).  
+> **Rapid Entry Point:** For a 9-minute synthesis, refer to the [Executive Memorandum (L1)](EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md).  
 > **Related Assets:** [Canonical Doctrine (L2A)](DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md) | [Financial Case (L2B)](MOQ-WORKING-CAPITAL-GOVERNANCE-WHITEPAPER.md) | [Formal Mechanics Monograph (L3)](FORMAL-MECHANICS-EMPIRICAL-AUDIT.md).
 
 ---
@@ -17,9 +17,9 @@
 The enterprise adoption of Artificial Intelligence (AI) and modern enterprise software systems is undergoing a profound profitability crisis. Despite trillions of dollars committed to digital transformations, centralized lakehouses, and generative pilots, the vast majority of initiatives fail to deliver measurable value to the corporate income statement (P&L). 
 
 The empirical evidence is definitive:
-* **Systemic Pilot Failure:** Investigations by the **MIT NANDA Project (2025)** document that **95% of corporate Generative AI pilot programs fail to demonstrate measurable Return on Investment (ROI)** on operating profits and losses.
-* **Production Abandonment:** Independent research by the **RAND Corporation** places the enterprise AI failure rate at **80.3%**, more than double the historical failure rate of standard corporate IT implementations.
-* **The Root Cause:** Executive boards instinctively attribute these failures to "algorithmic immaturity" or "poor data hygiene." However, empirical research reveals that **84% of AI implementation failures stem from organizational and leadership misalignments, not algorithmic deficiencies**. The underlying drivers are perverse employee incentive structures, ambiguous operational problem definitions, fragmented data architectures, and management systems that actively punish frontline transparency.
+* **Systemic Pilot Failure:** In preliminary findings from 52 organizations, 153 senior leaders and 300+ public initiatives, **MIT NANDA (2025)** reports that **95% of organizations are getting zero return from Generative AI**, and that most enterprise tools fail on brittle workflows, lack of contextual learning and misalignment with day-to-day operations rather than on model quality.
+* **Project Failure:** **RAND (2024)** cites estimates that **more than 80% of AI projects fail**, about twice the rate of IT projects that do not involve AI.
+* **The Root Cause:** Executive boards instinctively attribute these failures to "algorithmic immaturity" or "poor data hygiene." However, RAND's interviews with 65 data scientists and engineers trace **most root causes to leadership, problem definition, data and infrastructure rather than to the model**. The underlying drivers are perverse employee incentive structures, ambiguous operational problem definitions, fragmented data architectures, and management systems that actively punish frontline transparency.
 
 This comprehensive evidence dossier analyzes corporate technological failure through the lenses of **Principal-Agent Theory**, **Campbell’s Law**, and empirical **Management Economics** (Bloom et al., Stanford). It establishes the theoretical and empirical foundation for the **Deployment Strategist** methodology and the **Compliance as Code** paradigm, structured across five operational blocks.
 
@@ -42,12 +42,12 @@ By 2027, an estimated **40% of autonomous "agentic AI" enterprise projects will 
 ### 2.1. Principal-Agent Conflict in Operations
 Agency Theory dictates that whenever an enterprise principal delegates execution to an agent, structural conflict emerges under information asymmetry. Senior leadership seeks to maximize ROIC, eliminate operational friction, and achieve enterprise-wide visibility. Conversely, frontline operators, mid-level warehouse managers, and replenishment planners rationally act to minimize shift stress, protect local budgets, and hit short-term volume quotas.
 
-When an AI system is deployed that exposes local inefficiencies or disrupts informal workarounds, employees perceive the software as a career threat. If compensation and bonuses remain tied to legacy output metrics, passive resistance and boycott represent the economically rational choice for the worker. Stanford research led by **Nicholas Bloom et al. (World Management Survey)** proves that software alone never elevates productivity: structured management practices (interlinked targets, transparent accountability, aligned incentives) dictate whether technology succeeds.
+When an AI system is deployed that exposes local inefficiencies or disrupts informal workarounds, employees perceive the software as a career threat. If compensation and bonuses remain tied to legacy output metrics, passive resistance and boycott represent the economically rational choice for the worker. Research led by **Nicholas Bloom** points the same way: US multinationals obtained more productivity from the same IT than other firms, mainly because of their people-management practices (**Bloom, Sadun & Van Reenen, *American Economic Review*, 2012**). Management practices such as interlinked targets, transparent accountability and aligned incentives shape whether technology pays off.
 
 ### 2.2. Campbell’s Law: The Metric Corruption Engine
 Campbell’s Law states that the more any quantitative social or corporate metric is used for high-stakes decision-making, the more subject it will be to corrupting pressures and the more it will distort the underlying process it was intended to monitor.
 
-When an isolated operational metric (such as warehouse picking speed, ticket closing time, or quarterly purchase price variance) dictates bonuses, employees adapt behavior aggressively to "game the system." The software database reports operational perfection while the physical operation degrades. AI models trained on these manipulated databases ingest systemic human bias, outputting destructive hallucinations.
+When an isolated operational metric (such as warehouse picking speed, ticket closing time, or quarterly purchase price variance) dictates bonuses, employees adapt behavior aggressively to "game the system." The software database reports operational perfection while the physical operation degrades. AI models trained on these manipulated databases learn the distortion as if it were demand, and reproduce it at machine speed.
 
 ### 2.3. Forecast Value Added (FVA) Breakdown and Phantom Inventory
 In demand planning, **Forecast Value Added (FVA)** (Fildes & Goodwin) measures whether human managerial adjustments improve or degrade statistical baseline forecasts. Empirical literature reveals that human planners systematically inject upward bias ("sales optimism") to ensure buffer stock and protect commissions, following an asymmetric loss function where managers prefer the silent carrying cost of excess stock over the visible embarrassment of a stockout.
@@ -84,7 +84,7 @@ The connective tissue of this model is the **Corporate Ontology**—a dynamic se
 Good-faith memos and ceremonial paper audits (such as static ISO 9001 certificates) fail to prevent operational drift under pressure. True enterprise governance requires **Compliance as Code** enforced via Poka-Yoke software engineering:
 
 * **Poka-Yoke Pipelines:** Systems engineered so that invalid transactions are programmatically impossible to commit. Any order or state transition violating legal statutes or inventory constraints is cryptographically rejected at the API boundary.
-* **High-Stakes Industrial Precedents:** Demonstrated in high-penalty environments such as iGaming (automated, tamper-proof Net Gaming Revenue reconciliation) and global trade customs compliance (automated origin tracking preventing seizure of goods under forced-labor statutes).
+* **High-Stakes Industrial Precedents:** Demonstrated in high-penalty environments such as securities trading, where the SEC Market Access Rule (Rule 15c3-5) requires automated pre-trade controls that block erroneous orders (its first enforcement action followed Knight Capital's loss of more than 460 million dollars in 45 minutes in 2012), and global trade customs compliance (automated origin tracking preventing seizure of goods under forced-labor statutes).
 * **Sidecar Architectures and Safe-Staging:** Production transactional systems (SAP S/4HANA core ledgers) are insulated from AI experimentation via high-speed Change Data Capture (CDC) replication (SAP SLT / ODP) into decoupled sidecars. AI models query safe-staging data with sub-second latency, eliminating performance risks on the core ERP.
 
 ---
@@ -110,19 +110,19 @@ Good-faith memos and ceremonial paper audits (such as static ISO 9001 certificat
 ### AI Project Failure & Organizational Breakdown
 1. [FDE Academy: Why AI Projects Fail and How Forward Deployed Engineers Fix It](https://fde.academy/blog/why-ai-projects-fail-and-how-forward-deployed-engineers-fix-it)
 2. [Pertama Partners: AI Project Failure Statistics (2026)](https://www.pertamapartners.com/insights/ai-project-failure-statistics-2026)
-3. [Dan Cumberland Labs: AI Fundamentals](https://dancumberlandlabs.com/blog/ai-fundamentals/)
+3. [Challapally, Pease, Raskar & Chari (MIT NANDA, July 2025): The GenAI Divide: State of AI in Business 2025, preliminary findings (PDF copy)](https://webberwentzel.com/News/Documents/2025/MIT1757411281972.pdf)
 4. [RAND Corporation: Research Reports RRA2680-1 on AI Failure](https://www.rand.org/pubs/research_reports/RRA2680-1.html)
 5. [AIBL Media: AI Failure Research - Misread Postmortems](https://aiblmedia.com/posts/ai-failure-research-misread-postmortems/)
 6. [Grid Dynamics: Why Enterprise AI Initiatives Fail](https://aie.griddynamics.com/insights/articles/why-ai-initiatives-fail)
 7. [MarTech / Gartner: 40% of Agentic AI Projects Will Fail](https://martech.org/gartner-40-of-agentic-ai-projects-will-fail-making-humans-indispensable/)
-8. [SaguLabs: Why AI Projects Fail in Production](https://sagulabs.ai/blog/why-ai-projects-fail)
+8. [Meyer & Rowan (American Journal of Sociology, 1977): Institutionalized Organizations: Formal Structure as Myth and Ceremony](https://doi.org/10.1086/226550)
 9. [Domino AI: Navigating Enterprise AI Project Failure](https://domino.ai/blog/why-ai-projects-fail)
 
 ### Data Governance & Quality Realities
 10. [Gartner: Lack of AI-Ready Data Puts Enterprise AI at Risk](https://www.gartner.com/en/newsroom/press-releases/2025-02-26-lack-of-ai-ready-data-puts-ai-projects-at-risk)
 11. [CDO Magazine: Ignore Data Culture and 60% of AI Governance Efforts Fail](https://www.cdomagazine.tech/aiml/gartner-ignore-data-culture-and-60-of-ai-governance-efforts-will-fail-by-2027)
 12. [Gartner: Predicting AI Governance Pitfalls Through 2027](https://www.gartner.com/en/newsroom/press-releases/2026-09-21-gartner-predicts-60-percent-of-organizations-that-ignore-data-governance-culture-challenges-will-fail-to-govern-ai-successfully-by-2027)
-13. [Enterprise DNA: Overcoming Data Governance Culture Hurdles](https://enterprisedna.co/resources/news/gartner-data-governance-culture-ai-failure-2027/)
+13. [Bloom, Codreanu & Fletcher (NBER Working Paper 33384, 2025): Rationalizing Firm Forecasts](https://www.nber.org/papers/w33384)
 14. [Gartner: Generative AI Project Failure Patterns](https://www.gartner.com/en/articles/genai-project-failure)
 15. [ProjectManagement.com: Structural Drivers of AI Project Dissolution](https://www.projectmanagement.com/blog-post/79154/why-do-ai-projects-fail-)
 
@@ -130,17 +130,17 @@ Good-faith memos and ceremonial paper audits (such as static ISO 9001 certificat
 16. [OER Collective: Principles of Strategic Management Accounting (Agency Theory)](https://oercollective.caul.edu.au/principles-strategic-management-accounting/chapter/196/)
 17. [Emerald Insights: Unintended Distortionary Effects of Monetary Incentives](https://www.emerald.com/ijopm/article/doi/10.1108/IJOPM-02-2026-0309/1401072/The-unintended-effect-of-monetary-incentives-on)
 18. [Journal of Supply Chain Management: Supply Chain Incentive Alignment Gap](https://journal.oscm-forum.org/publication/pdf/supply-chain-incentive-alignment-the-gap-between-perceived-importance-and-actual-practice)
-19. [AI Transformation Readiness: Socio-Technical Failure Vectors](https://www.aitransformationreadiness.org/post/why-ai-projects-fail)
+19. [Bloom, Sadun & Van Reenen (American Economic Review, 2012): Americans Do IT Better: US Multinationals and the Productivity Miracle](https://doi.org/10.1257/aer.102.1.167)
 20. [Harvard Business School (Bloom et al.): Measuring Management Practices](https://www.hbs.edu/ris/Publication%20Files/Management_Practices_cd1ecd8a-6aeb-43e0-9d3d-f912ed242bf9.pdf)
 21. [David Card / UC Berkeley: Management Practices and Productivity](https://davidcard.berkeley.edu/papers/management-march-2016.pdf)
 22. [ResearchGate: Explaining Management Practices Across Firms and Countries](https://www.researchgate.net/publication/230556896_Measuring_and_Explaining_Management_Practices_Across_Firms_and_Countries)
 23. [American Economic Association: Management As a Technology](https://www.aeaweb.org/conference/2013/retrieve.php?pdfid=537)
-24. [Think Insights: Campbell's Law and Metric Corruption](https://thinkinsights.net/strategy/campbells-law)
-25. [Redis / Surviv.io: Goodhart’s Law in Quantitative Architecture](https://redis-01.surviv.io/goodhart-e2-80-99s-law)
+24. [Campbell (Evaluation and Program Planning, 1979): Assessing the Impact of Planned Social Change](https://doi.org/10.1016/0149-7189%2879%2990048-X)
+25. [Kerr (Academy of Management Journal, 1975): On the Folly of Rewarding A, While Hoping for B](https://doi.org/10.2307/255378)
 
 ### Forecasting Behavior (FVA) & Phantom Inventory
 26. [International Journal of Forecasting (Fildes, Goodwin et al.): Forecast Value Added](https://econpapers.repec.org/RePEc:eee:intfor:v:41:y:2025:i:2:p:649-669)
-27. [Horizon Solutions: Forecast Accuracy Bias and Forecast Value Add](https://www.horizonsolutions.ai/blog/forecast-accuracy-bias-and-forecast-value-add)
+27. [DeHoratius & Raman (Management Science, 2008): Inventory Record Inaccuracy: An Empirical Analysis](https://doi.org/10.1287/mnsc.1070.0789)
 28. [University of Manchester: Empirical Evaluation of Judgmental Adjustments](https://research.manchester.ac.uk/en/publications/effective-forecasting-and-judgmental-adjustments-an-empirical-eva/)
 29. [Nicolas Vandeput: Forecast Value Added Metrics in Supply Chain](https://nicolas-vandeput.medium.com/forecast-value-added-ebc163d7ccd)
 30. [University of Birmingham: Doctoral Thesis on Demand Forecasting Under Asymmetric Loss](https://etheses.bham.ac.uk/id/eprint/12756/13/Elegbede2022PhD.pdf)
@@ -163,10 +163,10 @@ Good-faith memos and ceremonial paper audits (such as static ISO 9001 certificat
 43. [Oritain: Strategic Supply Chain Compliance Architecture](https://oritain.com/resources/blog/compliance-in-supply-chain-management-strategic-guide)
 44. [AR Racking: Poka-Yoke Engineering in Warehouse Systems](https://www.ar-racking.com/en/blog/poka-yoke-in-logistics-zero-errors-in-warehouse-design-and-operation/)
 45. [Merca.team: Training Within Industry (TWI) Job Instruction Standards](https://merca.team/en/training-within-industry/)
-46. [PwC: Compliance as Code and Regulatory Risk in iGaming](https://www.pwc.es/es/publicaciones/entretenimiento-y-medios/assets/riesgos-cumplimiento-juego.pdf)
-47. [WBD Buzzsprout: Technical Compliance Challenges for Enterprise Platforms](https://wbd.buzzsprout.com/1942471/episodes/19790454-compliance-challenges-for-gaming-industry-suppliers)
-48. [Aurum Solutions: KPIs in iGaming - When Performance Meets Compliance](https://aurum.solutions/resources/kpis-in-igaming-when-performance-meets-compliance)
-49. [The Campbells Company: Responsible Sourcing and Compliance Verification](https://www.thecampbellscompany.com/wp-content/uploads/2024/12/Campbells-Responsible-Sourcing-Supplier-Code.pdf)
+46. [U.S. SEC (2013): SEC Charges Knight Capital With Violations of Market Access Rule](https://www.sec.gov/news/press-release/2013-222)
+47. [Boiral (Organization Science, 2003): ISO 9000: Outside the Iron Cage](https://doi.org/10.1287/orsc.14.6.720.24873)
+48. [Levine & Toffel (Management Science, 2010): Quality Management and Job Quality: How the ISO 9001 Standard for Quality Management Systems Affects Employees and Employers](https://doi.org/10.1287/mnsc.1100.1159)
+49. [OWASP Top 10 for LLM Applications (2025): LLM06 Excessive Agency](https://genai.owasp.org/llmrisk/llm06/)
 
 ### Technical Architecture (Sidecar, CDC, Safe-Staging)
 50. [Microsoft TechCommunity: SAP CDC Connector and SLT Replication Architecture](https://techcommunity.microsoft.com/blog/sapapplications/sap-cdc-connector-and-slt---part-1---overview-and-architecture/3775190)
@@ -186,4 +186,4 @@ Good-faith memos and ceremonial paper audits (such as static ISO 9001 certificat
 62. [Fask.ai: Causal Identification of Retail Inventory Discrepancies](https://fask.ai/use-cases/inventory-discrepancies/)
 
 ---
-*Executive Evidence Dossier compiled and audited under strict zero-fluff empirical standards.*
+*Bibliography revised on 2026-10-23: off-topic and unverifiable sources were replaced with the primary sources the text relies on (MIT NANDA, DeHoratius & Raman, Meyer & Rowan, Boiral, Levine & Toffel, Campbell, Kerr, Bloom et al., SEC, OWASP).*

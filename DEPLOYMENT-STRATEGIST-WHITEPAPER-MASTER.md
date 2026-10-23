@@ -8,7 +8,7 @@
 **Repository:** `mellon` Enterprise AI Deployment Framework.
 
 > **Document Architecture Level: Layer 2A (Canonical Whitepaper / Core Thesis)**  
-> **Executive Quick Access:** If limited to 6 minutes, review the [Executive Memorandum DOC-00](EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md) first.  
+> **Executive Quick Access:** If limited to 9 minutes, review the [Executive Memorandum DOC-00](EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md) first.  
 > **Technical Deep Dives:** [Field Toolkit](field-toolkit/README.md) · [Econometric Engine](econometric_engine.py) · [Inventory Mechanics](inventory_mechanics.py) · [Event Contracts](core_event_contracts.py) · [FSM Guardrail](inbound_fsm_guardrail.py).
 
 ---
@@ -17,9 +17,9 @@
 
 ```mermaid
 flowchart TD
-    T0["<b>Core Thesis:</b> 95% of SCM software and AI pilots fail not from algorithmic weakness,<br/>but because 'dirty data' is the fossilized record of I/T/C distortions that code ignores."]
+    T0["<b>Core Thesis:</b> Most of the value lost in SCM software and AI is lost at deployment, not in the algorithm:<br/>much of the 'dirty data' is the fossilized record of I/T/C distortions that code ignores."]
     
-    T1["<b>Section 1: The 'Dirty Data' Fallacy</b><br/>• 65% inaccurate inventory records (DeHoratius & Raman)<br/>• Expanding data reduces noise, not bias (Bloom et al., Stanford)<br/>• 95% of GenAI pilots produce zero P&L impact (MIT NANDA)"]
+    T1["<b>Section 1: The 'Dirty Data' Fallacy</b><br/>• 65% inaccurate inventory records (DeHoratius & Raman)<br/>• More data cuts forecast noise; bias is hard to remove (Bloom, Codreanu & Fletcher)<br/>• 95% of organizations get zero return from GenAI (MIT NANDA)"]
     
     T2["<b>Section 2: Empirical Anatomy of Distortions (I/T/C)</b><br/>• 11 frontline roles distorting transactional records for local bonus survival<br/>• Gemba sociology and institutional decoupling (Meyer & Rowan)<br/>• Frontline rejection as rational self-preservation (Dent & Goldberg)"]
     
@@ -27,7 +27,7 @@ flowchart TD
     
     T4["<b>Section 4: The Deployment Strategist Doctrine</b><br/>• Frontline ethnography: The Mom Test in the Gemba<br/>• Live cross-P&L attribution and TCO arbitrage in the UI<br/>• Strongly-typed contracts and cryptographic Safe-Staging"]
     
-    T5["<b>Section 5: Skeptic Perspective & Falsification Rubric</b><br/>• Refutation of the 3 fatal C-Level objections<br/>• Counterfactual econometric validation (Staggered DiD)<br/>• Formal falsification criteria and internal audit score"]
+    T5["<b>Section 5: Skeptic Perspective & Falsification Rubric</b><br/>• Refutation of the 3 fatal C-Level objections<br/>• Counterfactual econometric validation (Staggered DiD)<br/>• Formal falsification criteria and review status"]
 
     T0 --> T1
     T0 --> T2
@@ -50,12 +50,12 @@ Physical reality across manufacturing plants, distribution centers, and freight 
 
 ```mermaid
 flowchart LR
-    A["Massive IT / AI Investment<br/>• ERPs, Lakehouses, LLMs<br/>• Optimization models"] --> B["<b>Frontline Adoption Chasm</b><br/>• 95% of pilots show zero P&L ROI (MIT)<br/>• 65% of inventory records inaccurate (Harvard)<br/>• 47% fail on requirements (PMI)"]
+    A["Massive IT / AI Investment<br/>• ERPs, Lakehouses, LLMs<br/>• Optimization models"] --> B["<b>Frontline Adoption Chasm</b><br/>• 95% of organizations: zero GenAI return (MIT NANDA)<br/>• 65% of inventory records inaccurate (DeHoratius & Raman)<br/>• 47% fail on requirements (PMI)"]
     B --> C["<b>Shadow Operations (Shadow IT)</b><br/>• Local departmental spreadsheets<br/>• WhatsApp coordination & phone bypasses<br/>• Balance sheet cash destruction"]
 ```
 
 1. **Pilot Purgatory and Enterprise Inertia:**
-   * Empirical research from **MIT NANDA (2025)** documents that **approximately 95% of corporate Generative AI initiatives fail to produce measurable P&L returns** `[MIT NANDA 2025]`.
+   * Preliminary research from **MIT NANDA (2025)** reports that **95% of organizations are getting zero return from Generative AI**, and that most enterprise tools fail on brittle workflows, lack of contextual learning and misalignment with day-to-day operations rather than on model quality `[MIT NANDA 2025]`.
    * **Gartner (2024)** projected that at least **30% of Generative AI projects would be abandoned following Proof of Concept (PoC)** `[Gartner GenAI Survey 2024]`.
    * The Project Management Institute (**PMI**) documents that **35% to 47% of failed enterprise projects fail directly due to inaccurate operational requirements gathering** in the field `[PMI Pulse of the Profession]`.
 2. **The Systemic Inaccuracy of Transactional Ledgers:**
@@ -66,7 +66,7 @@ flowchart LR
 If enterprises possess greater compute power, superior optimization algorithms, and automated pipeline tooling than at any point in industrial history, **what is the causal mechanism causing operational data to degrade continuously, while decision systems remain sabotaged or ignored by frontline operators?**
 
 ### 1.4. Resolution: Demystifying "Dirty Data"
-The core axiom of this whitepaper states that **"dirty data" is not a software defect, a typographical mistake, or an ETL error; it is the fossilized record of an unresolved human incentive conflict, a semantic translation barrier, or an artificial accounting calendar distortion.**
+The core axiom of this whitepaper states that **much of what gets called "dirty data" is not a software defect, a typographical mistake, or an ETL error; it is the fossilized record of an unresolved human incentive conflict, a semantic translation barrier, or an artificial accounting calendar distortion.** Process errors, shrinkage and misplacement are real and documented (DeHoratius & Raman, 2008). The axiom targets the share that no cleansing program removes, because the organization keeps producing it.
 
 ```
                                   THE TRUTH ABOUT "DIRTY DATA"
@@ -83,10 +83,10 @@ The core axiom of this whitepaper states that **"dirty data" is not a software d
 ```
 
 #### The Stanford Finding: Noise vs. Systematic Bias
-The mathematical foundation explaining why standard data science and machine learning models collapse upon contact with the physical shop floor was formalized by **Bloom, Codreanu & Fletcher (Stanford University / SIEPR, 2025)**:
-* **Data scale and algorithmic complexity reduce statistical noise** ($\sigma^2_{\text{noise}}$), the random, uncorrelated variance across transactional observations.
-* **Data scale is entirely powerless against deliberate bias ($\mu_{\text{bias}}$)**, which stems systematically from the incentive structures and career risks governing the individual generating the record.
-* **Causal Mechanism:** A machine learning model trained on ten years of enterprise ERP history does not learn genuine customer demand; it learns and codifies the departmental politics of the organization. Treating structural bias as statistical noise guarantees deployment failure.
+**Bloom, Codreanu & Fletcher (NBER Working Paper 33384, 2025)** ran incentivized quarterly sales-forecasting experiments with US firms and checked the forecasts against realized revenue:
+* **More data mainly reduces statistical noise** ($\sigma^2_{\text{noise}}$) and over-precision, the random variance around the forecast.
+* **Bias ($\mu_{\text{bias}}$) proved hard to remove:** over-optimism responded to incentives rather than to more data, and the authors conclude the biases can be reduced but are hard to eliminate.
+* **Implication for this framework (our inference, not the paper's finding):** a model trained on ten years of ERP history inherits whatever systematic bias produced those records. More history shrinks the noise, not that bias, so treating structural bias as statistical noise sets the deployment up to fail.
 
 ---
 
@@ -135,7 +135,7 @@ flowchart TD
 | **Supply Chain Planner / Analyst** | **T + I** | **Censored demand & human middleware:** Forecasting future demand from historical billed shipments (*Sell-in*) rather than true consumption (*Sell-out*), inflating manual orders out of stockout fear. | **PMI Pulse:** 47% of project failures stem from poor requirements gathering. **Fildes et al. (2009):** Planner manual adjustments frequently generate negative Forecast Value Added (FVA). | Systematic negative FVA ($\text{Error}_{\text{Adjusted}} > \text{Error}_{\text{Base}}$). Latent demand censorship perpetuating structural shortages. |
 | **Logistics / Warehouse Operations** | **I** | **Truckload optimization vs. delivery SLAs:** Holding packed shipments on loading docks to consolidate full truckloads (FTL) and hit freight cost KPIs ($\$/\text{ton}$), violating customer delivery windows. | **DeHoratius & Raman (2008):** High handling complexity without continuous cycle auditing triggers severe inventory record inaccuracy. | Precipitous drop in On-Time In-Full (OTIF) rates despite finished inventory sitting physically on dock floors. Retail chargebacks. |
 | **IT / ERP Architecture** | **T** | **Master data obsolescence & system dogmatism:** Lead times, line capacities, and batch constraints in the ERP remain frozen since original go-live under the mantra "the parameters are configured." | **Gartner Research:** The average enterprise cost of poor data quality is **\$12.9 million annually**. | MRP engines issue desynchronized orders, forcing planners into offline spreadsheets (*Shadow IT*). |
-| **Data Science / Machine Learning** | **T** | **Symmetric loss optimization detached from P&L:** Training models to minimize MAPE or RMSE, assuming an under-forecast (stockout) carries identical financial cost to an over-forecast (surplus inventory). | **Bloom et al. (2025):** Massive algorithmic features dampen noise but leave departmental influence bias intact. | Models reporting "92% mathematical accuracy" whose operational adoption causes record OTIF drops and working capital spikes. |
+| **Data Science / Machine Learning** | **T** | **Symmetric loss optimization detached from P&L:** Training models to minimize MAPE or RMSE, assuming an under-forecast (stockout) carries identical financial cost to an over-forecast (surplus inventory). | **Bloom, Codreanu & Fletcher (2025):** More data mainly cuts forecast noise; bias proved hard to remove. | Models reporting "92% mathematical accuracy" whose operational adoption causes record OTIF drops and working capital spikes. |
 | **Sales in Supply Scarcity** | **I** | **The rationing game:** When suppliers experience capacity shortages, customers and sales reps deliberately triple purchase orders to secure a larger proportional allocation. | **Lee, Padmanabhan & Whang (1997):** Mathematical formalization of the *Rationing Game* as a primary demand amplifier in constrained supply chains. | Instantaneous phantom cancellations once capacity normalizes, leaving the enterprise holding millions in stranded raw materials. |
 | **Executive Leadership / S&OP** | **C + I** | **S&OP consensus as bureaucratic negotiation:** Monthly S&OP reviews devolve into political horse-trading where operational forecasts are forced to match the static annual budget. | **Oliva & Watson (2009, *POM*):** Document how political alignment and power dynamics distort consensus forecasting in S&OP. | Destruction of S&OP institutional credibility; operational departments maintain secret, parallel execution models. |
 
@@ -544,16 +544,9 @@ flowchart TD
 
 ---
 
-### 5.3. Internal Audit Rubric (Objective Evaluation 1 to 10)
+### 5.3. Review Status
 
-| Audit Dimension | Verification Standard | Score | Status |
-| :--- | :--- | :---: | :---: |
-| **1. Factual Rigor & Field Evidence** | Primary citations ($N=369,567$ audit records, Stanford SIEPR, Harvard, MIT, JAE). Zero unverified claims. | **9.9 / 10** | **VERIFIED** |
-| **2. Solution Architecture & Mechanics** | Deterministic decoupling, Pydantic V2 contracts, 900s TTL safe-staging, HMAC-SHA256 signatures. | **9.8 / 10** | **VERIFIED** |
-| **3. Originality & Methodological Differentiation** | Demystifying "dirty data" as an I/T/C incentive conflict; establishing the Deployment Strategist doctrine. | **9.9 / 10** | **VERIFIED** |
-| **4. Skeptic Handling & Falsifiability** | Scientific defense via Callaway & Sant'Anna DiD, Wild Bootstrap, and Rambachan & Roth HonestDiD. | **9.8 / 10** | **VERIFIED** |
-| **5. Structural Clarity & "Kill the Fluff"** | Minto SCQ hierarchy, high data-ink ratio (Tufte), WCAG 2.1 AA accessible contrast, zero corporate jargon. | **9.9 / 10** | **VERIFIED** |
-| **COMPOSITE EDITORIAL SCORE** | **Executive & Peer-Review Standard** | **9.86 / 10** | **APPROVED** |
+This document has not been externally peer-reviewed. An earlier version closed with a self-assigned editorial score (9.86/10); it was removed on 2026-10-23, together with corrections to the MIT NANDA, RAND, Bloom et al. and DeHoratius & Raman attributions. Errors can be reported through a GitHub issue.
 
 ---
 *End of Master Technical Whitepaper — Mellon & Ithildin Enterprise AI Deployment Framework.*

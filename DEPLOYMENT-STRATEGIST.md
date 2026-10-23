@@ -1,6 +1,6 @@
 # Deployment Strategist (DS) — Doctrine, Profile & Differentiation
 
-This document formalizes the definition of the **Deployment Strategist (DS)** role, explains why it aligns with technical operators who close the gap between software and operations, how it solves the 95% failure rate in enterprise AI projects, and details the specific operational methodologies (**Gemba walk, Genchi genbutsu, TWI, deterministic guardrails**) used to deliver measurable P&L value and differentiate from both traditional management consultants and pure software engineers.
+This document formalizes the definition of the **Deployment Strategist (DS)** role, explains why it aligns with technical operators who close the gap between software and operations, how it addresses the deployment gap behind the 95% of organizations getting zero return from generative AI, and details the specific operational methodologies (**Gemba walk, Genchi genbutsu, TWI, deterministic guardrails**) used to deliver measurable P&L value and differentiate from both traditional management consultants and pure software engineers.
 
 ---
 
@@ -33,8 +33,8 @@ In the foundational doctrine of **Palantir** (where field teams organized under 
 
 Empirical market research confirms that the bottleneck of enterprise AI **is not the model, it is the terrain**:
 
-1. **MIT Media Lab / Forbes (2026):** **95% of enterprise generative AI pilots fail to deliver business value** or reach sustained production. Only 5% achieve measurable revenue or efficiency impact.
-2. **RAND Corporation (AI Failure Study):** **84% of project failures** stem from organizational misalignment, absent operational leadership, ill-defined problem scopes, and unstructured/contaminated event data.
+1. **MIT NANDA (2025), *The GenAI Divide*:** in preliminary findings from 52 organizations, 153 senior leaders and 300+ public initiatives, **95% of organizations are getting zero return from generative AI**. The report puts the cause in brittle workflows, lack of contextual learning and misalignment with day-to-day operations, not in model quality.
+2. **RAND (2024), *The Root Causes of Failure for Artificial Intelligence Projects*:** cites estimates that **more than 80% of AI projects fail**, about twice the rate of IT projects without AI. Its interviews with 65 data scientists and engineers trace most root causes to misunderstood problems, missing data, technology-first thinking and weak infrastructure, not to the model.
 3. **The "Pilot Purgatory" Trap (Nabeel Qureshi, ex-Palantir):** *"A client buys an 8–12 week pilot, and the technical team spends all 12 weeks wrestling with IT permissions, only to scramble in the final week hacking together a demo that no floor operator will ever use."*
 4. **Michael Hammer's Principle ("Don't Automate, Obliterate"):** Automating a broken or chaotic physical process merely produces chaos at higher velocity. Before deploying software or AI agents, the operational flow must be diagnosed, unblocked, and standardized.
 
