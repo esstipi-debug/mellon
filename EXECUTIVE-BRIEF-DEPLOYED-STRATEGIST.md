@@ -43,12 +43,15 @@ Every operational distortion in the supply chain decomposes into three structura
 
 Supply chain analytical tools routinely fail at the last mile because they trigger an **institutional immune response**. Traditional software shifts clerical friction onto dockworkers while threatening the bonus compensation of middle management.
 
-The Deployment Strategist doctrine preempts and structurally neutralizes all four operational sabotage fronts:
+The resistance often starts at the top. A recurring pattern in the field: a manager arrives with a report or dashboard prepared by an analyst, declares it the truth, and orders the operation to act on it. But the report sees KPIs, not the operation, and those KPIs may already be dirty. Instead of checking the number on the floor, the manager imposes it. That disconnect is hard to repair, because the manager's view is already fixed: they can walk the floor and still not understand how its subculture works, or why.
 
-1. **The Floor Boycott (Gemba — The "Silent Blackout"):** Neutralized via the *Ergonomic Invariance Rule* (<800 ms response latency, industrial glove-compatible UI, zero incremental clicks). When software measurably saves time and physical fatigue, operators become its fiercest internal champions.
-2. **Malicious Compliance (Data Poisoning):** Neutralized via *Pydantic V2* perimeter validation contracts and immutable *HMAC-SHA256 audit ledgers*. Out-of-bounds or physically impossible entries are automatically quarantined, sealing tampering attempts cryptographically with user identity, timestamp, and counterfactual cost.
-3. **The Departmental Silo War (Bonus Preservation):** Neutralized via *Real-Time Cross-P&L Attribution*. No procurement or production order can be executed to optimize a local KPI (e.g., PPV discount or plant OEE) if it degrades consolidated enterprise margin (mandatory dual CFO + COO co-signature on Yellow / Red Lanes).
-4. **Legacy IT Resistance (Not-Invented-Here Syndrome):** Neutralized via the *50-50 Compact and the Day-5 Escalation Clause*, backed by a decoupled *Safe-Staging Architecture* that mathematically guarantees zero unauthorized mutations against core production databases.
+The Deployment Strategist doctrine preempts and structurally neutralizes all five operational sabotage fronts:
+
+1. **The Dashboard Verdict (Management Blindness):** Neutralized by treating every report as a hypothesis until it is checked on the floor. Each KPI behind a decision is traced to the physical event it claims to measure (a pick, a count, a clocked hour) before anyone is told to act on it. Where the number and the floor disagree, the gap is the finding: it shows where the metric is being gamed or mis-recorded, the mechanism Campbell's Law predicts ([DOC-08](EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md#22-campbells-law-the-metric-corruption-engine)).
+2. **The Floor Boycott (Gemba — The "Silent Blackout"):** Neutralized via the *Ergonomic Invariance Rule* (<800 ms response latency, industrial glove-compatible UI, zero incremental clicks). When software measurably saves time and physical fatigue, operators become its fiercest internal champions.
+3. **Malicious Compliance (Data Poisoning):** Neutralized via *Pydantic V2* perimeter validation contracts and immutable *HMAC-SHA256 audit ledgers*. Out-of-bounds or physically impossible entries are automatically quarantined, sealing tampering attempts cryptographically with user identity, timestamp, and counterfactual cost.
+4. **The Departmental Silo War (Bonus Preservation):** Neutralized via *Real-Time Cross-P&L Attribution*. No procurement or production order can be executed to optimize a local KPI (e.g., PPV discount or plant OEE) if it degrades consolidated enterprise margin (mandatory dual CFO + COO co-signature on Yellow / Red Lanes).
+5. **Legacy IT Resistance (Not-Invented-Here Syndrome):** Neutralized via the *50-50 Compact and the Day-5 Escalation Clause*, backed by a decoupled *Safe-Staging Architecture* that mathematically guarantees zero unauthorized mutations against core production databases.
 
 ---
 
