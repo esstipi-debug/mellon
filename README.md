@@ -111,21 +111,63 @@ In addition to the open architectural specifications versioned here, this framew
 
 ## 5. The 30-Day Frontline Deployment Protocol
 
-Engineered to integrate seamlessly with 90-day transformation sprints (such as WON.ai Rapid Redesign cycles; full playbook in [`field-toolkit/FIELD-PROTOCOL-30-DAYS.md`](field-toolkit/FIELD-PROTOCOL-30-DAYS.md) and [`field-toolkit/The-First-30-Days-Marcos-Stipicich.pdf`](field-toolkit/The-First-30-Days-Marcos-Stipicich.pdf)):
+Engineered to integrate seamlessly with 90-day transformation sprints (such as WON.ai Rapid Redesign cycles; full playbook in [`field-toolkit/FIELD-PROTOCOL-30-DAYS.md`](field-toolkit/FIELD-PROTOCOL-30-DAYS.md) and [`field-toolkit/The-First-30-Days-Marcos-Stipicich.pdf`](field-toolkit/The-First-30-Days-Marcos-Stipicich.pdf)).
+
+In physical supply chains, manufacturing, and distribution, enterprise AI deployments routinely collapse when planned exclusively from boardroom slides. Frontline operators do not reject software out of irrational "resistance to change" (*Dent & Goldberg, 1999*); they reject tools that slow down pick rates, trigger punitive surveillance, or fail under harsh dock conditions. The Mellon deployment protocol embeds directly into the physical Gemba alongside the workforce from Day 1.
 
 ```mermaid
-flowchart LR
-    W1["<b>Week 1: Access & Isolation</b><br/>• Execute 5-Day CEO Interlock<br/>• Ingest read-only staging data<br/>• Execute SQL negative controls"] --> W2["<b>Week 2: Gemba Ethnography</b><br/>• Graveyard shift immersion (02:30 AM)<br/>• Catalog Shadow IT & WhatsApp<br/>• Rule of Five physical sampling"]
-    W2 --> W3["<b>Week 3: Incentive Forensics</b><br/>• Measure Negative FVA bias<br/>• Quantify PPV vs. Carrying Cost<br/>• Run discrete-event simulation"]
-    W3 --> W4["<b>Week 4: P&L Gating & Handoff</b><br/>• Deploy Three-Lane MOQ gates<br/>• Activate sub-800 ms terminal UI<br/>• Transfer to internal Data Stewards"]
+flowchart TD
+    subgraph Corporate ["Enterprise & Security Track"]
+        C1["Week 1: Legal Interlock<br/>• 5-Day Access Addendum<br/>• Read-only replica ingested"]
+        C2["Week 2: Diagnostic Baseline<br/>• Catalog transaction anomalies<br/>• Run staging SQL assertions"]
+        C3["Week 3: Financial & FVA Forensics<br/>• Quantify PPV vs Holding Cost<br/>• Calibrate Tweedie solver"]
+        C4["Week 4: Executive Handoff<br/>• Three-Lane MOQ approval engine<br/>• Boardroom go/no-go memo"]
+    end
+
+    subgraph Gemba ["Gemba & Frontline Operator Track"]
+        G1["Week 1: The Operator Covenant<br/>• Shift-change introduction (06:00 & 14:00)<br/>• Non-surveillance compact signed"]
+        G2["Week 2: Floor Immersion & Shadow IT<br/>• Graveyard shift shadowing (02:30 AM)<br/>• Codify WhatsApp & local Excel workarounds<br/>• Rule of Five blind count with pickers"]
+        G3["Week 3: De-Weaponizing Incentives<br/>• Audit Campbell's Law metric traps<br/>• Align shift quotas with system safety"]
+        G4["Week 4: Ergonomic Acceptance Gate<br/>• Field-test <800 ms UI with glove crew<br/>• Mandatory floor operator sign-off"]
+    end
+
+    C1 --- G1
+    G1 --> G2
+    C1 --> C2
+    C2 --- G2
+    G2 --> G3
+    C2 --> C3
+    C3 --- G3
+    G3 --> G4
+    C3 --> C4
+    C4 --- G4
 ```
 
-| Deployment Phase | Timeframe | Core Operational Deliverable | Primary Stakeholder |
+### 5.1 The Gemba Covenant: Ground-Level Alliance Protocol (Directive M1)
+
+A Deployment Strategist never arrives at a plant as an undercover corporate inspector. On Day 1, before querying a single transactional database, the deployment team conducts mandatory shift-handover briefings with the floor workforce (across morning, afternoon, and graveyard shifts) establishing three operational guarantees:
+
+1. **The Non-Surveillance Guarantee:** The system contains zero telemetry designed to monitor individual human movement, track bathroom breaks, calculate personal fatigue scores, or generate disciplinary reports. The AI monitors machine invariants and inventory topology, not human labor.
+2. **The Clerical Drudgery Absorption Rule:** Every capability introduced must demonstrably reduce administrative burden. If an operator spends 22 minutes per shift manually transcribing paper tallies into legacy green-screen terminals (VT220) or reconciling bill-of-lading discrepancies over WhatsApp voice notes, the system's objective is to absorb that paperwork, returning time to the operator.
+3. **Historical Action Inquiry (*The Mom Test*, Fitzpatrick 2013):** Field interviews never solicit speculative feedback or hypothetical opinions (*"Would you like an AI dashboard?"*). We ask concrete forensic questions regarding past physical breakdowns: *"Walk me through what happened last Tuesday at 02:30 AM when SAP locked the batch number on the resin tanker at Gate 2."*
+
+### 5.2 The 4-Stage Operator-Led Deployment Architecture
+
+| Deployment Stage | Timeframe | Dual Frontline & Technical Deliverables | Primary Stakeholders |
 | :--- | :---: | :--- | :--- |
-| **Phase 1: Legal Interlock & Ingestion** | Days 0–7 | 5-Day Access Addendum signed; read-only replica ingested; `audit_assertions_sap.sql` adapted to staging schemas. | CEO, CISO, Lead Architect |
-| **Phase 2: Gemba Ground Truth** | Days 8–14 | Forensic night-shift shadowing completed; informal cheat sheets and WhatsApp channels mapped; Rule of Five inventory discrepancies audited. | Plant Managers, Dock Supervisors |
-| **Phase 3: FVA Forensics & Simulation** | Days 15–21 | Stockout fear bias quantified; purchasing PPV trade-offs isolated; `inventory_mechanics.py` Tweedie solver calibrated. | CFO, Procurement Directors |
-| **Phase 4: Gating, Pilot & Handoff** | Days 22–30 | Three-Lane MOQ approval engine live; `inbound_fsm_guardrail.py` active on pilot terminals; governance transferred to operational Data Stewards. | COO, Operational Data Stewards |
+| **Stage 1: Legal Interlock & The Operator Covenant** | Days 0–7 | **Technical:** 5-Day Access Addendum signed; read-only replica ingested; `audit_assertions_sap.sql` executed against staging schemas.<br/>**Gemba:** In-person shift-change introduction with shift leads and operators; physical perimeter walk (mapping dead Wi-Fi zones, scale bottlenecks, and dock lighting); Non-Surveillance Covenant ratified. | CEO, CISO, Plant Shift Stewards, Frontline Floor Leads |
+| **Stage 2: Gemba Ground Truth & Shadow IT Codification** | Days 8–14 | **Technical:** Anomaly register baseline computed from staging transactions.<br/>**Gemba:** Graveyard shift immersion (02:00–06:00 AM); cataloging undocumented *Shadow IT* (unofficial WhatsApp dispatch groups, desktop Excel macros titled `REAL_SCHEDULE_OCT2026.xlsx`, laminated paper cheat-sheets taped to forklift masts); Rule of Five blind physical inventory counts executed side-by-side with warehouse pickers. | Weighbridge Operators, Forklift Drivers, Order Selectors, Dock Supervisors |
+| **Stage 3: Incentive Forensics & De-Weaponizing Metrics** | Days 15–21 | **Technical:** Tweedie compound Poisson-Gamma inventory solver calibrated; discrete-event simulation isolating Purchase Price Variance (PPV) carrying cost penalties.<br/>**Gemba:** Analysis of Campbell's Law metric distortion: demonstrating to executive management that floor "errors" (e.g., pallets dropped in unassigned aisles or skipped barcode scans) are rational operator defenses against conflicting speed quotas; re-aligning operational metrics to protect shift bonuses. | CFO, Procurement Directors, Warehouse Operations Team |
+| **Stage 4: Ergonomic Floor Acceptance & Production Gating** | Days 22–30 | **Technical:** Three-Lane MOQ approval engine live; `inbound_fsm_guardrail.py` active on pilot terminals; cryptographic safe-staging verified.<br/>**Gemba:** Live terminal testing with shift operators wearing industrial cut-resistant gloves; validation of the <800 ms response threshold under plant RF interference; **Mandatory Floor Sign-Off**: if the shift crew reports friction or increased clicks over the manual workaround, deployment holds until resolved. | Shift Crew (Weighbridge & Forklift Operators), COO, Data Stewards |
+
+### 5.3 The Ergonomic Invariance Gate (<800 ms & Industrial Glove Compliance)
+
+Software that violates the physical realities of the shop floor is bypassed within 48 hours. Before any terminal or mobile workflow transitions from staging to active operations, it must satisfy four physical ergonomics criteria:
+
+* **Latency SLA ($\le 800\text{ ms}$ End-to-End):** Scans, queries, and state confirmations must resolve in under 800 milliseconds locally on ruggedized handhelds (Zebra/Honeywell) under degraded 2.4 GHz industrial Wi-Fi or LTE fallback. Any interface requiring roundtrip cloud inference greater than 1 second is rejected.
+* **Glove-Compatible Geometry:** Physical touch targets must be sized at $\ge 48 \times 48\text{ dp}$ with minimum 8 dp spacing, designed for high-contrast visibility ($\ge 7:1$ contrast ratio) under harsh 200-lux dock sodium lighting.
+* **Zero Net Incremental Clicks:** The digital workflow must require equal or fewer physical inputs than the existing paper or WhatsApp workaround it replaces.
+* **The Floor Operator Veto:** Formal deployment sign-off requires a signed concurrence from the active shift lead and a designated operator representative. Management cannot unilaterally declare adoption success if the floor designates the interface an operational impediment.
 
 ---
 
