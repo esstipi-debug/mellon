@@ -70,6 +70,7 @@ flowchart TD
 
     subgraph Layer2A["Layer 2: Field Architecture Whitepapers (25–35 min)"]
         L2P["<b>papers/THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.pdf</b><br/>24-page typeset whitepaper: Bypass index B, 3D 103/105/124 automaton, Little's quarantine frontier, IRB-12"]
+        L2G["<b>papers/guardrails/</b><br/>Deterministic AI Guardrails: 3-Plane Architecture & Formal Technical Manual"]
         L2A["<b>DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md</b><br/>Master treatise: Demystifying 'dirty data', 13 deployment failure modes, and anti-boycott protocols"]
     end
 
@@ -183,6 +184,7 @@ The repository is architected across modular epistemological layers—from found
 | **L1** | **DOC-00** | **Executive Board Memorandum (Gateway)** | [`EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md`](EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md) | Board, CEO, CFO, CIO | Rapid executive synthesis (6 min) mapping the failure modes, governance, and complete artifact suite. |
 | **L1B** | **DOC-09** | **AI Deployment Gate (`AI-GDG`) & 2026 Field Protocol** | [`AI-DEPLOYMENT-GATE-AND-2026-FIELD-PROTOCOL.md`](AI-DEPLOYMENT-GATE-AND-2026-FIELD-PROTOCOL.md) | PE Operating Partners, CFOs, AI Committees | Accounting transmission to `EBIT`/`FCF`, 4-Gate `AI-GDG` veto rubric, and `N=1 -> N=20+` 2026–2027 field protocol. |
 | **L2P** | **PAPER** | **The Deployment Chasm — Field Architecture Paper (24 pp.)** | [`papers/THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.pdf`](papers/THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.pdf) | CTOs, COOs, Principal FDEs | Print-ready 24-page whitepaper ([Markdown](papers/THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md)): index $B$, 3D `103/105/124` FSM, Little's quarantine frontier, `IRB-12`. |
+| **L2G** | **PAPER** | **Deterministic AI Guardrails Collection (2-Part)** | [`papers/guardrails/`](papers/guardrails/README.md) | CISOs, CTOs, Staff Engineers | Strategic Architecture ([`Governance`](papers/guardrails/DETERMINISTIC-GUARDRAILS-ARCHITECTURE-AND-GOVERNANCE.md)) & Formal Verification ([`Technical Manual`](papers/guardrails/DETERMINISTIC-GUARDRAILS-TECHNICAL-MANUAL.md)). |
 | **L2A** | **DOC-01** | **Master Whitepaper: DS Doctrine & I/T/C** | [`DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md`](DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md) | CEO, VP Transformation, COO | Canonical doctrine: 13 failure modes of corporate AI, 11 I/T/C operational distortions, dual governance model. |
 | **L2B** | **DOC-03** | **C-Level Whitepaper: MOQs vs. Working Capital** | [`MOQ-WORKING-CAPITAL-GOVERNANCE-WHITEPAPER.md`](MOQ-WORKING-CAPITAL-GOVERNANCE-WHITEPAPER.md) | CFO, CPO, Supply Chain Directors | Capital stewardship: TCO carrying cost mechanics, the PPV paradox, and Tweedie break-even frontier. |
 | **L2C** | **DOC-08** | **Executive Evidence Dossier (62 Citations)** | [`EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md`](EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md) | Audit Committees, Peer Reviewers | 62 academic and industry citations (MIT, Stanford, RAND, Harvard, NBER) establishing why AI pilots fail. |
