@@ -1,10 +1,18 @@
 -- ==============================================================================================
 -- audit_assertions_sap.sql
 -- ==============================================================================================
--- Production-Ready ANSI SQL Audit Assertion Suite for SAP S/4HANA Core Ledgers.
--- Target Tables: s4_mseg, s4_mkpf, s4_ekpo, s4_eket, s4_acdoca
--- Primary Key Composite Join: MBLNR (Material Document) + MJAHR (Fiscal Year) + ZEILE (Line Item)
--- Standard: Zero-Trust Telemetry Parity, Cryptographic Negative Controls.
+-- Reference ANSI SQL Audit Assertion Suite Modeled on Standard SAP S/4HANA Core Schemas.
+--
+-- SCOPE & EPISTEMIC NOTE:
+--   These queries are reference SQL assertions written against standard SAP S/4HANA table
+--   definitions (s4_mseg, s4_mkpf, s4_ekpo, s4_eket, s4_acdoca) paired with edge telemetry
+--   staging tables (fde_*). They are provided as auditable architecture specifications and
+--   have NOT been executed against a live proprietary client SAP production instance.
+--   Before production use, adapt table prefixes/views to the client's ingestion layer
+--   (e.g., SAP Datasphere, Snowflake CDC mirror, or HANA Calculation Views).
+--
+-- Composite Join Key: MANDT + MBLNR (Material Document) + MJAHR (Fiscal Year) + ZEILE (Line Item)
+-- Standard: Zero-Trust Telemetry Parity & Negative Controls (103/105/124 Decoupled Receipt).
 -- Parameter: :deployment_go_live_date (ISO-8601 Date String, e.g. '2026-11-01')
 -- ==============================================================================================
 
@@ -223,4 +231,49 @@ LEFT JOIN financial_gl_totals gl
    AND log.mblnr = gl.mblnr
    AND log.mjahr = gl.mjahr
 WHERE ABS(log.total_logistics_loss_local - COALESCE(gl.total_financial_loss_local, 0.0)) > 0.01;
+-- EXPECTED RESULT: 0 rows.
+
+
+-- ----------------------------------------------------------------------------------------------
+-- ASSERTION 5: Decoupled Conditional Receipt Parity (Movement Types 103 -> 105 / 124 / 122)
+-- Rule: Under the Two-Step Conditional Receipt architecture (see probes/cap3_delta_projection.py):
+--       (a) Released unrestricted stock (105) + blocked stock return (124) CANNOT exceed
+--           non-valuated GR blocked stock received at the dock (103) per PO line item.
+--       (b) Movement 122 (Return Delivery from valuated stock) CANNOT be posted against a PO line
+--           exceeding prior 105 valuated release (prevents premature financial reversal).
+-- ----------------------------------------------------------------------------------------------
+WITH po_receipt_balances AS (
+    SELECT
+        mseg.mandt,
+        mseg.ebeln AS purchase_order,
+        mseg.ebelp AS po_item_num,
+        SUM(CASE WHEN mseg.bwart = '103' THEN mseg.menge ELSE 0 END) AS qty_103_gr_blocked,
+        SUM(CASE WHEN mseg.bwart = '105' THEN mseg.menge ELSE 0 END) AS qty_105_released,
+        SUM(CASE WHEN mseg.bwart = '124' THEN mseg.menge ELSE 0 END) AS qty_124_return_blocked,
+        SUM(CASE WHEN mseg.bwart = '122' THEN mseg.menge ELSE 0 END) AS qty_122_return_valuated
+    FROM s4_mseg mseg
+    INNER JOIN s4_mkpf mkpf
+        ON mseg.mandt = mkpf.mandt AND mseg.mblnr = mkpf.mblnr AND mseg.mjahr = mkpf.mjahr
+    WHERE mseg.bwart IN ('103', '105', '124', '122')
+      AND mkpf.cpudt >= :deployment_go_live_date
+    GROUP BY mseg.mandt, mseg.ebeln, mseg.ebelp
+)
+SELECT
+    mandt,
+    purchase_order,
+    po_item_num,
+    qty_103_gr_blocked,
+    qty_105_released,
+    qty_124_return_blocked,
+    qty_122_return_valuated,
+    CASE
+        WHEN (qty_105_released + qty_124_return_blocked) > qty_103_gr_blocked
+            THEN 'MASS_CONSERVATION_BREACH: Released (105) + Blocked Return (124) exceeds Conditional Receipt (103)'
+        WHEN qty_122_return_valuated > qty_105_released
+            THEN 'MOVEMENT_TYPE_ERROR: Valuated Return (122) exceeds Released Stock (105); use 124 for GR Blocked Stock'
+        ELSE 'UNKNOWN_PARITY_ANOMALY'
+    END AS audit_violation_reason
+FROM po_receipt_balances
+WHERE (qty_105_released + qty_124_return_blocked) > qty_103_gr_blocked
+   OR qty_122_return_valuated > qty_105_released;
 -- EXPECTED RESULT: 0 rows.

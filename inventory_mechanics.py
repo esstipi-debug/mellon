@@ -1,8 +1,10 @@
 """
 inventory_mechanics.py
 ======================
-Mathematical proofs and numerical solver for:
-1. Stochastic Inventory Freezing Theorem (Kang & Gershwin divergence proof).
+Seeded numerical simulations and exact quadrature solvers for:
+1. Inventory Freezing Absorption Regime (Kang & Gershwin, 2005) — seeded discrete-time trajectory
+   complementing the analytical induction proof in FORMAL-MECHANICS-EMPIRICAL-AUDIT.md and the
+   exhaustive 64-state 3D decoupled FSM check in probes/cap3_delta_projection.py.
 2. Compound Poisson-Gamma (Tweedie) Non-Stationary Holding Cost Model.
 3. Exact Arbitrage Boundary Condition for i in {0.18, 0.245, 0.32}.
 """
@@ -13,8 +15,8 @@ from scipy import stats, integrate, optimize
 
 class StochasticFreezingTheorem:
     """
-    Formal mathematical demonstration and discrete-event simulation of the 
-    freezing effect under unobserved shrinkage (Goodhart evasion).
+    Seeded discrete-time numerical simulation illustrating the replenishment
+    freezing regime under unobserved shrinkage (Kang & Gershwin, 2005).
     """
 
     @staticmethod
@@ -66,7 +68,7 @@ class StochasticFreezingTheorem:
                     entered_freezing_at = t
 
         post_freezing_orders = int(np.sum(orders_placed[entered_freezing_at:])) if entered_freezing_at else 0
-        is_absorbed = (entered_freezing_at is not None) and (post_freezing_orders == 0)
+        is_absorbed = (entered_freezing_at not in (None,)) and (post_freezing_orders == 0)
 
         return {
             "reorder_point_R": reorder_point_R,
@@ -171,7 +173,7 @@ def run_numerical_verification():
     print("STRUCTURAL INVENTORY MECHANICS & STOCHASTIC ARBITRAGE SOLVER")
     print("=" * 80)
 
-    # 1. Theorem 1 Verification
+    # 1. Seeded Trajectory Illustration of Theorem 1
     sim_res = StochasticFreezingTheorem.simulate_absorbing_state(
         reorder_point_R=50.0,
         initial_stock=120.0,
@@ -180,7 +182,7 @@ def run_numerical_verification():
         time_steps=120,
         seed=123
     )
-    print("[1] Theorem 1 Simulation (Inventory Freezing Absorption):")
+    print("[1] Seeded Trajectory Simulation (Inventory Freezing Absorption Regime):")
     print(f"    Reorder Point (R):                  {sim_res['reorder_point_R']} units")
     print(f"    Absorption into Freezing State at:  Step t = {sim_res['entered_freezing_at']}")
     print(f"    Orders placed after freezing:       {sim_res['orders_placed_after_freezing']} orders (Suppression verified)")

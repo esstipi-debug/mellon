@@ -16,7 +16,7 @@ In the foundational doctrine of **Palantir** (where field teams organized under 
 | **Stakeholder Interface** | Talks to data engineers and enterprise IT architects | **Talks to the VP of Operations, warehouse supervisor, CFO, and floor operator** |
 | **Defining Motto** | *"I ship the code."* | *"The DS uncovers the problem and the dataset; the FDE integrates it. I make adoption stick."* |
 
-> *"A Deployment Strategist identifies high-value problems, navigates organizational politics to secure data access, designs workflows that people actually use, and drives change management through hypercare."* — Palantir Field Doctrine.
+In Palantir's field deployment model, the Deployment Strategist isolates high-value operational problems, navigates organizational governance to secure raw data access, designs workflows that frontline personnel actually execute, and sustains adoption through on-site hypercare.
 
 ### 1.1. The Definition of an Engineer: *"An engineer is someone who..."*
 
@@ -35,7 +35,7 @@ Empirical market research confirms that the bottleneck of enterprise AI **is not
 
 1. **MIT NANDA (2025), *The GenAI Divide*:** in preliminary findings from 52 organizations, 153 senior leaders and 300+ public initiatives, **95% of organizations are getting zero return from generative AI**. The report puts the cause in brittle workflows, lack of contextual learning and misalignment with day-to-day operations, not in model quality.
 2. **RAND (2024), *The Root Causes of Failure for Artificial Intelligence Projects*:** cites estimates that **more than 80% of AI projects fail**, about twice the rate of IT projects without AI. Its interviews with 65 data scientists and engineers trace most root causes to misunderstood problems, missing data, technology-first thinking and weak infrastructure, not to the model.
-3. **The "Pilot Purgatory" Trap (Nabeel Qureshi, ex-Palantir):** *"A client buys an 8–12 week pilot, and the technical team spends all 12 weeks wrestling with IT permissions, only to scramble in the final week hacking together a demo that no floor operator will ever use."*
+3. **The "Pilot Purgatory" Trap (documented in field accounts by ex-Palantir FDEs such as Nabeel Qureshi):** When an enterprise buys an 8–12 week pilot, technical teams routinely burn most of the engagement negotiating IT access and permissions, leaving only the final days to assemble a brittle prototype that frontline operators never adopt in daily work.
 4. **Michael Hammer's Principle ("Don't Automate, Obliterate"):** Automating a broken or chaotic physical process merely produces chaos at higher velocity. Before deploying software or AI agents, the operational flow must be diagnosed, unblocked, and standardized.
 
 ---

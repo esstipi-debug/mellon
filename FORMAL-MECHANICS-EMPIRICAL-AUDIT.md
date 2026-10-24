@@ -7,7 +7,7 @@
 
 > **Document Architecture Level: Layer 3 (Formal Specification, Code Guardrails & Econometric Audit)**  
 > **Rapid Entry Point:** For business and financial synthesis, refer to the [Executive Brief (L1)](EXECUTIVE-BRIEF-DEPLOYED-STRATEGIST.md).  
-> **Linked Code Assets:** [`core_event_contracts.py`](core_event_contracts.py) | [`inbound_fsm_guardrail.py`](inbound_fsm_guardrail.py) | [`test_gemba_invariants.py`](test_gemba_invariants.py) | [`econometric_engine.py`](econometric_engine.py) | [`audit_assertions_sap.sql`](audit_assertions_sap.sql) | [`honest_did_sensitivity_plot.png`](honest_did_sensitivity_plot.png).
+> **Linked Code Assets:** [`core_event_contracts.py`](core_event_contracts.py) | [`inbound_fsm_guardrail.py`](inbound_fsm_guardrail.py) | [`test_gemba_invariants.py`](test_gemba_invariants.py) | [`probes/cap3_delta_projection.py`](probes/cap3_delta_projection.py) | [`probes/quarantine_capacity.py`](probes/quarantine_capacity.py) | [`econometric_engine.py`](econometric_engine.py) | [`audit_assertions_sap.sql`](audit_assertions_sap.sql) | [`honest_did_sensitivity_plot.png`](honest_did_sensitivity_plot.png).
 
 ---
 
@@ -360,21 +360,23 @@ class InboundDeliveryFSM:
 
 ### 2.3. Formal Verification Campaign: 50,000 Adversarial Fuzzing Transitions
 
-To mathematically falsify the robustness of the deterministic guardrail before production cutover, the event contracts and state machine were subjected to an intensive battery of **50,000 property-based fuzzing cycles (`Hypothesis`)**, simulating deliberate operational attack vectors (event time-travel, fractional gram scale tampering, untyped payload injections, corrupted hash values):
+To empirically test the robustness of the deterministic guardrail before production cutover, the event contracts and state machine are subjected to a reproducible battery of **50,000 randomized adversarial cycles (`seed=20261024`)**, simulating operational attack vectors (timestamp replay, nonce reuse, scale mass tampering, untyped payload injections, and forged HMAC/SHA-256 digests), complemented by an exhaustive 64-state BFS check of the decoupled `103/105/124` two-step receipt automaton in [`probes/cap3_delta_projection.py`](probes/cap3_delta_projection.py):
 
 ```
 ================================================================================
 FORMAL VERIFICATION CAMPAIGN (50,000 ADVERSARIAL TRANSITIONS)
 Test Harness: test_gemba_invariants.py | Standard: Zero-Bypass Programmatic Poka-Yoke
 ================================================================================
-Total Evaluated Transitions:                     50,000
-  - Illegal Topological Path Interceptions:      13,335 transitions neutralized
-  - Mass Divergence Rejections (>3% Delta):       7,216 transitions neutralized
-  - Corrupt / Non-Hex Hash Rejections:            7,245 transitions neutralized
-  - Time-Reversal Replay Attacks Neutralized:     7,047 transitions neutralized
-  - Untyped Mock Dictionary Injections Blocked:   7,010 transitions neutralized
-  - Valid End-to-End Lifecycle Trajectories:      7,293 cycles verified
-INVARIANCE THEOREM SATISFACTION:                100.000% (ZERO BYPASSES RECORDED)
+Total Cycles Evaluated & Accounted (seed=20261024): 50,000 / 50,000
+  - blocked_illegal_transitions             : 13,245
+  - blocked_weight_divergences              : 7,132
+  - blocked_hash_or_hmac_forgeries          : 7,228
+  - blocked_replay_or_nonce_reuse           : 7,284
+  - blocked_dict_injections                 : 7,203
+  - successful_valid_full_lifecycles        : 7,119
+  - successful_valid_single_step_arrivals   : 789
+  - invariant_violations                    : 0
+EMPIRICAL INVARIANT SATISFACTION RATE:     100.000%
 ================================================================================
 ```
 
@@ -549,7 +551,7 @@ To prevent the common methodological fallacy of claiming "parallel pre-trends" b
 
 #### Econometric Engine Execution & Honest Sensitivity Analysis
 
-The empirical pipeline implemented in [`econometric_engine.py`](econometric_engine.py) executed estimation over a panel of $K = 16$ Distribution Centers across $T = 24$ months:
+The empirical pipeline implemented in [`econometric_engine.py`](econometric_engine.py) calibrates and stress-tests the identification strategy over a **synthetic DGP validation panel** of $K = 16$ Distribution Centers across $T = 24$ months (`seed=42`, modeling staggered adoption cohorts and pre-treatment Goodhart drift prior to live plant deployment):
 
 1. **Staggered DiD Aggregate Estimator (Callaway & Sant'Anna, 2021):**
    * Clustered OLS coefficient: $\hat{\beta} = -13.101\text{ k USD/month}$ net reduction in phantom shrinkage and expedited freight.
