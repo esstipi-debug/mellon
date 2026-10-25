@@ -19,7 +19,7 @@ Despite multi-million-dollar ERP and WMS investments, operations suffer from a t
 │                        THE FRONTLINE REPORTING COLLAPSE                                │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │ 1. THE REPORTING TAX (BUREAUCRATIC FRICTION):                                          │
-│    Formally reporting a damaged box requires an operator to halt their forklift, walk │
+│    Formally reporting a damaged box requires an operator to halt their forklift, walk  │
 │    150 meters to a supervisor's booth, log into a desktop terminal, and fill out 14    │
 │    mandatory fields in SAP QM/MIGO. Elapsed time: 18–25 minutes.                       │
 │                                                                                        │
@@ -29,7 +29,14 @@ Despite multi-million-dollar ERP and WMS investments, operations suffer from a t
 │    destroys their monthly performance bonus. The rational floor response is to "stash" │
 │    the damaged carton behind good inventory or pass it downstream.                     │
 │                                                                                        │
-│ 3. MIDDLE-MANAGEMENT ASPHYXIATION:                                                     │
+│ 3. THE RECOGNITION VOID & CREDIT APPROPRIATION (GATEKEEPING):                          │
+│    When an operator goes above and beyond to catch a critical defect, two things       │
+│    routinely occur: either middle management ignores the warning because addressing it│
+│    threatens shift completion KPIs, or supervisors claim credit in morning standups    │
+│    while the worker remains an invisible number. The resulting learned helplessness    │
+│    extinguishes frontline initiative and ownership.                                    │
+│                                                                                        │
+│ 4. MIDDLE-MANAGEMENT ASPHYXIATION:                                                     │
 │    Shift supervisors spend up to 65% of their working hours acting as high-cost data   │
 │    entry clerks: collecting informal WhatsApp photos from drivers, manually re-keying  │
 │    material numbers into spreadsheets, and arguing over blame.                         │
@@ -82,12 +89,17 @@ Operators never interact with complex UI forms while wearing cut-resistant work 
 * **Camera Capture:** The operator snaps a single photo of the damaged freight, barcode label, or shipping BOL. Multimodal edge models extract the GS1-128 barcode, container condition, and physical hazard class.
 * **Single-Tap Confirmation:** No manual typing required.
 
-### 3.2. The Operator Stewardship Ledger (Enabling Bureaucracy)
-To neutralize Campbell's Law, the engine shifts the dynamic from punitive surveillance to **verifiable ownership**:
-1. **The Time-Credit Guarantee (Directive M1):** Any time dedicated to identifying, documenting, and physically isolating an anomaly automatically issues a certified *Time-Credit Token*. This credit is passed to the labor management system (LMS), neutralizing any negative impact on the operator's shift pick-rate.
-2. **The Frontline Stewardship Ledger:** Every validated anomaly logged by a worker creates an append-only, cryptographic record of value protected:
-   $$\text{Value Protected} = \sum (\text{Replacement Cost of Contaminated Freight} + \text{Saved SLA Penalties})$$
-   *Example:* An operator who catches a leaking solvent pallet before loading onto a line-haul truck receives formal recorded credit for preventing $\$14,500\text{ USD}$ in cargo damage and hazardous transit fines. This portfolio is auditable during quarterly wage reviews and promotions.
+### 3.2. Frontline Ownership, Psychological Safety & Anti-Credit-Theft Protection
+To neutralize Campbell's Law and dismantle learned helplessness, the engine re-engineers floor sociology: from coercive surveillance to **empowering, verifiable frontline ownership** (*Adler & Borys, 1996*):
+
+1. **The Time-Credit Guarantee (Directive M1):** Any time dedicated to identifying, documenting, and physically isolating an anomaly automatically issues a certified *Time-Credit Token*. This credit bridges directly into the facility's Labor Management System (LMS), neutralizing any pick-rate speed penalty. The worker is never economically penalized for protecting the business.
+2. **Immutable Contribution Attribution (Anti-Credit-Theft):** Every incident is cryptographically sealed with the operator's digital badge ID (`operator_badge_id`) at the exact millisecond of ingestion. Shift supervisors and department leads **cannot delete, edit, or retroactively claim credit** for an operator's discovery. The contribution is permanently and visibly recorded in the enterprise ledger.
+3. **Psychological Safety & Feeling Valued:** Frontline workers routinely feel treated as disposable labor whose opinions are discarded. Narya gives the workforce an institutional voice that cannot be muted by hierarchy:
+   * **Direct Executive Visibility:** Plant managers, VPs of Operations, and Quality Directors see the unvarnished feed of frontline saves, linking specific cost avoidance directly to named floor crew members.
+   * **The Frontline Stewardship Portfolio:** The engine aggregates an ongoing record of value preserved by each operator:
+     $$\text{Value Protected} = \sum (\text{Replacement Cost of Contaminated Freight} + \text{Saved Chargeback Penalties} + \text{Prevented Safety Downtime})$$
+     *Example:* When an operator identifies a weeping chemical drum before it breaches racking, their terminal immediately acknowledges: *"Critical Save Logged. $18,400 in inventory contamination prevented. Attributed to Badge #4092."* This portfolio serves as objective, un-gameable evidence during annual wage reviews, promotions to lead operator, and safety awards.
+4. **Eliminating Supervisory Suppression:** When a defect is reported, the system generates an autonomous ticket with SLA tracking. Middle managers can no longer "bury" an issue to protect their shift metrics, because the open anomaly is already active in the plant-wide queue.
 
 ### 3.3. Disburdening Middle Management
 Shift supervisors cease acting as data-entry buffers between floor workers and enterprise software:
