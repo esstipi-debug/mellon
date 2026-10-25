@@ -87,8 +87,10 @@ def mm_c_wait(
             "stable": False,
             "rate_unit": rate_unit,
             "wq_native": float("inf"),
+            "wq_h": float("inf"),
             "wq_s": float("inf"),
             "lq": float("inf"),
+            "w_total_h": float("inf"),
             "w_total_s": float("inf"),
         }
 
@@ -106,7 +108,9 @@ def mm_c_wait(
         "rate_unit": rate_unit,
         "prob_wait": round(pw, 3),
         "wq_native": round(wq, 4),
+        "wq_h": round((wq * scale_s) / 3600.0, 4),
         "wq_s": round(wq * scale_s, 1),
         "lq": round(lam * wq, 2),
+        "w_total_h": round((w_total * scale_s) / 3600.0, 4),
         "w_total_s": round(w_total * scale_s, 1),
     }
