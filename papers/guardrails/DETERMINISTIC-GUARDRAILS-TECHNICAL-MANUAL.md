@@ -6,10 +6,10 @@
 > **Author:** Marcos Stipicich  
 > **Reference Stack:** Python 3.10+, Pydantic v2, Hypothesis, SQLite WAL, HMAC-SHA256, SAP RFC / Odoo API.  
 > **Related Codebase Assets in Repo:**  
-> - [`core_event_contracts.py`](file:///c:/fde/core_event_contracts.py) (Immutable physical telemetry contracts)  
-> - [`inbound_fsm_guardrail.py`](file:///c:/fde/inbound_fsm_guardrail.py) (Zero-bypass FSM engine)  
-> - [`test_gemba_invariants.py`](file:///c:/fde/test_gemba_invariants.py) (Adversarial property-based test harness)  
-> - [`probes/cap3_delta_projection.py`](file:///c:/fde/evidencia/probes/cap3_delta_projection.py) (Decoupled 3D state projection engine)
+> - [`core_event_contracts.py`](../../core_event_contracts.py) (Immutable physical telemetry contracts)  
+> - [`inbound_fsm_guardrail.py`](../../inbound_fsm_guardrail.py) (Zero-bypass FSM engine)  
+> - [`test_gemba_invariants.py`](../../test_gemba_invariants.py) (Adversarial property-based test harness)  
+> - [`probes/cap3_delta_projection.py`](../../probes/cap3_delta_projection.py) (Decoupled 3D state projection engine)
 
 ---
 
@@ -27,7 +27,7 @@ flowchart LR
 ### 1.1 Modeling Immutable Telemetry Contracts
 The contract architecture forbids raw dictionary (`dict`) payloads or unvalidated primitive parameters. Contracts must be **immutable (`frozen=True`)**, strictly verifying types, physical boundaries, and cryptographic signatures at the instant of instantiation.
 
-Below is the production-grade implementation pattern established in [`core_event_contracts.py`](file:///c:/fde/core_event_contracts.py):
+Below is the production-grade implementation pattern established in [`core_event_contracts.py`](../../core_event_contracts.py):
 
 ```python
 """
@@ -79,7 +79,7 @@ class YardGateEvent(BaseModel):
 
 In cyber-physical deployments, modeling operational flow via a single scalar state variable (e.g., `STATUS = 'IN_RECEIVING'`) produces deadlock. If arriving cargo exhibits physical defects during night-shift unsealing, a 1D state machine forces the facility into a false dilemma: either detain the carrier on the apron indefinitely to avoid financial posting, or post the goods to clear the dock and assume the unverified liability.
 
-We formally decouple the state of each handling unit (`SSCC`) across three orthogonal coordinates ([`THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER.md:167-208`](file:///c:/fde/THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER.md#L167-L208)):
+We formally decouple the state of each handling unit (`SSCC`) across three orthogonal coordinates ([`THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER.md:167-208`](../THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md)):
 
 $$\mathbf{X}_t = (s_t, a_t, d_t) \in \mathcal{S} \times \mathcal{A} \times \mathcal{D}$$
 
@@ -181,7 +181,7 @@ def delta(cfg: Config, event: E) -> Config | Rejected:
 
 ## 3. Transactional Isolation Patterns: The Kern Production Standard
 
-In production agentic environments where models propose purchase orders or inventory allocations, systems enforce the **Safe-Staging Writeback** architecture ([`DEPLOYMENT-STRATEGIST-MASTER-BLUEPRINT.md:123-140`](file:///c:/fde/DEPLOYMENT-STRATEGIST-MASTER-BLUEPRINT.md#L123-L140)):
+In production agentic environments where models propose purchase orders or inventory allocations, systems enforce the **Safe-Staging Writeback** architecture ([`DEPLOYMENT-STRATEGIST-MASTER-BLUEPRINT.md:123-140`](../../DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md)):
 
 ```mermaid
 flowchart TD
@@ -211,7 +211,7 @@ flowchart TD
 
 ## 4. Adversarial Verification Harness & Property-Based Testing
 
-A guardrail is not verified because it passes 10 unit tests with clean synthetic fixtures. It must be subjected to **Property-Based Testing** via `Hypothesis` ([`test_gemba_invariants.py`](file:///c:/fde/test_gemba_invariants.py)).
+A guardrail is not verified because it passes 10 unit tests with clean synthetic fixtures. It must be subjected to **Property-Based Testing** via `Hypothesis` ([`test_gemba_invariants.py`](../../test_gemba_invariants.py)).
 
 ### 4.1 The Six Adversarial Invariant Probes (`P1` through `P6`)
 

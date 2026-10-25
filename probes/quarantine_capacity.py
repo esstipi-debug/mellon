@@ -136,4 +136,5 @@ def classify(
         "buffer_positions": buffer_positions,
         "headroom_positions": round(buffer_positions - load, 3),
         "binding_constraint": f["binding_constraint"],
+        "break_glass_required": state in {"DOCK_COLLAPSE", "FLOOR_OVERFLOW"},
     }

@@ -229,7 +229,7 @@ The original 59-predicate vocabulary (35 single-use verbs) was consolidated into
 
 - One note per node in folders `01 How to Measure Anything` … `08 Continuous Discovery Habits` and `99 FDE Synthesis`.
 - YAML frontmatter (`id`, `type`, `book`, `tags`), `[[wikilinks]]` for every relation, and an `00 Index.md`.
-- `## External Resources` with `- [title](url) _(kind)_` for every node with resources; Book notes aggregate all resources of their layer.
+- `## External Resources` with `- [title](<url>) _(kind)_` for every node with resources; Book notes aggregate all resources of their layer.
 - Book notes append the full `research/<book>.md` dossier under `## Tactical Field Dossier`, with headings demoted one level to keep the vault outline clean.
 
 **Neo4j** (`out/neo4j.cypher`):
