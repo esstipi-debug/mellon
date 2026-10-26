@@ -37,7 +37,7 @@ A forensic treatise on four decades of enterprise technology (from ISO 9000 and 
   * Decoupled receipt automaton: BFS verification proving exactly 12 legal configurations of 64 reachable (18.75%).
   * Little's Law dock buffer saturation frontier ($\lambda^*_{\text{piso}}$), single-writer authority, and *Break-Glass* (`OVERFLOW_IMPUTED`).
 * **Chapter 5: The Forward Deployed Strategist 2.0 (FDS 2.0) Manifesto**
-  * Beyond Palantir FDS 1.0: The Tri-Band Operator (Gemba anthropologist at 02:30 AM, Silo econometrician, and SRE deterministic engineer).
+  * Beyond Palantir FDE 1.0: The Tri-Band Operator (Gemba anthropologist at 02:30 AM, Silo econometrician, and SRE deterministic engineer).
 * **Chapter 6: Field Implementation & 90-Day Deployment Doctrine**
   * Week-by-week execution protocol: from night-shift Gemba audits to automated Launch-Readiness Gates and hypercare exit.
 * **Chapter 7: Regulatory Anchoring & Population-Scale Proofs**
