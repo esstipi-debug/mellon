@@ -1,5 +1,7 @@
 # Mellon — logo
 
+Definición del logo, los pilares y el mensaje de marca: [`IDENTITY.md`](IDENTITY.md).
+
 Tres hojas forman una **M**. Cada hoja lleva un pilar en sus nervaduras:
 
 | Hoja | Pilar | Nervaduras |
