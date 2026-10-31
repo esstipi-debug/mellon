@@ -29,7 +29,7 @@ In Palantir's field deployment model, the Deployment Strategist isolates high-va
 
 ---
 
-## 2. Why 95% of Enterprise AI Projects Fail (The Problem the DS Solves)
+## 2. Why Most Enterprise AI Projects Fail (The Problem the DS Solves)
 
 Empirical market research confirms that the bottleneck of enterprise AI **is not the model, it is the terrain**:
 

@@ -23,9 +23,9 @@ The protocol is the operating document of this toolkit. Nothing writes to produc
 
 ---
 
-### Earlier Artifacts
+### Other Artifacts
 
-The three artifacts below are earlier drafts of parts of the protocol, kept for reference. Where they differ from the protocol, the protocol governs.
+Artifacts 1–3 below are earlier drafts of parts of the protocol, kept for reference. Artifact 4 is a specification and artifacts 5–7 are Python scripts. Where any of them differs from the protocol, the protocol governs.
 
 | Artifact | File | Primary Audience & Function | Deployment Window |
 | :--- | :--- | :--- | :---: |

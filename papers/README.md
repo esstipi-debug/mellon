@@ -25,7 +25,7 @@ A forensic treatise on four decades of enterprise technology (from ISO 9000 and 
 * **Chapter 1: The Historical Anatomy of Failure (Four Decades of Repeating Cycles)**
   * The 4 cycles: ISO 9000, Monolithic ERP (SAP R/3), Cloud SaaS, and Generative AI.
   * Corporate autopsies: Lidl (€500M write-off), FoxMeyer (Chapter 11), Hershey (Halloween 1999), and Zillow Offers ($304M inventory write-down).
-  * Empirical benchmarks: The Standish Group CHAOS series, Panorama Consulting, and MIT NANDA (July 2025: 95% of enterprise GenAI fails to impact P&L).
+  * Empirical benchmarks: The Standish Group CHAOS series, Panorama Consulting, and MIT NANDA (July 2025: 95% of organizations getting zero return from GenAI).
 * **Chapter 2: The Sociology of the Floor (*Gemba*) & Campbell’s Law**
   * Mathematical proof of rational self-preservation: why dirty data is an optimal response under finite shift constraints.
   * The Kerr effect and multi-task agency (Holmström & Milgrom): why bonuses on volume actively subsidize order defect rates.

@@ -30,7 +30,7 @@ In enterprise technology deployments, systems fail at the boundary where digital
          • Confined to remote IDEs & slides              • Embedded in the Gemba alongside the floor
          • Treats frontline pushback as "ignorance"      • Respects operator fatigue & tacit knowledge
          • Imposes abstract AI without floor empathy     • Partner to labor, mathematically safe to IT
-         • Result: 95% Pilot Failure Rate                • Hypothesis: Sustained Adoption & Verifiable P&L
+         • MIT NANDA: 95% of orgs, zero GenAI return     • Hypothesis: Sustained Adoption & Verifiable P&L
                        │                                               │
                        ▼                                               ▼
                   GATE CLOSED                                     GATE OPEN
@@ -44,7 +44,7 @@ In enterprise technology deployments, systems fail at the boundary where digital
 
 ---
 
-## 2. The Executive Problem: Why 95% of Enterprise AI Pilots Fail at the Last Mile
+## 2. The Executive Problem: Why Most Enterprise AI Pilots Fail at the Last Mile
 
 Preliminary research from **MIT NANDA (July 2025; 52 organizations interviewed, 153 senior leader surveys)** reports that **95% of organizations are getting zero return from Generative AI** due to brittle workflows, lack of contextual learning, and misalignment with daily operations, while **RAND (2024)** cites estimates that **more than 80% of AI projects fail**, about twice the rate of IT projects without AI. In physical supply chains, manufacturing, and distribution, this systemic collapse is driven by a triadic operational bottleneck:
 
