@@ -21,7 +21,7 @@ Despite multi-million-dollar ERP and WMS investments, operations suffer from a t
 │ 1. THE REPORTING TAX (BUREAUCRATIC FRICTION):                                          │
 │    Formally reporting a damaged box requires an operator to halt their forklift, walk  │
 │    150 meters to a supervisor's booth, log into a desktop terminal, and fill out 14    │
-│    mandatory fields in SAP QM/MIGO. Elapsed time: 18–25 minutes.                       │
+│    mandatory fields in SAP QM/MIGO.                                                    │
 │                                                                                        │
 │ 2. THE PERVERSE INCENTIVE TRAP (CAMPBELL'S LAW, 1979):                                 │
 │    Forklift drivers and order pickers are measured strictly on speed quotas (picks/hr).│
@@ -37,7 +37,7 @@ Despite multi-million-dollar ERP and WMS investments, operations suffer from a t
 │    extinguishes frontline initiative and ownership.                                    │
 │                                                                                        │
 │ 4. MIDDLE-MANAGEMENT ASPHYXIATION:                                                     │
-│    Shift supervisors spend up to 65% of their working hours acting as high-cost data   │
+│    Shift supervisors spend part of their working hours acting as high-cost data        │
 │    entry clerks: collecting informal WhatsApp photos from drivers, manually re-keying  │
 │    material numbers into spreadsheets, and arguing over blame.                         │
 └────────────────────────────────────────────────────────────────────────────────────────┘
