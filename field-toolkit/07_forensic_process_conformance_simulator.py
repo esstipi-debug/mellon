@@ -90,7 +90,7 @@ def generate_forensic_test_scenarios() -> Tuple[List[RawWmsEvent], List[RawWifiS
     Genera 3 casos operativos con telemetría cruzada:
     - CASO_001 (Golden Path): Flujo óptimo conforme a diseño.
     - CASO_002 (Batch Scanning Clotting): Operario confirma 4 órdenes en 6 segundos a 45 metros de distancia.
-    - CASO_003 (Congestión y Double-Handling): Pallets atrapados en muelle con retrabajos y desvío de odometría 3.5x.
+    - CASO_003 (Congestión y Double-Handling): Pallets atrapados en muelle con retrabajos y un desvío de odometría por encima del umbral de 2x.
     """
     t0 = datetime(2026, 10, 25, 8, 0, 0)
     wms_events: List[RawWmsEvent] = []
@@ -160,8 +160,8 @@ def generate_forensic_test_scenarios() -> Tuple[List[RawWmsEvent], List[RawWifiS
     for act, ts, loc, xyz in cong_steps:
         wms_events.append(RawWmsEvent(ts, "CASE_003_STAGING_COLLAPSE", act, "OP_STAGED", loc, xyz, 80))
 
-    # CAN-bus revela una distancia astronómica: la grúa recorrió 1,420 metros para un trayecto
-    # cuya distancia Manhattan teórica era de sólo 110 metros (Desvío 12.9x por pasillos tapados)
+    # CAN-bus registra 1,420 metros recorridos, más de 10 veces la distancia Manhattan teórica
+    # que suman los tramos del caso (supuesto del caso: pasillos tapados por pallets en piso)
     can_events.append(RawCanBusTelemetry(t_cong + timedelta(minutes=260), "FORK_09", 1.4, 1420.0, 88.0, 0.62))
 
     return wms_events, wifi_events, can_events
@@ -275,20 +275,20 @@ class ForensicOperationalAuditor:
                 "actual_odometer_m": actual_travel_m,
                 "detour_ratio": round(detour_ratio, 2),
                 "status": "VIOLACIÓN CRÍTICA" if detour_ratio > 2.0 else "NORMAL",
-                "root_cause": "La máquina recorrió 12.9x más distancia de la teórica debido al bloqueo masivo de pasillos por pallets en piso."
+                "root_cause": "Supuesto del caso sintético: pasillos bloqueados por pallets en piso, que alargan el recorrido."
             }
 
         # ------------------------------------------------------------------------------
         # INVARIANTE 2: Ley de Little en Muelle (L = lambda * W)
         # ------------------------------------------------------------------------------
-        # Datos del caso 3: Arribos lambda = 8 camiones/h (240 pallets/h)
-        # WMS afirma: W_reportado = 45 min (0.75 h).
-        # Auditoría física en piso muestra: L_staging = 480 pallets estancados permanentemente.
+        # Supuestos fijos de la demostración; no salen de los eventos de los casos:
+        # arribos lambda = 240 pallets/h, W reportado por el WMS = 45 min (0.75 h)
+        # y WIP observado en staging L = 480 pallets.
         lambda_hourly = 240.0
         w_reported_h = 0.75
         l_observed = 480.0
 
-        # W_real = L / lambda
+        # W implícito = L / lambda (ley de Little, en régimen estable)
         w_real_h = l_observed / lambda_hourly
         w_real_min = w_real_h * 60.0
 
@@ -296,9 +296,9 @@ class ForensicOperationalAuditor:
             "arrival_rate_pallets_per_hr": lambda_hourly,
             "reported_dock_dwell_min": round(w_reported_h * 60.0, 1),
             "observed_wip_pallets": l_observed,
-            "mathematically_proven_dwell_min": round(w_real_min, 1),
+            "implied_dwell_min": round(w_real_min, 1),
             "discrepancy_factor": round(w_real_h / w_reported_h, 2),
-            "verdict": "SUB-REPORTE DETECTADO: El tiempo real en muelle (120 min) es 2.67x mayor al reportado en WMS (45 min)."
+            "verdict": f"DISCREPANCIA: con estos supuestos, el tiempo implícito en muelle ({w_real_min:.0f} min) es {w_real_h / w_reported_h:.2f}x el reportado en el WMS ({w_reported_h * 60:.0f} min)."
         }
 
         # ------------------------------------------------------------------------------
@@ -367,10 +367,10 @@ def main():
     # Invariante 2: Little's Law
     ll = invariants["littles_law_audit"]
     print("2. INVARIANTE DE CONSERVACIÓN DE FLUJO (LEY DE LITTLE SUB-SISTÉMICA)")
-    print(f"   • Tasa de Arribo Real en Garita: {ll['arrival_rate_pallets_per_hr']} pallets/hora")
-    print(f"   • Tiempo de Estadía Reportado en WMS: {ll['reported_dock_dwell_min']} minutos")
-    print(f"   • WIP Físico Promedio en Piso (Staging): {ll['observed_wip_pallets']} pallets")
-    print(f"   • TIEMPO DE ESTADÍA REAL MATEMÁTICAMENTE DEMOSTRADO: {ll['mathematically_proven_dwell_min']} minutos")
+    print(f"   • Tasa de arribo (supuesto): {ll['arrival_rate_pallets_per_hr']} pallets/hora")
+    print(f"   • Tiempo de estadía reportado en WMS (supuesto): {ll['reported_dock_dwell_min']} minutos")
+    print(f"   • WIP promedio en staging (supuesto): {ll['observed_wip_pallets']} pallets")
+    print(f"   • Tiempo de estadía implícito (L / λ): {ll['implied_dwell_min']} minutos")
     print(f"   • Factor de Discrepancia: {ll['discrepancy_factor']}x")
     print(f"   • Veredicto: {ll['verdict']}\n")
 

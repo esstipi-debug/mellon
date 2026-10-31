@@ -27,6 +27,10 @@ audio = ["transformers>=4.44", "torch>=2.2", "accelerate"]
 # 4.6-4.8 instalan sin error pero revientan en runtime contra numpy 2.x con
 # AttributeError: _ARRAY_API not found (problema de ABI, no de metadatos).
 vision = ["opencv-contrib-python>=4.10.0.84"]
+# Scripts 05 y 06 de field-toolkit/ (prototipos fuera del paquete): `recon` alcanza
+# para el 05; `recon-bot` suma el bot de Telegram, la API HTTP y la transcripcion.
+recon = ["scikit-learn"]
+recon-bot = ["scikit-learn", "aiohttp", "fastapi", "uvicorn", "pydantic", "python-multipart", "faster-whisper"]
 
 [project.scripts]
 fdekit = "fdekit.cli:main"

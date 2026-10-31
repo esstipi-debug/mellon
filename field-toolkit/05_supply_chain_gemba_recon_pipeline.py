@@ -96,7 +96,7 @@ KNOWLEDGE_GRAPH_DB: List[FailureMode] = [
             "ruedas desgastadas facetadas bloqueadas"
         ],
         root_cause_hypothesis="Falta de guardahilos (thread guards) en rodamientos y omisión de programa preventivo TPM en rodados.",
-        empirical_impact_description="Aumento de fuerza de tracción a >45 lbf (excede norma ergonómica OSHA). Reduce velocidad de marcha 35%, generando una caída neta del 15% al 22% en UPH.",
+        empirical_impact_description="Aumento de fuerza de tracción a >45 lbf (el límite aceptable depende de la tarea: tablas de Snook y Ciriello, 1991). Reduce velocidad de marcha 35%, generando una caída neta del 15% al 22% en UPH.",
         severity_1_to_10=7,
         diagnostic_check=DiagnosticCheck(
             id="CHK_CART_01",
@@ -104,7 +104,7 @@ KNOWLEDGE_GRAPH_DB: List[FailureMode] = [
             inspection_method="Muestrear 20 carritos en uso activo con dinamómetro digital de tracción y registrar presencia de filamentos en ejes.",
             sample_rule="20 unidades tomadas al azar en pasillos de picking.",
             red_flag_threshold="Fuerza de empuje > 200 N (>45 lbf) o > 10% de la flota con ruedas bloqueadas.",
-            normative_reference="OSHA Standard 1910 Ergonomics / Snook-Ciriello Tables"
+            normative_reference="Snook y Ciriello (1991), tablas de fuerzas de empuje aceptables"
         ),
         service_offering=ServiceOffering(
             id="SRV_MHE_FLEET_OPT",
@@ -661,11 +661,21 @@ class GembaReconPipeline:
 
         dossier_items = []
         total_estimated_annual_loss = 0.0
+        # Todos los modos "labor_waste" usan el mismo supuesto (25 min por operario y turno):
+        # se suman al total una sola vez para no contar dos veces las mismas horas.
+        labor_waste_counted = False
 
         for fm, score, triggering_notes in sorted_matches:
             impact_data = self.calculator.calculate(fm, params)
             cost_usd = impact_data.get("annual_cost_usd", 0.0)
-            total_estimated_annual_loss += cost_usd
+            summary = impact_data["summary"]
+            counted_in_total = not (fm.impact_formula_type == "labor_waste" and labor_waste_counted)
+            if fm.impact_formula_type == "labor_waste":
+                labor_waste_counted = True
+            if counted_in_total:
+                total_estimated_annual_loss += cost_usd
+            else:
+                summary += " No se suma al total: repite el supuesto de 25 min por operario de otro hallazgo."
 
             dossier_items.append({
                 "failure_mode_id": fm.id,
@@ -675,8 +685,9 @@ class GembaReconPipeline:
                 "severity_1_to_10": fm.severity_1_to_10,
                 "triggering_field_notes": triggering_notes,
                 "root_cause_hypothesis": fm.root_cause_hypothesis,
-                "empirical_impact": impact_data["summary"],
+                "empirical_impact": summary,
                 "annual_cost_usd": cost_usd,
+                "counted_in_total": counted_in_total,
                 "diagnostic_check": asdict(fm.diagnostic_check),
                 "service_offering": asdict(fm.service_offering)
             })

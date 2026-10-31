@@ -44,7 +44,7 @@ flowchart TD
 
 ### 2.1. Equipamiento Móvil (MHE)
 * **Carritos de Picking (4 ruedas):**
-  * *Resistencia al rodaje:* Nominal $< 15\text{ lbf}$ ($66.7\text{ N}$). Ruedas atascadas con film stretch elevan la fuerza a $> 40 - 55\text{ lbf}$ ($178 - 245\text{ N}$), superando el umbral ergonómico de seguridad (OSHA).
+  * *Resistencia al rodaje:* Nominal $< 15\text{ lbf}$ ($66.7\text{ N}$). Ruedas atascadas con film stretch elevan la fuerza a $> 40 - 55\text{ lbf}$ ($178 - 245\text{ N}$); el límite aceptable depende de la tarea y se contrasta con las tablas de Snook y Ciriello (1991).
   * *Velocidad de marcha:* Cae de $4.5\text{ km/h}$ a $< 3.0\text{ km/h}$ (caída del $35\%$).
   * *Impacto en UPH (Units Per Hour):* Como el tiempo de traslado representa el $50\% - 55\%$ del ciclo de picking, la pérdida neta de productividad es del **$15\% - 22\%$**.
   * *Ratio de flota:* Debe mantenerse en **$1.15 - 1.25$ carritos por picker activo** ($10\%$ buffer de mantenimiento, $10\%-15\%$ wave staging).

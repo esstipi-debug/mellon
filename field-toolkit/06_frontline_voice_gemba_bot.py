@@ -27,6 +27,7 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from xml.sax.saxutils import escape
 
 import aiohttp
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -376,7 +377,7 @@ def create_app(pipeline: GembaReconPipeline, transcriber: AudioTranscriber) -> F
             # Respuesta en formato TwiML
             twiml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Message>{markdown_dossier[:1500]}</Message>
+    <Message>{escape(markdown_dossier[:1500])}</Message>
 </Response>"""
             return PlainTextResponse(content=twiml_response, media_type="application/xml")
         else:
