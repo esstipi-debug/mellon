@@ -387,7 +387,7 @@ $$L_{\text{staging}} = \lambda_{\text{inbound\_real}} \cdot W_{\text{staging\_dw
 * **Falsificación de la Telemetría:**  
   Si los reportes de los supervisores declaran que el tiempo promedio de muelle es $W = 45\text{ minutos}$ y la tasa de llegada medida en garita es $\lambda = 12\text{ camiones/hora}$ ($360\text{ pallets/hora}$), pero el recuento visual en el piso de staging muestra permanentemente $L = 620\text{ pallets}$:
   $$L_{\text{real}} = 620 \ne (360 \times 0.75 = 270\text{ pallets})$$
-  El sistema detecta una **distorsión deliberada de reportes de piso**. El tiempo real de permanencia es matemáticamente $W_{\text{real}} = \frac{620}{360} = 1.72\text{ horas}$ ($103\text{ minutos}$), duplicando el tiempo reportado por el WMS.
+  El sistema detecta que **el tiempo reportado no es consistente con lo observado en el piso**; la causa se investiga con el turno antes de atribuir intención. El tiempo real de permanencia es matemáticamente $W_{\text{real}} = \frac{620}{360} = 1.72\text{ horas}$ ($103\text{ minutos}$), duplicando el tiempo reportado por el WMS.
 
 ---
 
@@ -410,6 +410,6 @@ Para validar que las aristas del Grafo Causal no son simples correlaciones espur
 2. **Ejecución de la Perturbación:**  
    Se reprograman las citas en el software de muelle (YMS) reteniendo 4 camiones en el buffer externo durante 3 días consecutivos (Martes a Jueves).
 3. **Métrica Ciega de Contraste:**  
-   Se recopila la distancia recorrida por los operarios de picking a través de los syslogs de roaming Wi-Fi de las pistolas RF (sin notificar a los operarios ni a los supervisores de turno del experimento).
+   Se usa la distancia recorrida agregada por zona y turno, calculada con los syslogs de roaming Wi-Fi de las pistolas RF, sin identificar operarios. Operarios y supervisores saben que esos datos agregados se usan para el estudio; lo que no se anuncia es en qué días se aplica la perturbación, para no sesgar la medición.
 4. **Veredicto de Validación Causal:**  
    Si el estimador de Diferencias-en-Diferencias ($\text{DiD}$) sobre los datos de los APs confirma una reducción de la distancia recorrida en la ventana temporal predicha de $\mathbf{17\% \pm 2.5\%}$ con un $p\text{-value} < 0.01$, **la arquitectura causal del grafo queda formalmente demostrada y certificada para producción**.

@@ -89,7 +89,7 @@ def generate_forensic_test_scenarios() -> Tuple[List[RawWmsEvent], List[RawWifiS
     """
     Genera 3 casos operativos con telemetría cruzada:
     - CASO_001 (Golden Path): Flujo óptimo conforme a diseño.
-    - CASO_002 (Batch Scanning Clotting): Operario confirma 4 órdenes en 6 segundos a 45 metros de distancia (Gaming).
+    - CASO_002 (Batch Scanning Clotting): Operario confirma 4 órdenes en 6 segundos a 45 metros de distancia.
     - CASO_003 (Congestión y Double-Handling): Pallets atrapados en muelle con retrabajos y desvío de odometría 3.5x.
     """
     t0 = datetime(2026, 10, 25, 8, 0, 0)
@@ -135,11 +135,11 @@ def generate_forensic_test_scenarios() -> Tuple[List[RawWmsEvent], List[RawWifiS
         ("PICK_CONFIRM", t_clot + timedelta(seconds=7), "RACK_03_22", (55.0, 20.0, 0.0)),
     ]
     for act, ts, loc, xyz in clot_picks:
-        wms_events.append(RawWmsEvent(ts, "CASE_002_BATCH_GAMING", act, "OP_GAMER", loc, xyz, 10))
+        wms_events.append(RawWmsEvent(ts, "CASE_002_BATCH_CONFIRM", act, "OP_02", loc, xyz, 10))
 
     # Wi-Fi desmiente el movimiento: terminal estático en el AP de la cafetería/lockers
-    wifi_events.append(RawWifiSyslog(t_clot - timedelta(minutes=5), "MAC_OP_GAMER", "BSSID_BREAKROOM", "BREAKROOM", "ASSOCIATE", -52))
-    wifi_events.append(RawWifiSyslog(t_clot + timedelta(seconds=10), "MAC_OP_GAMER", "BSSID_BREAKROOM", "BREAKROOM", "STATIONARY", -51))
+    wifi_events.append(RawWifiSyslog(t_clot - timedelta(minutes=5), "MAC_OP_02", "BSSID_BREAKROOM", "BREAKROOM", "ASSOCIATE", -52))
+    wifi_events.append(RawWifiSyslog(t_clot + timedelta(seconds=10), "MAC_OP_02", "BSSID_BREAKROOM", "BREAKROOM", "STATIONARY", -51))
 
     # ----------------------------------------------------------------------------------
     # CASO 3: Congestión Crítica y Doble Manipulación en Staging (Re-handling Loop)
@@ -212,13 +212,13 @@ class ForensicOperationalAuditor:
             dist_manhattan = dx + dy + dz
             total_manhattan_m += dist_manhattan
 
-            # 1. Chequeo Biomecánico de Velocidad Implicada (Gaming Detection)
+            # 1. Chequeo Biomecánico de Velocidad Implicada (confirmaciones en lote)
             if dist_manhattan > 5.0 and dt_sec > 0:
                 implied_speed = dist_manhattan / dt_sec
                 if implied_speed > 2.2:  # Umbral máximo humano con carga (2.2 m/s = 7.9 km/h)
                     gaming_flags.append(
                         f"🚨 BATCH CLOTTING: Transición '{src}' -> '{tgt}' cubrió {dist_manhattan:.1f}m en {dt_sec:.1f}s "
-                        f"(Velocidad Implicada: {implied_speed:.2f} m/s > 2.2 m/s). Falsificación de escaneo en piso."
+                        f"(Velocidad Implicada: {implied_speed:.2f} m/s > 2.2 m/s). Las confirmaciones no siguen el recorrido físico (posible confirmación en lote): señal de proceso, no falta individual."
                     )
 
             # 2. Detección de Retrabajo / Doble Manipulación (Re-handling Loop)
@@ -256,7 +256,7 @@ class ForensicOperationalAuditor:
         Calcula las 3 leyes de conservación física sobre el sistema:
         1. Invariante Cinemática CAN-bus vs. Manhattan
         2. Invariante de Little (W_real vs W_reportado)
-        3. Correlación Wi-Fi de Gaming de Presencia
+        3. Correlación Wi-Fi de presencia
         """
         results = {}
 
@@ -302,14 +302,14 @@ class ForensicOperationalAuditor:
         }
 
         # ------------------------------------------------------------------------------
-        # INVARIANTE 3: Telemetría Wi-Fi vs. Declaración WMS (Caso 2 Gaming)
+        # INVARIANTE 3: Telemetría Wi-Fi vs. Declaración WMS (Caso 2)
         # ------------------------------------------------------------------------------
-        gamer_wifi = [w for w in self.wifi if w.client_mac == "MAC_OP_GAMER"]
+        gamer_wifi = [w for w in self.wifi if w.client_mac == "MAC_OP_02"]
         results["wifi_rf_audit"] = {
-            "operator_mac": "MAC_OP_GAMER",
+            "operator_mac": "MAC_OP_02",
             "connected_ap_zone": gamer_wifi[0].ap_zone if gamer_wifi else "UNKNOWN",
             "physical_rssi_dbm": gamer_wifi[0].rssi_dbm if gamer_wifi else 0,
-            "verdict": "CONFIRMACIÓN DE FRAUDE: El operario declaró estar en pasillos RACK_02 y RACK_03, pero su terminal estuvo inmóvil en BSSID_BREAKROOM durante toda la ventana de confirmación."
+            "verdict": "DISCREPANCIA DE REGISTRO: el WMS ubica las confirmaciones en los pasillos RACK_02 y RACK_03, pero la terminal estuvo asociada a BSSID_BREAKROOM durante toda la ventana. Indica confirmación en lote fuera del pasillo (por ejemplo, picking en papel por cortes de Wi-Fi); se revisa con el turno como problema de proceso, no como falta individual."
         }
 
         return results
@@ -328,7 +328,7 @@ def main():
     wms_events, wifi_events, can_events = generate_forensic_test_scenarios()
     auditor = ForensicOperationalAuditor(wms_events, wifi_events, can_events)
 
-    cases = ["CASE_001_GOLDEN", "CASE_002_BATCH_GAMING", "CASE_003_STAGING_COLLAPSE"]
+    cases = ["CASE_001_GOLDEN", "CASE_002_BATCH_CONFIRM", "CASE_003_STAGING_COLLAPSE"]
 
     print("\n[FASE 1: CONFORMANCE CHECKING SOBRE EL EVENT-LOG TRANSACCIONAL]\n")
     for cid in cases:
@@ -382,7 +382,7 @@ def main():
     print(f"   • Veredicto Forense: {wf['verdict']}\n")
 
     print("=" * 90)
-    print("✅ AUDITORÍA FORENSE COMPLETADA: Cero ambigüedad. Las discrepancias físicas han sido aisladas.")
+    print("✅ DEMOSTRACIÓN COMPLETADA sobre 3 casos sintéticos. Las discrepancias son hipótesis para revisar con el turno, no veredictos sobre personas.")
     print("=" * 90 + "\n")
 
 
