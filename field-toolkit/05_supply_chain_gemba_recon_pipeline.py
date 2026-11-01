@@ -1,12 +1,13 @@
 """
 05_supply_chain_gemba_recon_pipeline.py
 ========================================================================================
-FRONTLINE RECONNAISSANCE & DIAGNOSTIC PLAYBOOK ENGINE (GRAPH + VECTOR RETRIEVAL)
+FRONTLINE RECONNAISSANCE & DIAGNOSTIC PLAYBOOK ENGINE (TF-IDF WORD MATCHING)
 ========================================================================================
-Purpose: Ingest informal field observations (text/speech-to-text) from auditors,
-perform semantic matching against pre-mapped operational failure modes, traverse the
-underlying Knowledge Graph, calculate quantified financial/operational impact, and
-output immediate on-site verification checklists + commercial service offerings.
+Purpose: Take informal field observations from auditors (text, or speech already
+transcribed), match them by shared words (TF-IDF) against 10 pre-written operational
+failure modes, estimate the financial/operational impact of each match from fixed
+assumptions, and output on-site verification checklists + commercial service offerings.
+No semantic search and no graph: KNOWLEDGE_GRAPH_DB is a plain list of failure modes.
 
 Framework Integration: FDE Field Toolkit / Gemba Ethnographic Forensics
 Supported Verticals: Retail, Food & Cold Chain, Pharma/Health, Heavy Construction, General DC
@@ -628,7 +629,7 @@ class GembaReconPipeline:
         """
         Ejecuta el reconocimiento completo:
         1. Segmentación
-        2. Búsqueda y ponderación semántica
+        2. Búsqueda por palabras compartidas (TF-IDF) y ponderación
         3. Fusión de resultados por modo de falla único
         4. Cuantificación financiera de impacto
         5. Ensamblaje de checklist de terreno y catálogo comercial
@@ -717,7 +718,7 @@ class GembaReconPipeline:
             severity_badge = "🔴 ALTA" if item["severity_1_to_10"] >= 8 else ("🟡 MEDIA" if item["severity_1_to_10"] >= 6 else "🟢 LEVE")
 
             md.append(f"### {idx}. [{item['category']}] {item['name']}")
-            md.append(f"* **Criticidad:** {severity_badge} (Severidad: {item['severity_1_to_10']}/10) | **Confianza Semántica:** {round(item['confidence_score']*100)}%")
+            md.append(f"* **Criticidad:** {severity_badge} (Severidad: {item['severity_1_to_10']}/10) | **Similitud de palabras (TF-IDF):** {round(item['confidence_score']*100)}%")
             md.append(f"* **Notas de Terreno Gatillantes:** *\"{ ' | '.join(item['triggering_field_notes']) }\"*")
             md.append(f"* **Hipótesis Causa Raíz:** {item['root_cause_hypothesis']}")
             md.append(f"* **Impacto Operativo & Financiero:** {item['empirical_impact']}")
@@ -729,7 +730,7 @@ class GembaReconPipeline:
             md.append(f"* **Umbral de Alerta Roja (Red Flag):** **{chk['red_flag_threshold']}**")
             md.append("")
             md.append("#### 💼 Propuesta Comercial & Módulo de Solución:")
-            md.append(f"* **Servicio:** **{srv['title']}** (ROI típico: ~{srv['typical_roi_weeks']} semanas)")
+            md.append(f"* **Servicio:** **{srv['title']}** (ROI supuesto, sin fuente: ~{srv['typical_roi_weeks']} semanas)")
             md.append(f"* **Alcance / Entregable:** {srv['scope_deliverable']}")
             md.append(f"* **Modelo Comercial:** {srv['commercial_model']}")
             md.append("\n" + "-"*80 + "\n")

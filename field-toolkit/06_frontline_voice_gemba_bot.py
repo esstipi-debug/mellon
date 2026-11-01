@@ -3,15 +3,22 @@
 ========================================================================================
 FRONTLINE VOICE RECONNAISSANCE BOT & WEBHOOK SERVER (WHISPER + TELEGRAM / WHATSAPP)
 ========================================================================================
-Purpose: Enable field auditors and deployment strategists to send voice notes or text
-from their smartphones (via Telegram or WhatsApp/Webhook) while walking the warehouse floor.
-The engine transcribes audio on-the-fly using Faster-Whisper, pipes the text through
-the Gemba Reconnaissance Knowledge Graph, and returns an executive diagnostic dossier
-with quantified financial impact and on-site Red Flags within seconds.
+Purpose: Let field auditors and deployment strategists send observations from their
+smartphones while walking the warehouse floor: text or voice notes through Telegram,
+text only through WhatsApp (Twilio), and text or audio files through an HTTP API.
+Audio is transcribed in Spanish with Faster-Whisper; the text goes to script 05 (word
+matching against 10 pre-written failure modes, no graph), and the reply is script 05's
+report, with the same limits.
+
+Limits: prototype with no tests and no access control. The Telegram bot answers anyone
+who messages it; the HTTP API has no authentication and listens on all network
+interfaces (0.0.0.0); the WhatsApp webhook does not verify Twilio's request signature
+(X-Twilio-Signature) and cuts each reply at 1,500 characters.
 
 Framework Integration: FDE Field Toolkit
 Component: 06_frontline_voice_gemba_bot.py
-Dependencies: aiohttp, faster-whisper, fastapi, uvicorn, pydantic
+Dependencies: optional group `recon-bot` in pyproject.toml (scikit-learn, aiohttp, fastapi,
+uvicorn, pydantic, python-multipart, faster-whisper)
 ========================================================================================
 """
 
@@ -361,8 +368,11 @@ def create_app(pipeline: GembaReconPipeline, transcriber: AudioTranscriber) -> F
     @app.post("/api/webhook/whatsapp")
     async def whatsapp_webhook(request: Request):
         """
-        Webhook genérico para WhatsApp (Twilio format o Meta Cloud API).
-        Permite enviar la respuesta directamente al teléfono del auditor.
+        Webhook de WhatsApp para Twilio: procesa solo mensajes de texto. Otros formatos (por
+        ejemplo, el JSON de Meta Cloud API) reciben {"status": "received"} y no se procesan.
+        Permite enviar la respuesta directamente al teléfono del auditor, cortada en 1.500
+        caracteres. No verifica la firma de Twilio (X-Twilio-Signature): acepta pedidos de
+        cualquiera que conozca la URL.
         """
         content_type = request.headers.get("content-type", "")
         if "application/x-www-form-urlencoded" in content_type:

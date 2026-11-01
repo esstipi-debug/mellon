@@ -4,7 +4,8 @@
 SIMULADOR FORENSE DE CONFORMANCE CHECKING, INVARIANTES FÍSICAS Y DETECCIÓN DE SHADOW IT
 ========================================================================================
 Propósito: Demostrar la detección automatizada de anomalías operacionales y arbitraje
-de incentivos a partir de la correlación cruzada de tres streams de datos crudos:
+de incentivos cruzando tres fuentes de datos. Corre sobre 3 casos sintéticos generados
+en el propio script; no lee datos reales. Las fuentes que imita:
 1. Event-Logs de SAP / WMS (Marcas de tiempo atómicas de confirmación)
 2. Syslog de Roaming Wi-Fi 802.11k/r/v (Ubicación física real de terminales RF)
 3. Telemetría CAN-bus J1939 (Odometría, velocidad e impactos de grúas)
@@ -75,6 +76,9 @@ GOLDEN_PATH_SLAS = {
     ("STAGING_VERIFY", "PUTAWAY_EXEC"): (300.0, 7200.0),
     ("PUTAWAY_EXEC", "PICK_WAVE_ALLOC"): (60.0, 14400.0),
     ("PICK_WAVE_ALLOC", "PICK_CONFIRM"): (120.0, 1800.0),
+    # Varias líneas de picking seguidas son flujo normal, sin SLA propio: la velocidad entre
+    # confirmaciones se revisa aparte (chequeo de confirmaciones en lote).
+    ("PICK_CONFIRM", "PICK_CONFIRM"): (0.0, float("inf")),
     ("PICK_CONFIRM", "PACK_CONSOLIDATE"): (60.0, 900.0),
     ("PACK_CONSOLIDATE", "DOCK_OUTBOUND"): (60.0, 1800.0),
     ("DOCK_OUTBOUND", "GATE_OUT"): (60.0, 1200.0),
@@ -89,7 +93,7 @@ def generate_forensic_test_scenarios() -> Tuple[List[RawWmsEvent], List[RawWifiS
     """
     Genera 3 casos operativos con telemetría cruzada:
     - CASO_001 (Golden Path): Flujo óptimo conforme a diseño.
-    - CASO_002 (Batch Scanning Clotting): Operario confirma 4 órdenes en 6 segundos a 45 metros de distancia.
+    - CASO_002 (Batch Scanning Clotting): Operario confirma 4 órdenes en 7 segundos, abarcando 45 metros de pasillo.
     - CASO_003 (Congestión y Double-Handling): Pallets atrapados en muelle con retrabajos y un desvío de odometría por encima del umbral de 2x.
     """
     t0 = datetime(2026, 10, 25, 8, 0, 0)
@@ -125,7 +129,7 @@ def generate_forensic_test_scenarios() -> Tuple[List[RawWmsEvent], List[RawWifiS
     # ----------------------------------------------------------------------------------
     # CASO 2: Arbitraje de Incentivos (Batch Scanning Clotting / Shadow IT)
     # ----------------------------------------------------------------------------------
-    # El operario hizo picking en papel y confirma 4 picks en ráfaga (intervalos de 2 segundos)
+    # El operario hizo picking en papel y confirma 4 picks en ráfaga (intervalos de 2 a 3 segundos)
     # abarcando 45 metros de pasillo, mientras el Wi-Fi muestra que estaba en la sala de café.
     t_clot = t0 + timedelta(hours=3)
     clot_picks = [
@@ -221,8 +225,9 @@ class ForensicOperationalAuditor:
                         f"(Velocidad Implicada: {implied_speed:.2f} m/s > 2.2 m/s). Las confirmaciones no siguen el recorrido físico (posible confirmación en lote): señal de proceso, no falta individual."
                     )
 
-            # 2. Detección de Retrabajo / Doble Manipulación (Re-handling Loop)
-            if src == tgt:
+            # 2. Detección de Retrabajo / Doble Manipulación (Re-handling Loop):
+            # una actividad repetida que el Golden Path no admite
+            if src == tgt and (src, tgt) not in GOLDEN_PATH_SLAS:
                 rework_loops += 1
                 deviations.append(f"🔁 LOOP RE-HANDLING: '{src}' ejecutado consecutivamente en {dt_sec/60.0:.1f} min.")
                 continue
