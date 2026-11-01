@@ -146,7 +146,7 @@ We enforce strict separation across **three latency regimes** and **four computa
 
 1. **Plane 1 — Hard Real-Time Control (`20–100 Hz`, deterministic latency `<10 ms`):** Servo loops, dynamic weighbridges, and physical safety interlocks (ISO 10218 / IEC 61508; the direct architectural lesson of **Therac-25**, Leveson & Turner, 1993 `[D]`). Executed exclusively on local PLC / RTOS hardware; zero cloud inference.
 2. **Plane 2 — System 1 Semantic Triage (`~70–200 ms` API; `<2 s` human feedback loop):** Non-autoregressive typed classifiers (`Jev` by TypeSafe AI `[R]`) confined to closed *enums* and human alert prioritization (*Digital Andon*), with zero ERP write permissions.
-3. **Plane 3 — Ledger Boundary (Deterministic ACID / Event-Sourced):** Finite-state machine (`kern` / `mellon`) verifying cryptographic sensor proofs, state preconditions, and idempotency keys prior to invoking `BAPI_GOODSMVT_CREATE`.
+3. **Plane 3 — Ledger Boundary (Deterministic ACID / Event-Sourced):** Finite-state machine (`kern` / `mellon`) verifying cryptographic sensor proofs, state preconditions, and idempotency keys before any ERP posting (in SAP S/4HANA, `BAPI_GOODSMVT_CREATE`). Neither repository calls that BAPI yet; `kern`'s only SAP connector writes item prices to SAP Business One.
 
 | Authority Level | Permitted Privilege | Authorized Principals | Failure Consequence & Reversibility |
 |:---:|---|---|---|
@@ -285,8 +285,8 @@ def delta(cfg: Config, event: E) -> Config | Rejected:
 
 ```text
 $ python -m pytest tests/test_cap3_probes.py test_gemba_invariants.py -q
-................................                                         [100%]
-32 passed in 2.60s
+............                                                             [100%]
+12 passed in 2.08s
 $ python -c "from probes import cap3_delta_projection as m; print(len(m.REACHABLE_STATES))"
 12
 ```
@@ -336,7 +336,7 @@ Ranked by descending net contribution (producing a mathematically concave cumula
 
 ## 4.2 Financial Audit of Minimum Order Quantities (MOQ) vs. WACC
 
-Compensating Procurement on Purchase Price Variance (*PPV*) incentivizes accepting vendor MOQs $Q_m \gg Q^*$ in exchange for nominal unit discounts $d \in (0, 1)$ that destroy free cash flow `[M]`. With annual demand $D$, base unit price $P$, order setup cost $S$, annual holding rate $h = r_{\text{WACC}} + c_{\text{storage}} + c_{\text{obsolescence}} + c_{\text{damage}}$ ($20\%\text{–}38\%$ per year `[D]`), $H_0 = P h$, $Q^* = \sqrt{2DS/H_0}$, and discounted holding cost $H(d) = P(1-d)h$, a discount creates net cash if and only if:
+Compensating Procurement on Purchase Price Variance (*PPV*) incentivizes accepting vendor MOQs $Q_m \gg Q^*$ in exchange for nominal unit discounts $d \in (0, 1)$ that destroy free cash flow `[M]`. With annual demand $D$, base unit price $P$, order setup cost $S$, annual holding rate $h = r_{\text{WACC}} + c_{\text{storage}} + c_{\text{obsolescence}} + c_{\text{damage}}$ ($20\%\text{–}38\%$ per year, an assumed range with no published source cited `[?]`), $H_0 = P h$, $Q^* = \sqrt{2DS/H_0}$, and discounted holding cost $H(d) = P(1-d)h$, a discount creates net cash if and only if:
 
 $$D \cdot P \cdot d > \left(\frac{H(d) \, Q_m}{2} - \frac{H_0 \, Q^*}{2}\right) + D \cdot S \left(\frac{1}{Q_m} - \frac{1}{Q^*}\right)$$
 
@@ -344,7 +344,7 @@ $$D \cdot P \cdot d > \left(\frac{H(d) \, Q_m}{2} - \frac{H_0 \, Q^*}{2}\right) 
 
 ## 4.3 CRPS / Newsvendor Separation and Independently Audited Gainsharing
 
-1. **S&OP De-Biasing (Fildes et al., 2009; Gneiting & Raftery, 2007) `[D][M]`:** Over 75% of commercial manual overrides to statistical forecasts are upward adjustments that degrade accuracy (WAPE/MAPE) by 4.5% to 11.2%. Penalizing forecasters for stockouts or excess inventory destroys strict propriety. Our governance separates:
+1. **S&OP De-Biasing (Fildes et al., 2009; Gneiting & Raftery, 2007) `[D][M]`:** In more than 60,000 forecasts from four supply-chain companies, upward manual adjustments to statistical forecasts were much less likely to improve accuracy than downward ones and more often went in the wrong direction (Fildes et al., 2009). Penalizing forecasters for stockouts or excess inventory destroys strict propriety. Our governance separates:
    * *Pure Probabilistic FVA Compensation for Planning:* $w_{\text{plan}} = w_0 + \alpha \bigl(\operatorname{CRPS}(F_{\text{naive}}, y_t) - \operatorname{CRPS}(F_t, y_t)\bigr)$, making truthful reporting $F_t = G_t$ the strictly dominant strategy.
    * *Deterministic Critical-Fractile Replenishment:* `kern` sets target stock $Q_t^* = F_t^{-1}\!\left(\frac{C_u}{C_u + C_o}\right)$ from asymmetric underage ($C_u$) and overage ($C_o$) costs without ever biasing the underlying forecast.
 2. **Collective Gainsharing Without Self-Reporting Penalties `[M]`:**
@@ -406,7 +406,7 @@ Across the **90-day post-cutover Hyper-Care phase**, governance tracks the weekl
 
 1. **COO Objection (*"Will enforcing `BWART 103` before releasing stock paralyze our 4,000-pallet/night perishables cross-dock?"*):** No, because the architecture **never imposes uniform 100% blind counting**: it decouples per `HU/SSCC` (immediately releasing compliant pallets off the same trailer), enables the **ISO 2859-1 AQL green lane** for certified vendors ($>99.5\%$ historical accuracy, reverting automatically upon a single sample defect), and releases the physical dock door via `DEPART` without waiting for quarantine resolution (Theorem T2).
 2. **CIO / CISO Objection (*"Who maintains edge gateways and SQLite across 18 plants at 03:00 AM after your team leaves?"*):** Edge nodes run stateless signed containers over embedded SQLite WAL backed by an **ISO 13850 hardware selector** allowing any night-shift supervisor to fail over to standard SAP `MIGO` in `<100 ms` without external IT intervention.
-3. **CFO Objection (*"Union wage contracts are locked for 3 years and regional HQ controls commercial bonuses; what survives if I cannot touch compensation today?"*):** In $e_r^* = \operatorname{clip}_{[0,T]}\!\left(\frac{k_g T + \gamma(\alpha - \beta) + q P}{k_r + k_g}\right)$, even with $\gamma$ fixed, raising technical shortcut friction ($k_g \uparrow$ via the 3D FSM), instituting stratified blind counts ($q \uparrow$), and fixing capture ergonomics ($k_r \downarrow$) eliminates 60%–75% of ledger corruption and halts the *Freeze Effect* ($L_t < R + \hat{D}_t$). Whenever executives order bypassing technical guardrails to hit a quarterly target, FDS 2.0 requires signing a **Formal Risk-Acceptance Memo copied to the Board Audit Committee** prior to enabling write authority.
+3. **CFO Objection (*"Union wage contracts are locked for 3 years and regional HQ controls commercial bonuses; what survives if I cannot touch compensation today?"*):** In $e_r^* = \operatorname{clip}_{[0,T]}\!\left(\frac{k_g T + \gamma(\alpha - \beta) + q P}{k_r + k_g}\right)$, even with $\gamma$ fixed, raising technical shortcut friction ($k_g \uparrow$ via the 3D FSM), instituting stratified blind counts ($q \uparrow$), and fixing capture ergonomics ($k_r \downarrow$) raises the operator's optimal verification effort $e_r^*$ in the model `[M]` (how much ledger corruption that removes in a real plant has not been measured `[?]`) and halts the *Freeze Effect* ($L_t < R + \hat{D}_t$). Whenever executives order bypassing technical guardrails to hit a quarterly target, FDS 2.0 requires signing a **Formal Risk-Acceptance Memo copied to the Board Audit Committee** prior to enabling write authority.
 
 **Unified Governing Principle (Adler & Borys, 1996, applied to transactional software):** *The FDS 2.0 architecture is strictly coercive over general-ledger mutation and strictly enabling over physical floor flow.* Unlike **Palantir FDSE 1.0** (embedding forward-deployed engineers to bind operations onto a proprietary data-fusion platform such as Foundry/Skywise), FDS 2.0 hardens physical capture, `OBYC` accounting boundaries, and local incentives without locking the enterprise into perpetual black-box middleware.
 
@@ -453,7 +453,7 @@ $$IRB = 100 \times \frac{\sum_{i=1}^{12} w_i s_i}{3 \sum_{i=1}^{12} w_i} = 100 \
 2. **Hardened Provenance Probes P1–P6 & 50,000-Cycle Adversarial Fuzzing Suite (`test_gemba_invariants.py`):**  
    `python -m pytest test_gemba_invariants.py -v` and `python test_gemba_invariants.py` $\to$ verifies fail-closed HMAC-SHA256 verification, total UTC timestamp normalization, single-use nonce anti-replay, `124`/`122` return segregation, `[1500, 80000]` kg weighbridge bounds, master-catalog weight parity, and `50,000 / 50,000` accounted adversarial cycles (`seed=20261024`, `0` violations).
 3. **Safe-Staging Idempotent Writeback & Governance Suite (`src/fdekit/ithildin/` & companion `kern` v2.9.0 engine):**  
-   `python -m pytest -q` (full `mellon` repository suite: `1,075+` unit, guard, simulation, and boundary tests; companion private `kern` v2.9.0 boundary suite verified across `260` boundary/writeback tests in `38.72s`).
+   `python -m pytest -q` (full `mellon` repository suite: `1,075+` unit, guard, simulation, and boundary tests; companion proprietary-licensed `kern` v2.9.0 boundary suite verified across `260` boundary/writeback tests in `38.72s`).
 
 ### Selected Primary Filings and Peer-Reviewed References
 * Adler, P. S., & Borys, B. (1996). Two types of bureaucracy: Enabling and coercive. *Administrative Science Quarterly*, 41(1), 61–89. `[D]`

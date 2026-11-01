@@ -21,17 +21,17 @@ A deterministic guardrail is not a regular expression or a generic `try/catch` b
 flowchart LR
     F["1. Theoretical Law or Failure Mode\n(Physics, Pacioli, Incident)"] --> C["2. Immutable Typed Contract\n(Pydantic v2 / Frozen Dataclass)"]
     C --> T["3. State Topology FSM\n(delta: S x E -> S | Rejected)"]
-    T --> H["4. Adversarial Verification\n(Hypothesis: 50,000 mutations)"]
+    T --> H["4. Adversarial Verification\n(Hypothesis + 50,000 seeded random cycles)"]
 ```
 
 ### 1.1 Modeling Immutable Telemetry Contracts
 The contract architecture forbids raw dictionary (`dict`) payloads or unvalidated primitive parameters. Contracts must be **immutable (`frozen=True`)**, strictly verifying types, physical boundaries, and cryptographic signatures at the instant of instantiation.
 
-Below is the production-grade implementation pattern established in [`core_event_contracts.py`](../../core_event_contracts.py):
+Below is a simplified, older excerpt of the pattern in [`core_event_contracts.py`](../../core_event_contracts.py). The current code differs in three ways: it never hard-codes the HMAC secret (the caller passes the key in, and `compute_hmac_proof` fails closed unless it gets a key of at least 16 bytes); the weight bounds are 1,500 to 80,000 kg inclusive (`MIN_WEIGHBRIDGE_KG`, `MAX_WEIGHBRIDGE_KG`); and the signature covers transaction ID, delivery ID, license plate, weight and timestamp (`canonical_signing_payload()`), not just delivery ID and weight:
 
 ```python
 """
-core_event_contracts.py (Production Extract)
+core_event_contracts.py (simplified, older excerpt; see the note above)
 Immutable contracts validating physical bounds and signatures prior to system ingest.
 """
 from datetime import datetime, timezone
@@ -168,6 +168,10 @@ def delta(cfg: Config, event: E) -> Config | Rejected:
             return Rejected("ILLEGAL", "COUNT_FAIL requires UNLOADING and active 103 hold")
         return replace(cfg, s=S.HELD)
 
+    # RESOLVE_RELEASE (HELD -> RELEASED, posts 105) and RESOLVE_RETURN (HELD -> RETURNED,
+    # posts 124) are left out of this extract; without them RELEASED and RETURNED are
+    # unreachable. The full delta() is in probes/cap3_delta_projection.py.
+
     if event is E.DEPART:
         # Theorem T2: Vehicle can depart once physical unloading concludes, decoupled from accounting dispute
         if d is D.DEPARTED or s not in {S.HELD, S.CLEARED, S.RELEASED, S.RETURNED}:
@@ -179,9 +183,9 @@ def delta(cfg: Config, event: E) -> Config | Rejected:
 
 ---
 
-## 3. Transactional Isolation Patterns: The Kern Production Standard
+## 3. Transactional Isolation Patterns: Kern's Safe-Staging Reference Design
 
-In production agentic environments where models propose purchase orders or inventory allocations, systems enforce the **Safe-Staging Writeback** architecture ([`DEPLOYMENT-STRATEGIST-MASTER-BLUEPRINT.md:123-140`](../../DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md)):
+Kern is built and tested, but no client runs it in production yet (see the [30-day field protocol](../../field-toolkit/FIELD-PROTOCOL-30-DAYS.md)). For agentic environments where models propose purchase orders or inventory allocations, its reference design is the **Safe-Staging Writeback** architecture ([master whitepaper, §4.4](../../DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md)). The signed approval with a 900-second default TTL is in Kern's code (`nosilo_core/writeback.py`); Kern's only SAP connector writes item prices to SAP Business One, so the S/4HANA postings named below (`BWART`, `MIRO`) have no connector yet:
 
 ```mermaid
 flowchart TD
@@ -221,15 +225,17 @@ A guardrail is not verified because it passes 10 unit tests with clean synthetic
 | **`P2`** | Inject naive (timezone-unaware) timestamps. | Timezone drift mutation exploits. | Mandatory UTC-aware `datetime` enforcement. |
 | **`P3`** | Inject duplicate timestamp ($t_{\text{new}} = t_{\text{last}}$). | Replay attack accepted via weak inequality ($<$). | Strict inequality enforcement ($t_{\text{new}} \le t_{\text{last}} \implies \text{Error}$). |
 | **`P4`** | Cargo rejection without origin segregation. | Cross-contamination of `124` and `122` movements. | Strict segregation: `124` only from blocked `103`; `122` only post-`105`. |
-| **`P5`** | Out-of-bounds weighbridge load injection. | Negative or 80-ton cargo weights accepted. | Hard bounds: `gt=Decimal(3000), lt=Decimal(45000)` in contract. |
+| **`P5`** | Out-of-bounds weighbridge load injection. | Negative or out-of-range cargo weights accepted. | Hard bounds in the contract: 1,500 to 80,000 kg inclusive (`MIN_WEIGHBRIDGE_KG`, `MAX_WEIGHBRIDGE_KG`). |
 | **`P6`** | Self-referential tare verification. | Driver falsifies unladen truck weight. | Mandatory cross-check against catalog tare bounds (`MARA-BRGEW` $\times$ quantity). |
 
 ### 4.2 Adversarial Verification Harness Code
 
 ```python
 """
-test_gemba_invariants.py (Formal Verification Extract)
-Subjecting FSM engine to 50,000 randomized state transitions.
+test_gemba_invariants.py (simplified, older excerpt; the current file differs)
+One Hypothesis property test. The current file runs each property test with 500
+examples; its 50,000-cycle campaign is run_50000_fuzzing_campaign, a seeded random
+campaign (random.Random), not Hypothesis.
 """
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
@@ -275,6 +281,8 @@ radar
   "4. Loud Degradation": 9.0
   "5. Idempotency & Cryptography": 9.5
 ```
+
+*The scores in the chart are self-assigned; they are not the result of an external certification or audit.*
 
 | Evaluation Dimension | Weight | Target Standard for 10 / 10 Score | Falsification Verification Asset |
 | :--- | :---: | :--- | :--- |

@@ -5,7 +5,7 @@
 > **Version:** 1.1 — October 25, 2026 (see the corrections log at the end)  
 > **Author:** Marcos Stipicich  
 > **Evidence Taxonomy:**  
-> `[EMPIRICAL]` = Telemetry audits and codebase verification (`kern`, `mellon`; `mellon` collects 1,079 automated tests as of October 25, 2026).  
+> `[EMPIRICAL]` = Codebase verification (`kern`, `mellon`; `mellon` collects 1,079 automated tests as of October 25, 2026); no telemetry audits have been run yet.  
 > `[CANON]` = Physical conservation laws, double-entry bookkeeping, and formal systems engineering literature.  
 > `[REGULATORY]` = Enforced statutory articles (EU AI Act, GDPR, Chilean Labor Code, German BetrVG).  
 > `[MODELING]` = Flow-conservation balances, state closure theorems, and queueing theory.
@@ -151,7 +151,7 @@ flowchart LR
 
 1. **Double-Entry Accounting Conservation (Luca Pacioli, 1494):**
    * *Invariant:* No asset account (e.g., inventory valuation `BSX`) can mutate without an equal offsetting liability/clearing entry (`WRX`).
-   * *Guardrail Mechanism:* The integration gateway intercepts all calls to `BAPI_GOODSMVT_CREATE`, failing closed if journal debits and credits do not balance bit-for-bit.
+   * *Guardrail Mechanism (design):* An integration gateway intercepts every goods-movement posting (in SAP S/4HANA, calls to `BAPI_GOODSMVT_CREATE`) and fails closed if journal debits and credits do not balance. Not built yet: neither `mellon` nor `kern` calls that BAPI, and `kern`'s only SAP connector writes item prices to SAP Business One.
 2. **Queueing Theory and Mass Balance (*Factory Physics*, Hopp & Spearman; John Little, 1961):**
    * *Identity:* In a stable system, average work-in-process equals average throughput ($\lambda$) times average time in the system ($W$): $L = \lambda W$. It holds for long-run averages, not for each transaction.
    * *Guardrail Mechanism:* `quarantine_capacity.py` uses Little's Law to size the inspection bay ($L_{quarantine} = \lambda \cdot r \cdot R$, with $r$ the retention rate and $R$ the resolution time) and a queueing model for waiting time. At run time, the FSM enforces the resulting bay capacity ($V$) per transaction: when retained inventory in inspection exceeds $V$, the FSM vetoes new inbound flows or triggers the formal `OVERFLOW_IMPUTED` break-glass protocol, allocating demurrage directly to the offending cost center `[MODELING]`.
@@ -176,19 +176,21 @@ The operational cost of enforcing guardrails is trivial compared to the remediat
 
 ```mermaid
 xychart-beta
-    title "Cumulative Remediation Cost by Error Detection Stage ($ USD)"
+    title "Illustrative Cumulative Remediation Cost by Error Detection Stage (USD, assumed values)"
     x-axis ["Inference (FSM Gate)", "Weighbridge Gate", "Invoice Clearing (MIRO)", "Gemba Stockout Outage"]
     y-axis "Remediation Cost ($)" 0 --> 50000
     bar [10, 450, 4800, 42000]
 ```
+
+*The four values are illustrative assumptions chosen to show that an error costs more the later it is caught; they are not measured data and no source is cited.*
 
 Kern’s constitutional engineering principle enforces **Loud Degradation**:
 $$\text{If } \text{Data}(x) = \emptyset \implies \text{Result} = \text{None} \quad (\text{NEVER } 0.0 \text{ or synthetic heuristics}).$$
 
 ### 4.2 Regulatory and Statutory Alignment
 Deploying autonomous agents into enterprise workflows must comply with evolving global mandates:
-* **EU AI Act (Regulation EU 2024/1689) Art. 14:** Mandates effective human oversight (*Human-in-the-Loop* / *Human-on-the-Loop*) for high-risk deployments. Kern’s **Four Guided Outcomes** (`EXECUTED`, `OPTIONS`, `HANDOFF`, `ESCALATED`) natively satisfy this requirement: 3 of the 4 pathways enforce mandatory human sign-off before execution.
-* **EU AI Act Art. 5(1)(f) and GDPR Art. 35:** The AI Act prohibits emotion recognition in the workplace, and the GDPR requires a data-protection impact assessment for high-risk processing. The digital Andon processes syntax-only tokens against closed schemas, dropping raw audio buffers in memory with $TTL = 0$.
+* **EU AI Act (Regulation EU 2024/1689) Art. 14:** Mandates effective human oversight (*Human-in-the-Loop* / *Human-on-the-Loop*) for high-risk deployments. Kern’s **Four Guided Outcomes** (`EXECUTED`, `OPTIONS`, `HANDOFF`, `ESCALATED`) are designed to support this requirement: 3 of the 4 pathways require human sign-off before execution. Whether a given deployment complies with Art. 14 is a legal assessment of that deployment.
+* **EU AI Act Art. 5(1)(f) and GDPR Art. 35:** The AI Act prohibits emotion recognition in the workplace, and the GDPR requires a data-protection impact assessment for high-risk processing. In the design, the digital Andon processes syntax-only tokens against closed schemas and drops raw audio buffers from memory with $TTL = 0$; neither `mellon` nor `kern` implements an Andon yet.
 * **Labor Regulations (Chilean Labor Code Art. 154 / German BetrVG §87(1) no. 6):** Chile requires workplace control measures to be general and to respect workers' dignity; Germany requires works-council co-determination before introducing technical systems that can monitor employee behavior or performance. Neither allows clandestine individual scoring by algorithm.
 
 ---
@@ -205,7 +207,7 @@ Deploying autonomous agents into enterprise workflows must comply with evolving 
 * **Response:** Cloud-vendor solutions (such as Azure AI Content Safety or Bedrock Guardrails) are **semantic content filters, not transactional state verifiers**. They can block offensive language or flag data exfiltration, but they cannot evaluate whether truck `AB123CD` is physically resting on load-cell #2 or whether open purchase order line `EKPO-EBELP` has unfulfilled balance. Delegating transactional integrity to a remote cloud LLM classifier introduces unacceptable latency (>300 ms) and provides zero mathematical determinism.
 
 ### Objection 3: "Under physical throughput pressure, frontline operators will bypass the guardrails."
-* **Response:** The operational doctrine incorporates the **Break-Glass (`OVERFLOW_IMPUTED`) Protocol**. Effective guardrails do not act as dumb brick walls: if inspection bays reach physical saturation, the system admits the cargo to prevent highway traffic blockages, but **automatically posts the accrued cost to the generating department via digital supervisor signature**. By binding procedural exceptions to management accounting, bypass ceases to be an invisible floor workaround and becomes an explicit financial decision.
+* **Response:** The operational doctrine incorporates the **Break-Glass (`OVERFLOW_IMPUTED`) Protocol**. Effective guardrails do not act as dumb brick walls: if inspection bays reach physical saturation, the system admits the cargo to prevent highway traffic blockages, and records an `OVERFLOW_IMPUTED` event tagged with the generating cost center (`probes/cap3_delta_projection.py`); posting that cost to the department and the digital supervisor signature are part of the design, not yet of the code. By binding procedural exceptions to management accounting, bypass ceases to be an invisible floor workaround and becomes an explicit financial decision.
 
 ---
 

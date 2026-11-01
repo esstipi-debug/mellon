@@ -52,7 +52,7 @@ When an isolated operational metric (such as warehouse picking speed, ticket clo
 ### 2.3. Forecast Value Added (FVA) Breakdown and Phantom Inventory
 In demand planning, **Forecast Value Added (FVA)** (Fildes & Goodwin) measures whether human managerial adjustments improve or degrade statistical baseline forecasts. Empirical literature reveals that human planners systematically inject upward bias ("sales optimism") to ensure buffer stock and protect commissions, following an asymmetric loss function where managers prefer the silent carrying cost of excess stock over the visible embarrassment of a stockout.
 
-This dynamic manufactures **Phantom Inventory**—where the ERP/WMS indicates inventory is physically present, but the stock is missing due to shrinkage, damage, or misplacement. Automated replenishment models observing non-zero stock cease issuing replenishment purchase orders as sales drop to zero, misinterpreting a stockout as demand destruction. Lost sales from phantom inventory can be up to five times greater than traditional forecasting accounts for, requiring negative binomial Bayesian filtering to detect.
+This dynamic manufactures **Phantom Inventory**—where the ERP/WMS indicates inventory is physically present, but the stock is missing due to shrinkage, damage, or misplacement. Automated replenishment models observing non-zero stock cease issuing replenishment purchase orders as sales drop to zero, misinterpreting a stockout as demand destruction. Lost sales from phantom inventory do not appear in the sales history that forecasting reads. In one case described by professors in a *Wall Street Journal* guest post, as reported by *Supply Chain Dive*, they were five times what traditional analyses had counted; that is a single case, not a general ratio.
 
 ---
 
@@ -70,12 +70,14 @@ Pioneered by Palantir Technologies, the Forward Deployed Engineer (FDE) / Deploy
 ### 3.3. The Corporate Ontology
 The connective tissue of this model is the **Corporate Ontology**—a dynamic semantic layer positioned above relational databases that maps raw SQL tables into governed business objects ("Shipment", "Production Asset", "Purchase Order") with strictly defined, verifiable actions.
 
-| Strategic Dimension | Traditional Strategic Consulting (McKinsey, BCG, Big 4) | Forward Deployed Engineering (Palantir / Mellon Model) |
+| Strategic Dimension | Traditional Strategic Consulting (McKinsey, BCG, Big 4) | Forward Deployed Engineering (Palantir Model) |
 | :--- | :--- | :--- |
 | **Primary Deliverable** | Abstract slide decks, strategy roadmaps, theoretical target models. | Tested production software integrated with live data under real constraints. |
 | **Team Architecture** | Highly fragmented across multiple handoffs (strategy $\rightarrow$ offshore tech). | End-to-end single ownership; zero translation latency from floor to code. |
 | **Incentive Alignment** | Billable hours; incentives aligned with extending engagement scope. | Time-to-value; client autonomy achieved via hardened software platform. |
 | **Operating Reality** | Clean sandboxes, executive interviews, static sanitized sample data. | Unfiltered Gemba friction; broken ERP schemas, operator workarounds. |
+
+*The right-hand column describes the forward-deployed model popularized by Palantir. Mellon proposes this approach but has not been deployed with a client yet, so none of that column has been shown for Mellon in the field.*
 
 ---
 
@@ -145,7 +147,7 @@ Good-faith memos and ceremonial paper audits (such as static ISO 9001 certificat
 29. [Nicolas Vandeput: Forecast Value Added Metrics in Supply Chain](https://nicolas-vandeput.medium.com/forecast-value-added-ebc163d7ccd)
 30. [University of Birmingham: Doctoral Thesis on Demand Forecasting Under Asymmetric Loss](https://etheses.bham.ac.uk/id/eprint/12756/13/Elegbede2022PhD.pdf)
 31. [arXiv: 2610.19829: Stochastic Inventory Discrepancy Modeling](https://arxiv.org/pdf/2610.19829)
-32. [Atlantis Press: Bayesian Detection of Phantom Inventory](https://www.atlantis-press.com/proceedings/icaisda-25/126022694)
+32. [Atlantis Press: Phantom Inventory Detection in Retail Supply Chains using Federated Learning (ICAISDA 2025 proceedings)](https://www.atlantis-press.com/proceedings/icaisda-25/126022694)
 33. [Supply Chain Dive: Phantom Inventory Management and Retail Bias](https://www.supplychaindive.com/news/phantom-inventory-management-retail-sales-forecasts/433231/)
 34. [MIT DSpace: Inventory Discrepancies in Retail Store Operations](https://dspace.mit.edu/entities/publication/3869cd6f-ce70-4537-a682-33ee76b3c64d)
 
