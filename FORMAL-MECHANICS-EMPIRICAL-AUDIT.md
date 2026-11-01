@@ -380,7 +380,7 @@ EMPIRICAL INVARIANT SATISFACTION RATE:     100.000%
 ================================================================================
 ```
 
-*Security Invariant:* It is mathematically proven that **no execution path can reach `POSTED_TO_ERP` ledger state** without presenting the complete cryptographic chain of physical telemetry proofs (`GATE_ARRIVED` + `CLEARED_COMPLETE`).
+*Security Invariant (tested, not formally proven):* in the 50,000 randomized cycles and the property-based tests, **no execution path reached `POSTED_TO_ERP`** without the signed physical proofs (`GATE_ARRIVED` + `CLEARED_COMPLETE`). Randomized testing does not rule out paths it did not generate; the 3-coordinate automaton in [`probes/cap3_delta_projection.py`](probes/cap3_delta_projection.py) is checked exhaustively by breadth-first search.
 
 ---
 
@@ -484,9 +484,11 @@ To prevent the common methodological fallacy of claiming "parallel pre-trends" b
 | **Distribution Centers ($K$)** | $K \ge 12$ clusters | If $K < 30$, mandatory deployment of **Wild Cluster Bootstrap** (*Cameron, Gelbach & Miller, 2008*) to correct standard error deflation. |
 | **Time Horizon ($T$)** | $T \ge 18$ months | Minimum 6 months pre-treatment and 12 months post-treatment to decouple annual seasonality. |
 | **Minimum Detectable Effect (MDE)** | $\text{MDE} \le 8.5\%$ | Capable of detecting true phantom inventory loss reductions $\ge 8.5\%$ at $\alpha = 0.05$. |
-| **Intraclass Correlation ($\rho$)** | $\rho \approx 0.12\text{--}0.18$ | Calibrated from historical monthly warehouse scrap variance. |
+| **Intraclass Correlation ($\rho$)** | $\rho \approx 0.12\text{--}0.18$ | Assumed design value; to be calibrated with the first facility's historical scrap data. |
 
 #### Vega-Lite Specification: Dynamic Event Study with TOST Equivalence Band
+
+*Illustrative coefficients typed into the specification below; they are not the output of [`econometric_engine.py`](econometric_engine.py).*
 
 ```json
 {
@@ -553,8 +555,8 @@ To prevent the common methodological fallacy of claiming "parallel pre-trends" b
 
 The empirical pipeline implemented in [`econometric_engine.py`](econometric_engine.py) calibrates and stress-tests the identification strategy over a **synthetic DGP validation panel** of $K = 16$ Distribution Centers across $T = 24$ months (`seed=42`, modeling staggered adoption cohorts and pre-treatment Goodhart drift prior to live plant deployment):
 
-1. **Staggered DiD Aggregate Estimator (Callaway & Sant'Anna, 2021):**
-   * Clustered OLS coefficient: $\hat{\beta} = -13.101\text{ k USD/month}$ net reduction in phantom shrinkage and expedited freight.
+1. **Simplified pooled regression (not the Callaway & Sant'Anna aggregate):**
+   * Treated coefficient of a pooled OLS without facility or month fixed effects: $\hat{\beta} = -13.101\text{ k USD/month}$ on the synthetic panel.
    * Cluster-robust standard error: $\text{SE} = 4.268$.
    * $t$-statistic: $-3.069$.
 2. **Cameron-Gelbach-Miller Wild Cluster Bootstrap (9,999 Iterations):**
@@ -562,7 +564,7 @@ The empirical pipeline implemented in [`econometric_engine.py`](econometric_engi
 3. **Rambachan & Roth (2023) Honest Sensitivity Frontier:**
    * Maximum observed pre-treatment divergence: $\bar{\delta} = 2.269\text{ k USD}$.
    * Honest breakdown threshold: **$M^* \ge 5.000$**.
-   * *Scientific Interpretation:* The estimated causal reduction in operational losses remains strictly negative and statistically significant at 95% confidence even if post-treatment counterfactual trend violations were to drift at a slope exceeding twice the maximum historical volatility ($M^* > 2 \times \bar{\delta}$).
+   * *Interpretation:* on this synthetic panel the event-study estimate stays negative at 95% confidence up to the breakdown value $M^* = 5$ computed by the code. It shows the pipeline runs; it is not evidence of an effect in real facilities.
    * High-resolution diagnostic plot: [`honest_did_sensitivity_plot.png`](honest_did_sensitivity_plot.png).
 
 ---

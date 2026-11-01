@@ -33,7 +33,7 @@ To close the chasm between executive strategy and physical shop-floor execution 
 Every operational distortion in the supply chain decomposes into three structural vectors:
 
 1. **Incentives (I):** Conflicts between departmental performance targets and consolidated enterprise free cash flow.  
-   * *Example:* Procurement maximizes its annual Purchase Price Variance (PPV) bonus by purchasing massive Minimum Order Quantities (MOQs), offloading an unmeasured 24.50% holding cost burden onto warehousing.
+   * *Example:* Procurement maximizes its annual Purchase Price Variance (PPV) bonus by purchasing massive Minimum Order Quantities (MOQs), offloading the holding cost (24.5% a year in this repository's worked example) onto warehousing.
 2. **Translation (T):** Semantic desynchronization between physical operational reality and digital system abstractions.  
    * *Example:* Forecasting demand from historical billed shipments (*Sell-in*) rather than point-of-sale customer consumption (*Sell-out*), systematically censoring historical stockouts.
 3. **Calendar (C):** Asymmetric accounting windows and quarter-end manipulations (*Real Earnings Management* — Roychowdhury, 2006).  
@@ -51,22 +51,22 @@ The Deployment Strategist doctrine preempts and structurally neutralizes all fiv
 2. **The Floor Boycott (Gemba — The "Silent Blackout"):** Neutralized via the *Ergonomic Invariance Rule* (<800 ms response latency, industrial glove-compatible UI, zero incremental clicks). When software measurably saves time and physical fatigue, operators become its fiercest internal champions.
 3. **Malicious Compliance (Data Poisoning):** Neutralized via *Pydantic V2* perimeter validation contracts and immutable *HMAC-SHA256 audit ledgers*. Out-of-bounds or physically impossible entries are automatically quarantined, sealing tampering attempts cryptographically with user identity, timestamp, and counterfactual cost.
 4. **The Departmental Silo War (Bonus Preservation):** Neutralized via *Real-Time Cross-P&L Attribution*. No procurement or production order can be executed to optimize a local KPI (e.g., PPV discount or plant OEE) if it degrades consolidated enterprise margin (mandatory dual CFO + COO co-signature on Yellow / Red Lanes).
-5. **Legacy IT Resistance (Not-Invented-Here Syndrome):** Neutralized via the *50-50 Compact and the Day-5 Escalation Clause*, backed by a decoupled *Safe-Staging Architecture* that mathematically guarantees zero unauthorized mutations against core production databases.
+5. **Legacy IT Resistance (Not-Invented-Here Syndrome):** Neutralized via the *50-50 Compact and the Day-5 Escalation Clause*, backed by a decoupled *Safe-Staging Architecture* designed so that models never write directly to core production databases: changes go through validated staging and a named approval.
 
 ---
 
 ## 3. Financial Proof: Working Capital Destruction via Minimum Order Quantities (MOQs)
 
-The most urgent capital drain in industrial manufacturing and distribution is the collision between unit purchase price discounts (PPV) and the true cost of carrying inventory (*Inventory Carrying Cost*, audited at **24.50% annually** across industrial benchmarks).
+The most urgent capital drain in industrial manufacturing and distribution is the collision between unit purchase price discounts (PPV) and the true cost of carrying inventory (*Inventory Carrying Cost*; **24.5% a year** in the worked example of the [MOQ whitepaper](MOQ-WORKING-CAPITAL-GOVERNANCE-WHITEPAPER.md), Annex A, not an audited benchmark).
 
 ### 3.1. The Phantom Savings Paradox
-When procurement executes order batches exceeding **60 to 90 days of projected forward consumption**, the capital carrying cost rapidly eclipses any commercial discount:
+When procurement executes order batches exceeding **60 to 90 days of projected forward consumption**, the carrying cost of the extra stock can exceed the discount:
 
-> **The Iron Law of Purchasing Economics:**  
-> Beyond 90 days of inventory coverage, **every dollar saved in unit purchase price via volume discounts destroys between \$1.20 and \$1.80 in net corporate cash flow**.
+> **Rule of thumb from the worked example:**  
+> At the 24.5% example rate, a batch covering 90 days of demand costs about 3.1% of its value to hold, so a volume discount below about 3% does not pay for the extra stock; longer coverage needs a larger discount (see the MOQ whitepaper, §2.2).
 
 ### 3.2. Stochastic Arbitrage Boundary under Compound Poisson-Gamma (Tweedie) Demand
-Replacing naive linear approximations with realistic compound Poisson-Gamma jump dynamics ($\int_0^T F_{D(t)}(Q^*) \, dt = \frac{\delta}{i(1 - \delta)}$), our numerical solver computes exact break-even discount thresholds over a 6-month horizon ($T = 0.5\text{ years}$):
+Replacing naive linear approximations with realistic compound Poisson-Gamma jump dynamics ($\int_0^T F_{D(t)}(Q^*) \, dt = \frac{\delta}{i(1 - \delta)}$), our numerical solver ([`inventory_mechanics.py`](inventory_mechanics.py)) computes break-even discount thresholds over a 6-month horizon ($T = 0.5\text{ years}$) for an example SKU with mean demand of 50 units a year:
 
 | Purchase Batch ($Q$) | Minimum Required Discount ($i = 24.5\%$) | Economic Verdict Against Standard 5% Vendor Discount |
 | :---: | :---: | :--- |
@@ -74,24 +74,24 @@ Replacing naive linear approximations with realistic compound Poisson-Gamma jump
 | **100 units** | **10.91%** | **Severe Liquidity Trap:** Rapid depletion of balance sheet working capital. |
 | **200 units** | **10.91%** | **Red Lane Violation:** Illiquid balance sheet asset. Requires immediate C-Level veto and multi-SKU split. |
 
-* **Maximum Non-Destructive Batch ($Q^*$):** For a standard commercial discount of **5.0%**, the maximum order quantity that does not destroy cash at an annual carrying rate of 24.5% is **only 4.3 units**. Routine industrial purchases of 50- or 100-unit minimum batches are mathematically cash-negative.
+* **Maximum Non-Destructive Batch ($Q^*$):** For a standard commercial discount of **5.0%**, the maximum order quantity that does not destroy cash at an annual carrying rate of 24.5% is **4.3 units** for this example SKU. For it, batches of 50 or 100 units do not pay for themselves; other demand rates give other thresholds.
 
 ---
 
 ## 4. Deterministic Engineering & Scientific Validation
 
-The Deployment Strategist framework is grounded in verified, production-grade software and a falsifiable econometric protocol:
+The Deployment Strategist framework is backed by tested reference code in this repository and a falsifiable econometric protocol that has not yet been run in the field:
 
 ### 4.1. "Compliance as Code" and Poka-Yoke Invariants
-* **Strongly-Typed Event Contracts (Pydantic V2):** Yard, weighbridge, and scrap events enforce exact fixed-point arithmetic (`Decimal`) and hex-validated SHA-256 signatures (`pattern=r"^[a-fA-F0-9]{64}$"`), eliminating floating-point rounding vulnerabilities and fraudulent paperwork.
-* **Zero-Bypass Finite State Machine:** The transition `POSTED_TO_ERP` is topographically gated: it is impossible to post an inventory adjustment into SAP S/4HANA without synchronized physical proofs (scale weight parity $\le 3.0\%$ + optical ALPR license match + cryptographic blind cycle count).
+* **Strongly-Typed Event Contracts (Pydantic V2):** Yard, weighbridge, and scrap events enforce exact fixed-point arithmetic (`Decimal`), physical bounds, and HMAC-SHA256 signatures checked against a gateway secret, which removes floating-point rounding errors and rejects unsigned or altered events.
+* **Zero-Bypass Finite State Machine:** In [`inbound_fsm_guardrail.py`](inbound_fsm_guardrail.py), the state `POSTED_TO_ERP` is reachable only after signed gate, weighbridge and dock events and a blind count that reconciles with the manifest. It is a Python reference implementation; it is not connected to SAP S/4HANA.
 * **Adversarial Fuzzing Harness:** The state machine verified **50,000 randomized adversarial state transitions** with **100.000% invariant satisfaction** (zero bypasses).
 
 ### 4.2. Counterfactual Causal Econometrics (Staggered DiD)
-To prove that operational savings are causal rather than statistical artifacts of market seasonality, we evaluate interventions via the **Callaway & Sant'Anna (2021)** doubly robust estimator across a 16-facility panel over 24 months:
-* **Average Treatment Effect on the Treated (ATT):** Causal reduction of **$-\$13,101\text{ USD/month}$** per distribution center in unrecorded shrinkage and emergency spot freight ($p < 0.001$).
-* **Cameron-Gelbach-Miller Wild Cluster Bootstrap (9,999 replications):** Empirical cluster significance confirmed at **$p = 0.015402$**.
-* **Rambachan & Roth (2023) HonestDiD Sensitivity:** Robustness breakdown frontier **$M^* \ge 5.00$**, demonstrating that the causal benefit remains statistically significant even if pre-treatment parallel trends experienced linear violations up to double the maximum historical variance.
+To separate operational savings from seasonality, the framework proposes a staggered difference-in-differences evaluation (**Callaway & Sant'Anna, 2021**). No facility has been treated yet, so there is no causal estimate; [`econometric_engine.py`](econometric_engine.py) runs the pipeline on a **synthetic panel** (16 simulated distribution centers, 24 months, `seed=42`) with an effect built into the generator:
+* **Pooled regression on the synthetic panel:** treated coefficient of **$-13.1\text{k USD/month}$** (cluster-robust SE 4.27). This simplified OLS has no facility or month fixed effects; it is not the Callaway & Sant'Anna estimator.
+* **Wild cluster bootstrap of that regression (9,999 replications):** $p = 0.0154$ on the synthetic data.
+* **HonestDiD sensitivity (Rambachan & Roth, 2023) on the synthetic event study:** breakdown value $M^* = 5$. These numbers show the code runs end to end; they are not evidence of an effect in any real facility.
 
 ---
 
@@ -128,11 +128,11 @@ flowchart TD
 | **DOC-04-06** | **L2D** | **30-Day Frontline Field Toolkit** | [`field-toolkit/`](field-toolkit/README.md) | Deployment Strategists, FDEs | Executable field contracts & protocols (30 min) |
 | **DOC-07** | **L3** | **Formal Code Mechanics & Empirical Audit** | [`FORMAL-MECHANICS-EMPIRICAL-AUDIT.md`](FORMAL-MECHANICS-EMPIRICAL-AUDIT.md) | Lead Architects, FDEs, Auditors | Pydantic contracts, FSM, DiD econometrics (45 min) |
 | **CODE** | **ENG** | **Mathematical Solver & Tweedie Boundary Engine** | [`inventory_mechanics.py`](inventory_mechanics.py) | Operations Researchers | Theorem 1 simulation & Tweedie solver (Executable) |
-| **CODE** | **ENG** | **Econometric Pipeline & Wild Cluster Bootstrap** | [`econometric_engine.py`](econometric_engine.py) | Applied Econometricians | Callaway & Sant'Anna + Wild Bootstrap (Executable) |
+| **CODE** | **ENG** | **Econometric Pipeline & Wild Cluster Bootstrap** | [`econometric_engine.py`](econometric_engine.py) | Applied Econometricians | DiD on a synthetic panel + Wild Bootstrap (Executable) |
 | **CODE** | **ENG** | **Strongly-Typed Event Contracts** | [`core_event_contracts.py`](core_event_contracts.py) | Distributed Systems Engineers | Pydantic V2 & Decimal verification (Executable) |
 | **CODE** | **ENG** | **Poka-Yoke Inbound State Machine** | [`inbound_fsm_guardrail.py`](inbound_fsm_guardrail.py) | Lead Software Architects | Zero-bypass state machine (Executable) |
 | **CODE** | **ENG** | **Gemba Invariant Harness (50,000 Fuzzing Runs)** | [`test_gemba_invariants.py`](test_gemba_invariants.py) | Software Engineers / QA | 50,000 fuzzing transitions (Executable) |
-| **CODE** | **ENG** | **Production SQL Audit Suite for SAP S/4HANA** | [`audit_assertions_sap.sql`](audit_assertions_sap.sql) | Enterprise Database Architects | ANSI SQL S/4HANA assertions (Executable) |
+| **CODE** | **ENG** | **Reference SQL Audit Suite for SAP S/4HANA (not run against SAP)** | [`audit_assertions_sap.sql`](audit_assertions_sap.sql) | Enterprise Database Architects | ANSI SQL S/4HANA assertions (Executable) |
 | **DOJO** | **UI** | **Interactive Simulation & Sensitivity Dojo** | [GitHub Pages Deployment](https://esstipi-debug.github.io/mellon/) | Executive & Technical Teams | Interactive Tweedie & absorption visualization |
 
 ---

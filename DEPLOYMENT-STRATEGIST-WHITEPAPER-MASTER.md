@@ -114,7 +114,7 @@ flowchart TD
     end
 
     subgraph Impact["Consolidated Destruction"]
-        LOST["<b>Liquidity & Service Collapse</b><br>• Stockouts on high-margin Class-A SKUs<br>• Warehouses paralyzed by unsellable SLOB inventory<br>• Annual carrying cost: 24.50% cash drain"]
+        LOST["<b>Liquidity & Service Collapse</b><br>• Stockouts on high-margin Class-A SKUs<br>• Warehouses paralyzed by unsellable SLOB inventory<br>• Carrying cost (24.5%/yr in the MOQ example)"]
     end
 
     V --> D_V --> LOST
@@ -124,6 +124,8 @@ flowchart TD
 ```
 
 ### 2.1. Empirical Evidence Matrix Across 11 Enterprise Roles
+
+*The citation column names the study behind each mechanism. The percentages and amounts in the table are the author's illustrative estimates, not results reported by those studies.*
 
 | Operational Role | Distortion | Causal Mechanism & Self-Preservation Behavior | Academic Empirical Citation | Quantitative P&L Impact |
 | :--- | :---: | :--- | :--- | :--- |
@@ -142,6 +144,8 @@ flowchart TD
 ---
 
 #### Multivariate Visualization: Cleveland Dot Plot of Economic Severity
+
+*The ranges below are the author's illustrative estimates, without a source or a defined base; read them as a relative ordering, not as measured data.*
 The following dot plot maps the economic severity range and primary causal distortion vector across all 11 enterprise roles, adhering to Edward Tufte's data-ink principles and WCAG 2.1 AA accessible contrast ratios ($\ge 4.5:1$):
 * **Incentive (I):** Solid circle `●` / Okabe-Ito Blue (`#0072B2`, contrast ratio 5.17:1).
 * **Translation (T):** Solid triangle `▲` / Okabe-Ito Dark Green (`#007856`, contrast ratio 5.41:1).
@@ -234,7 +238,7 @@ In the fragmented enterprise, the **Analyst (Business Analyst, Demand Planner, I
 ```mermaid
 flowchart LR
     subgraph StatusQuo["The Analyst Trap (Legacy State)"]
-        A1["Manual CSV dumps from<br>SAP / WMS (70% of work week)"] --> A2["Fragile 50 MB Excel workbooks<br>with unversioned macros"]
+        A1["Manual CSV dumps from<br>SAP / WMS (much of the work week)"] --> A2["Fragile 50 MB Excel workbooks<br>with unversioned macros"]
         A2 --> A3["Manual upward adjustments<br><i>(Negative FVA from stockout fear)</i>"]
         A3 --> A4["<b>Biological Middleware</b><br>Manually bridging broken systems"]
     end
@@ -247,10 +251,10 @@ flowchart LR
     A4 -.->|Frontline Transformation| B1
 ```
 
-* **The Biological Middleware Syndrome:** In enterprises with disconnected ERP, WMS, and CRM systems, planners dedicate **60% to 75% of their working hours** to low-value data plumbing: exporting CSVs, maintaining fragile `VLOOKUP` workbooks, and reconciling manual SKU codes. The planner acts as human middleware. When they leave the firm, undocumented operational memory is lost.
+* **The Biological Middleware Syndrome:** In enterprises with disconnected ERP, WMS, and CRM systems, planners can spend much of their working week on low-value data plumbing: exporting CSVs, maintaining fragile `VLOOKUP` workbooks, and reconciling manual SKU codes. The planner acts as human middleware. When they leave the firm, undocumented operational memory is lost.
 * **The Censored Demand Fallacy (*Sell-in* vs. *Sell-out*):** Traditional planners project demand from historical billing records (*Sell-in*). If a Class-A SKU was stocked out for three weeks in July, the ERP records zero sales. Standard models interpret this as a natural collapse in market demand, reducing future replenishment orders and initiating a vicious cycle of structural shortages.
 * **Negative Forecast Value Added (FVA):** Planners worsen forecast accuracy ($\text{FVA} < 0$) because of **asymmetric downside consequences**: running out of raw materials results in public executive reprimand, whereas carrying 25% surplus inventory dilutes invisibly across corporate holding cost lines.
-* **Emancipation via the Deployment Strategist:** The Deployment Strategist automates up to **80% of routine data reconciliation** through an Operational Ontology. Planners are elevated to **Human-in-the-Loop Decision Operators**, equipped with live P&L impact calculations and uncensored demand signals.
+* **Emancipation via the Deployment Strategist:** The aim is to automate most routine data reconciliation through an Operational Ontology (a design target, not a measured result). Planners are elevated to **Human-in-the-Loop Decision Operators**, equipped with live P&L impact calculations and uncensored demand signals.
 
 ---
 
@@ -264,12 +268,12 @@ A pervasive executive dogma holds that growing gross revenue (*Top-Line*) automa
 ```mermaid
 flowchart TD
     V1["Sales & Marketing push uncoordinated volume<br><i>(Aggressive end-of-quarter discounts)</i>"] --> V2["Artificial order surge spikes ERP demand"]
-    V2 --> V3["<b>Fulfillment Capacity Gridlock</b><br>• Warehouse overtime (+50% labor rate)<br>• Spot emergency freight (+80% transport cost)<br>• Stockouts on high-margin core SKUs"]
-    V3 --> V4["<b>True Margin Collapse (Cost-to-Serve)</b><br>Reported Gross Margin: +28%<br>True Contribution Margin: <b>-4.5%</b> (Net cash loss)"]
+    V2 --> V3["<b>Fulfillment Capacity Gridlock</b><br>• Warehouse overtime premiums<br>• Spot emergency freight premiums<br>• Stockouts on high-margin core SKUs"]
+    V3 --> V4["<b>True Margin Collapse (Cost-to-Serve)</b><br>Example: Gross Margin +28%<br>Contribution Margin after CTS: <b>negative</b>"]
     V3 --> V5["<b>Stockout Ad-Waste</b><br>Digital ad spend spent driving traffic to empty shelves"]
 ```
 
-* **The Blindness of Gross Revenue to Cost-to-Serve:** When commercial teams push volume spikes to satisfy quarterly quotas, fulfillment absorbs punishing cost premiums: unscheduled third-shift labor, external overflow warehousing, and expedite fees. When calculating the granular **Cost-to-Serve**, orders with a nominal 28% gross margin frequently yield a **negative net contribution margin (-4% to -6%)**.
+* **The Blindness of Gross Revenue to Cost-to-Serve:** When commercial teams push volume spikes to satisfy quarterly quotas, fulfillment absorbs punishing cost premiums: unscheduled third-shift labor, external overflow warehousing, and expedite fees. When calculating the granular **Cost-to-Serve**, an order with a nominal 28% gross margin can end with a **negative net contribution margin** (an illustrative case, not a measured frequency).
 * **Stockout Ad-Waste:** When marketing ad algorithms operate detached from physical distribution constraints, digital ad spend continues running on SKUs that are out of stock. Customers click, encounter out-of-stock banners, and bounce—burning marketing capital while damaging brand equity.
 * **Commercial-Operational Interlock Gates:** The Deployment Strategist establishes deterministic circuit breakers: if the forward stockout probability for a SKU over the next 10 days exceeds 10%, the system **automatically pauses programmatic digital ad campaigns via API**, subordinating marketing spend to physical availability.
 
@@ -330,6 +334,8 @@ flowchart TD
 
 ### 3.2. Master Table of the 13 Deployment Failure Modes
 
+*Apart from the named studies (MIT NANDA, Gartner, DeHoratius & Raman, Fildes et al., Bloom et al., PMI), the basis column reflects the author's field experience, not audits or retrospectives carried out for this framework.*
+
 | # | Critical Failure Mode | Causal Mechanism & Frontline Manifestation | Evidence Basis | Operational Antidote |
 |---|---|---|:---:|---|
 | **1** | **Solving the stated request rather than the true problem** | The client asks for *"an inventory visibility dashboard."* The team builds it, only to find zero adoption after 90 days. The true bottleneck was a cross-warehouse rebalancing rule. | **Field Testimony + Industry Benchmark** | Shadow graveyard shifts and verify ground truth: *What physical operational decision changes when this number is displayed?* |
@@ -376,7 +382,7 @@ flowchart TD
 
 * **Front 1: The Floor Boycott (Gemba — The "Silent Blackout"):** Operators execute passive resistance by exploiting hardware excuses: *"the barcode scanner is glitching"*, *"the handheld battery died"*, or *"the mobile app is lagging"*. Using these pretexts, workers revert to clipboards. **Antidote:** Enforce the *800 ms Rule* (sub-second acoustic/visual scan feedback) and the *Zero Incremental Clicks Rule*.
 * **Front 2: Malicious Compliance & Data Poisoning:** When mandated to adopt an analytical tool, skeptical users deliberately inject absurd inputs (e.g., vendor lead times of 0.1 days). When the model produces an unexecutable recommendation, they present it to leadership to justify returning to legacy discretion. **Antidote:** Enforce strict *Pydantic V2* input validation contracts with an immutable *HMAC-SHA256 audit ledger* that captures user identity, timestamp, and counterfactual cost.
-* **Front 3: The Middle Management Silo War (Bonus Defense):** Department heads publicly support modernizations while quietly routing transactions through legacy channels to preserve local bonus metrics (PPV or OEE). **Antidote:** Expose live, consolidated cross-P&L attribution on order approval screens ($\Delta\text{TCO} = \Delta\text{PPV} - \text{Carrying Cost}(24.5\%) - \text{Freight Overrun}$). Orders that destroy consolidated value require mandatory dual CFO + COO co-signatures.
+* **Front 3: The Middle Management Silo War (Bonus Defense):** Department heads publicly support modernizations while quietly routing transactions through legacy channels to preserve local bonus metrics (PPV or OEE). **Antidote:** Expose live, consolidated cross-P&L attribution on order approval screens ($\Delta\text{TCO} = \Delta\text{PPV} - \text{Carrying Cost}(i_{\text{holding}}) - \text{Freight Overrun}$). Orders that destroy consolidated value require mandatory dual CFO + COO co-signatures.
 * **Front 4: Legacy IT Resistance (Not-Invented-Here Syndrome):** Internal IT or legacy systems integrators stall deployments via endless cybersecurity questionnaires to exhaust the contract window. **Antidote:** Mutual execution of the *5-Day Access Addendum* paired with an isolated *Safe-Staging Architecture* that requires zero direct write access to production transactional databases.
 
 ---
@@ -424,7 +430,7 @@ flowchart LR
 
 ### 4.3. Real-Time Cross-P&L Attribution & Incentive Arbitrage
 When procurement or planning modules propose order quantities, the UI must project the consolidated income-statement impact:
-$$\Delta \text{TCO} = (P_{\text{standard}} - P_{\text{negotiated}}) \cdot Q - \text{Carrying Cost}(24.50\%) - \text{Surge Freight} - \text{Obsolescence Reserve}$$
+$$\Delta \text{TCO} = (P_{\text{standard}} - P_{\text{negotiated}}) \cdot Q - \text{Carrying Cost}(i_{\text{holding}}) - \text{Surge Freight} - \text{Obsolescence Reserve}$$
 If an order saves \$10,000 in procurement price variance but incurs \$25,000 in holding and freight costs, it automatically transitions to a **Red Lane**, requiring joint CFO and COO authorization.
 
 ### 4.4. Deterministic Safe-Staging Architecture with Idempotent Writeback
@@ -508,7 +514,7 @@ flowchart TD
     subgraph Defense["Technical Refutation"]
         R1["<b>Asset Productization:</b><br>Teams build reusable software assets (contracts, FSMs) transferred to client autonomy within 90 days."]
         R2["<b>Real-Time Decision Gates:</b><br>HR evaluates annually; deterministic software arrests margin destruction at 10:15 AM on the order line."]
-        R3["<b>Counterfactual Econometrics:</b><br>Statistical validation via Callaway & Sant'Anna Staggered DiD with Wild Bootstrap (p < 0.01)."]
+        R3["<b>Counterfactual Econometrics:</b><br>Proposed validation via staggered DiD (Callaway & Sant'Anna) with wild cluster bootstrap; not yet run on field data."]
     end
 
     O1 --> R1
@@ -518,7 +524,7 @@ flowchart TD
 
 #### Objection 1: *"The Deployment Strategist represents an expensive, bespoke consulting model affordable only to defense primes or mining conglomerates, but unviable for commercial manufacturing."*
 * **Technical Refutation:** This critique confuses billable-hour consulting (*Time & Materials*) with productized forward-deployed engineering. The goal of the Deployment Strategist is to **identify recurring operational failure modes and codify them into reusable software assets** (as demonstrated by Palantir's deployment history).
-* **Payback Metric:** Preventing a single catastrophic raw-material stockout or inventory write-down amortizes deployment costs in under 60 days. The engagement contract mandates full client sovereignty in 90 days.
+* **Payback Hypothesis:** Preventing a single major raw-material stockout or inventory write-down could cover the cost of a deployment; no deployment has measured this yet. The proposed engagement terms hand full control to the client within 90 days.
 
 #### Objection 2: *"Incentive alignment is an executive governance and HR responsibility managed through compensation plans, not an operational software issue."*
 * **Technical Refutation:** Executive governance operates on quarterly or annual cycles. By the time inventory surges appear on the year-end balance sheet, working capital is already trapped.
@@ -526,11 +532,11 @@ flowchart TD
 
 #### Objection 3: *"Reported savings are statistical noise, market seasonality, or procurement luck rather than causal impact from deployment engineering."*
 * **Technical Refutation:** This objection is valid against naive pre/post comparisons. The Deployment Strategist framework rejects naive pre/post evaluations and traditional Two-Way Fixed Effects ($2 \times 2$ TWFE), which introduce severe negative-weighting bias under staggered facility rollouts (*Goodman-Bacon, 2021; de Chaisemartin & D'Haultfœuille, 2020*).
-* **Scientific Verification Protocol:** All causal claims are evaluated via the **Callaway & Sant'Anna (2021) Doubly Robust Staggered Difference-in-Differences Estimator** implemented in [`econometric_engine.py`](econometric_engine.py):
+* **Scientific Verification Protocol:** Causal claims are to be evaluated with the **Callaway & Sant'Anna (2021) staggered difference-in-differences design**. There is no field data yet: [`econometric_engine.py`](econometric_engine.py) exercises the pipeline on a **synthetic panel** (16 simulated DCs, 24 months, `seed=42`) with an effect built into the generator:
   $$Y_{it} = \alpha_i + \lambda_t + \sum_{g} \sum_{t \ge g} \theta_{gt} \cdot D_{it}^g + \mathbf{X}_{it}' \boldsymbol{\gamma} + \varepsilon_{it}$$
-  1. **Dynamic Event-Study Bounds:** Post-treatment ATT estimates are strictly negative and statistically significant ($\hat{\theta}(1) = -30.49\text{ k USD/month}$, $p < 0.001$).
-  2. **Wild Cluster Bootstrap (Cameron, Gelbach & Miller, 2008):** 9,999 Rademacher replications to account for small cluster counts ($K = 16$), yielding an exact empirical significance of **$p = 0.015402$**.
-  3. **HonestDiD Sensitivity (Rambachan & Roth, 2023):** Breakdown frontier satisfies **$M^* \ge 5.00$**, proving that the treatment effect remains statistically negative even if counterfactual trends departed from parallel paths by double the maximum pre-treatment violation observed (see [`honest_did_sensitivity_plot.png`](honest_did_sensitivity_plot.png)).
+  1. **Event study (synthetic data):** the outcome-regression estimate one month after adoption is $\hat{\theta}(1) = -30.49\text{ k USD/month}$, with approximate standard errors (not Callaway & Sant'Anna inference).
+  2. **Wild Cluster Bootstrap (Cameron, Gelbach & Miller, 2008):** 9,999 Rademacher replications ($K = 16$) on a simplified pooled regression without fixed effects: $p = 0.0154$.
+  3. **HonestDiD Sensitivity (Rambachan & Roth, 2023):** breakdown value $M^* = 5$ on the same synthetic event study (see [`honest_did_sensitivity_plot.png`](honest_did_sensitivity_plot.png)). These results show the pipeline runs; they are not evidence of an effect in a real facility.
 
 ---
 
@@ -538,9 +544,9 @@ flowchart TD
 
 | Operational Dimension | Chosen Architectural Approach | Alternative Rejected | Engineering Cost & Justification |
 |---|---|---|---|
-| **Adoption Strategy** | Frontline co-design in the Gemba from Week 1. | Designing exclusively for executive conference rooms. | Increases initial discovery friction, but guarantees a sustained frontline adoption rate above 90% at 30 days post-launch. |
+| **Adoption Strategy** | Frontline co-design in the Gemba from Week 1. | Designing exclusively for executive conference rooms. | Increases initial discovery friction; the expected payoff is higher sustained adoption, a hypothesis not yet measured in a deployment. |
 | **Data Governance** | Zero-Copy architecture with real-time ontological mapping. | Multi-year enterprise Data Lakehouse / MDM initiatives. | Requires handling entity resolution over imperfect data via strongly-typed contracts, avoiding 24 months of passive data cleansing delay. |
-| **System Mutation** | Safe-Staging with 900s TTL and API writeback. | Unrestricted direct database writes or unvalidated LLM output. | Adds ~1.2 seconds of transaction latency, but guarantees 0.0% transactional ledger corruption and eliminates operational hallucination risk. |
+| **System Mutation** | Safe-Staging with 900s TTL and API writeback. | Unrestricted direct database writes or unvalidated LLM output. | Adds an approval step and some latency (not yet measured); it keeps unvalidated model output from writing to the ledger, without guaranteeing zero errors. |
 
 ---
 

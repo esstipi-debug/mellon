@@ -23,10 +23,10 @@ $$ \text{PPV} = (P_{\text{standard}} - P_{\text{negotiated}}) \times Q_{\text{pu
 
 Under this accounting formulation:
 * The larger the purchased volume ($Q$), the greater the apparent "accounting savings" reported to the Board.
-* However, the true holding cost of storing excess inventory (*Inventory Carrying Cost*, empirically calibrated between **20% and 28% annually** on tied-up working capital) is silently absorbed by the P&L through logistics OpEx, off-site storage leases, write-offs, shrinkage, and capital charges.
+* However, the true holding cost of storing excess inventory (*Inventory Carrying Cost*, which each firm calibrates with Finance; Annex A works an example at **24.5% a year**) is silently absorbed by the P&L through logistics OpEx, off-site storage leases, write-offs, shrinkage, and capital charges.
 
-> **Financial Invariant Thesis:**  
-> When the coverage horizon of a minimum order batch exceeds **60 to 90 days of forward demand**, the cumulative inventory carrying cost completely overtakes the commercial price discount. Beyond this break-even inflection point, **every single dollar saved on purchase price destroys between \$1.20 and \$1.80 of net enterprise cash.**
+> **Break-Even Thesis:**  
+> The longer a minimum order batch covers forward demand, the larger the discount it needs to pay for the extra stock. At the 24.5% example rate (Annex A), 90 days of coverage needs about a 3% discount and 180 days about 6% (table in §2.2). Below that break-even, the discount costs more cash than it saves.
 
 This whitepaper establishes an algorithmic decision framework and executive governance protocol to arbitrate sourcing exceptions against supplier MOQs, unifying Procurement, Supply Chain, and Finance under a single optimization metric: **Net Economic Value (NEV)**.
 
@@ -44,7 +44,7 @@ When an order exception enters the enterprise (MRP detects a net replenishment n
 ```mermaid
 flowchart LR
     A["Procurement Negotiation<br/><b>Volume Discount: -3%</b>"] -->|Accepts 120-Day MOQ| B["Balance Sheet Influx<br/><b>Trapped Working Capital</b>"]
-    B --> C["Inventory Carrying Cost<br/><b>24.5% Annualized (2.04%/mo)</b>"]
+    B --> C["Inventory Carrying Cost<br/><b>24.5% a year in the Annex A example (2.04%/mo)</b>"]
     C -->|"Inflection Point at 90 Days<br/>(Discount Completely Erased)"| D["Break-Even Threshold<br/>Savings = Carrying Cost"]
     D -->|Excess Holding Time| E["<b>Net Cash Destruction</b><br/>Obsolescence, spot storage, cost of debt"]
 ```
@@ -96,7 +96,7 @@ $$\int_0^T F_{D(t)}(Q^*) \, dt = \frac{\delta}{i_{\text{holding}} (1 - \delta)}$
 where $F_{D(t)}(y) = e^{-\lambda t} + \sum_{n=1}^\infty \frac{(\lambda t)^n e^{-\lambda t}}{n!} \cdot \frac{\gamma(n\alpha, \beta y)}{\Gamma(n\alpha)}$ is the cumulative distribution function (CDF) of Tweedie demand.
 
 #### Minimum Break-Even Discount ($\delta^*$) for a 6-Month Horizon ($T = 6$)
-*(Empirical calibration resolved via adaptive Gauss-Kronrod quadrature in [`inventory_mechanics.py`](inventory_mechanics.py) with $\lambda = 5.0\text{ orders/yr}$, $\alpha = 2.0$, $\beta = 0.2$, mean annual demand $50\text{ units/yr}$)*:
+*(Example SKU parameters, solved via adaptive Gauss-Kronrod quadrature in [`inventory_mechanics.py`](inventory_mechanics.py) with $\lambda = 5.0\text{ orders/yr}$, $\alpha = 2.0$, $\beta = 0.2$, mean annual demand $50\text{ units/yr}$)*:
 
 | Excess Batch Size ($Q_{\text{moq}}$) | Required Discount ($i = 18.0\%$) | Required Discount ($i = 24.5\%$) | Required Discount ($i = 32.0\%$) | Financial Regime |
 | :---: | :---: | :---: | :---: | :--- |
@@ -107,7 +107,7 @@ where $F_{D(t)}(y) = e^{-\lambda t} + \sum_{n=1}^\infty \frac{(\lambda t)^n e^{-
 
 **Maximum Allowable Order Quantity ($Q^*$) Under a Fixed 5.0% Volume Discount:**
 * At $i_{\text{holding}} = 18.0\%$: $Q^* = \mathbf{10.9\text{ units}}$ (Purchases exceeding 11 units yield negative NPV).
-* At $i_{\text{holding}} = 24.5\%$ (Corporate Standard): $Q^* = \mathbf{4.3\text{ units}}$ (Standard MOQs of $\ge 50$ units are financially unviable).
+* At $i_{\text{holding}} = 24.5\%$ (the Annex A example rate): $Q^* = \mathbf{4.3\text{ units}}$ (with this example's demand of 50 units a year, batches of 50 units or more do not pay for themselves).
 * At $i_{\text{holding}} = 32.0\%$: $Q^* = \mathbf{\text{Unviable}}$ (No positive batch covers holding costs under a 5% discount).
 
 ---
@@ -172,7 +172,7 @@ Executive alignment cannot be achieved through memos; compensation scorecards mu
 ### Objection 1 (The CPO): *"Global overseas suppliers refuse call-off deliveries and will not lower MOQs; enforcing this will cause catastrophic stockouts or explode freight rates."*
 * **Operational Rebuttal:** Suppliers impose MOQs to optimize their manufacturing setup costs or fill ocean containers. 
 * Modern governance does not demand purchasing less than the manufacturer's run size; it **decouples commercial contracting from physical delivery schedules**.
-* Over 70% of tier-1 global suppliers accept annual blanket purchase orders with staggered call-offs, or nominal batch surcharges that are substantially cheaper than enterprise storage OpEx and working capital lockup.
+* Many suppliers accept annual blanket purchase orders with staggered call-offs, or small-batch surcharges; whether these cost less than storage and tied-up capital is checked case by case with the TCO model in §2.2.
 * On shipping rates: splitting batches does not require shipping LCL. Sourcing teams deploy **origin multi-SKU consolidation**, shipping full 40-foot high-cube containers (FCL) combining fast-moving consumables with slow-moving components to maintain container economies without bloating SKU cycle stock.
 
 ### Objection 2 (The CFO): *"Inventory carrying cost is largely an accounting abstraction; purchase price variance (PPV) is hard cash saved on the invoice."*
@@ -219,20 +219,20 @@ Before approving capital authorizations, leadership applies four mandatory check
 │   i_holding = i_capital  +  i_service    +  i_storage       +  i_risk            │
 │                 (WACC)     (Ins/Taxes)    (Marginal OpEx)     (Write-Offs)       │
 │                                                                                  │
-│   Typical Range: 8% - 14%     1% - 3%         3% - 6%           4% - 10%         │
-│   Consolidated Industrial Benchmark: 18.0% to 32.0% annually                     │
+│   Assumed range: 8% - 14%     1% - 3%         3% - 6%           4% - 10%         │
+│   Range used in this paper's tables (assumption): 18.0% to 32.0% annually        │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Audit Calibration Worksheet (USD \$20,000,000 Base Inventory Portfolio):
+### Illustrative Calibration Worksheet (hypothetical USD \$20,000,000 inventory portfolio; example figures, not audited data):
 
-| Category | Audited Accounting Line Item | Annual Audited Outflow | Resulting Percentage |
+| Category | Accounting Line Item (example) | Annual Outflow (example) | Resulting Percentage |
 | :--- | :--- | :---: | :---: |
 | **1. Capital** | Post-tax working capital credit facility ($K_d \times [1-T]$) | \$1,900,000 | **9.50%** |
 | **2. Service** | Floating stock insurance policy (\$240k) + Local inventory assets tax (\$120k) | \$360,000 | **1.80%** |
 | **3. Space** | Dedicated 3PL satellite warehouse leases (\$680k) + Variable utilities/handling (\$160k) | \$840,000 | **4.20%** |
 | **4. Risk** | Historical 24-month SLOB write-offs (\$1.3M) + Audited annual physical shrinkage (\$500k) | \$1,800,000 | **9.00%** |
-| **TOTAL** | **Official Corporate Carrying Cost Rate ($i_{\text{holding}}$)** | **\$4,900,000** | **24.50% annually** |
+| **TOTAL** | **Example Carrying Cost Rate ($i_{\text{holding}}$)** | **\$4,900,000** | **24.50% annually** |
 
 $$\mathbf{i_{\text{holding}} = 24.50\% \ \text{per year} \quad \left( 2.04\% \ \text{per month} \right)}$$
 
