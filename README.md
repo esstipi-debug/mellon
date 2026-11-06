@@ -13,6 +13,17 @@
 
 ---
 
+## 📄 Field Whitepapers
+
+Two field papers make the case this framework is built on: errors on the floor are rational when someone else pays for them. Both PDFs open in the browser.
+
+| Paper | The argument |
+| :--- | :--- |
+| **[Dirty Data Is a Rational Answer](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/dirty-data-is-a-rational-answer.pdf)** *(29 pages · PDF)* | Accuracy costs the person typing the record time now, while the error costs someone else money later. In one retailer's audits, 65% of nearly 370,000 inventory records did not match the shelf (*DeHoratius & Raman, 2008*). |
+| **[Nobody Pays for Being Wrong](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/nobody-pays-for-being-wrong.pdf)** *(27 pages · PDF)* | The supervisor who obeys the system against the evidence and the picker who ships a dented unit look like opposites, but both take the option that is cheap for them. The lever for both: make someone answer for the decision, and ask for the reason before the override. |
+
+---
+
 ## 1. Architectural Identity: Mellon & Ithildin
 
 In enterprise technology deployments, systems fail at the boundary where digital models meet physical operations. Inspired by high-reliability forward deployed engineering (Palantir doctrine), this repository is organized around a dual architectural paradigm:

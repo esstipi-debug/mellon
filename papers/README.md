@@ -4,6 +4,15 @@
 
 ---
 
+## 📄 Field Whitepapers
+
+Two field papers for operators and executives, on the same thesis as this series. Both PDFs open in the browser.
+
+* **[Dirty Data Is a Rational Answer](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/dirty-data-is-a-rational-answer.pdf)** *(29 pages · PDF)*: why WMS cutovers and AI break on the dock, and how to deploy with human incentives instead of against them.
+* **[Nobody Pays for Being Wrong](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/nobody-pays-for-being-wrong.pdf)** *(27 pages · PDF)*: why obeying the system and dodging it answer the same rule, and what a rule looks like when nobody has to carry it.
+
+---
+
 ## 📚 1. The Definitive Master Monograph (117 Pages)
 ### *The Deployment Chasm: Why Enterprise Technology Collapses at the Gemba—and How to Build for the Terrain*
 
