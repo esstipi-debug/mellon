@@ -6,8 +6,9 @@
 
 ## 📄 Field Whitepapers
 
-A field paper for operators and executives, on the same thesis as this series. The PDF opens in the browser.
+Field papers for operators and executives, on the same thesis as this series. The PDFs open in the browser.
 
+* **[The Smith and the Tailor](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/the-smith-and-the-tailor.pdf)** *(10 pages · PDF)*: why many deployments are cut before anyone measures the floor, and two rules a CEO can set before kickoff.
 * **[Nobody Pays for Being Wrong](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/nobody-pays-for-being-wrong.pdf)** *(27 pages · PDF)*: why obeying the system and dodging it answer the same rule, and what a rule looks like when nobody has to carry it.
 
 ---

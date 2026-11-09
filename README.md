@@ -15,10 +15,11 @@
 
 ## 📄 Field Whitepapers
 
-A field paper makes the case this framework is built on: errors on the floor are rational when someone else pays for them. The PDF opens in the browser.
+Field papers for operators and executives. The PDFs open in the browser.
 
 | Paper | The argument |
 | :--- | :--- |
+| **[The Smith and the Tailor](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/the-smith-and-the-tailor.pdf)** *(10 pages · PDF)* | Many deployments are cut before anyone measures the floor, by someone who will not be there when the seams give. Two rules a CEO can set before kickoff change who carries it. |
 | **[Nobody Pays for Being Wrong](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/nobody-pays-for-being-wrong.pdf)** *(27 pages · PDF)* | The supervisor who obeys the system against the evidence and the picker who ships a dented unit look like opposites, but both take the option that is cheap for them. The lever for both: make someone answer for the decision, and ask for the reason before the override. |
 
 ---
