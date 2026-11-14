@@ -4254,6 +4254,100 @@
           "feedback": "Culpar a otra área y prometer varianza cero destruye la relación de largo plazo (`ta_relationship_vs_transaction`) y revela sobreconfianza (`htma_overconfidence`)."
         }
       ]
+    },
+    {
+      "id": "scen_43_deployment_chasm_gemba",
+      "title": "El Abismo del Despliegue: Fricción Operativa y Capital de Trabajo en el Piso",
+      "phase": "Diagnosis & Measurement",
+      "book": "fde",
+      "difficulty": "boss",
+      "active_pitfalls": [
+        "fc_fighting_resistance",
+        "ta_need_to_be_right"
+      ],
+      "target_techniques": [
+        "bps_prioritize_2x2",
+        "sw_script_moves"
+      ],
+      "target_practice": "fde_eight_deployment_rules",
+      "supporting_nodes": [
+        "fde_bottleneck_pass_through",
+        "x_three_chasms",
+        "x_ceremonial_decoupling",
+        "x_grudin_distribution_chasm",
+        "x_informal_rent_sustento",
+        "x_bimodal_inventory_trap",
+        "x_last_50_meters_fracture",
+        "sw_rider_elephant_path",
+        "fc_fifty_fifty",
+        "fde_mellon_brand_philosophy"
+      ],
+      "context": "En una planta de manufactura y distribución hospitalaria, el sistema central reporta cumplimiento del 98% con inventarios bimodalmente inflados por lotes mínimos de compras, pero las líneas se detienen tres veces por semana por falta de insumos críticos. Los supervisores anotan en libretas manuales porque el software exige doce campos obligatorios sin beneficio para su entrega de turno.",
+      "stakeholder_role": "Vicepresidente de Operaciones & Supply Chain",
+      "stakeholder_quote": "Invertimos millones en software y compramos lotes gigantes para bajar el costo unitario, pero los operarios siguen con cuadernos y la bodega está llena de lo que no se vende. Necesito que los obligues a cargar los datos.",
+      "diagnosis_question": "¿Qué diagnóstico estructural explica por qué la planta sigue en quiebre pese al stock abundante y al software nuevo?",
+      "diagnosis_options": [
+        {
+          "id": "a",
+          "text": "Hay tres brechas de piso activas: registro formal desacoplado de la realidad, captura sin beneficio y distorsión por lote mínimo.",
+          "is_correct": true,
+          "explanation": "Identifica las brechas estructurales de registro, reparto y la distorsión bimodal de inventario."
+        },
+        {
+          "id": "b",
+          "text": "El problema es de adopción pura: falta capacitar a los supervisores en la interfaz y aplicar sanciones por usar cuadernos en papel.",
+          "is_correct": false,
+          "explanation": "Confunde síntoma con causa y ataca la resistencia sin cerrar la brecha de incentivo del operador."
+        },
+        {
+          "id": "c",
+          "text": "El algoritmo de pronóstico falla porque requiere incorporar diez variables meteorológicas más para modelar la variabilidad real.",
+          "is_correct": false,
+          "explanation": "Añadir complejidad matemática cuando la distorsión nace de las reglas de compra por lote mínimo solo acelera el error."
+        }
+      ],
+      "action_question": "¿Cuál es la primera intervención según las reglas operativas de despliegue?",
+      "action_options": [
+        {
+          "id": "best",
+          "label": "Medir la brecha física en la restricción y dar salida física en papel al final de turno.",
+          "script": "No vamos a imponer doce campos obligatorios en el software. Mediremos a mano la discrepancia real en la línea crítica; automatizaremos la captura pasiva para que el supervisor conserve su hoja física al terminar el turno, y desacoplaremos los amortiguadores de resina del lote de compra.",
+          "is_best": true,
+          "deltas": {
+            "TQ": 12,
+            "SIG": 10,
+            "EVI": 12,
+            "ADP": 10
+          },
+          "feedback": "Aplica las reglas de despliegue pragmático cerrando reparto y registro en la restricción real."
+        },
+        {
+          "id": "mid",
+          "label": "Crear un comité semanal de conciliación entre compras y operaciones para revisar stock.",
+          "script": "Organizaremos una reunión semanal de operaciones para que compras y planta concilien sus reportes de stock y acuerden fechas de entrega.",
+          "is_best": false,
+          "deltas": {
+            "TQ": 0,
+            "SIG": -2,
+            "EVI": -3,
+            "ADP": -2
+          },
+          "feedback": "Agrega reuniones sin intervenir la física del lote mínimo ni la fricción del registro diario."
+        },
+        {
+          "id": "bad",
+          "label": "Amenazar con sanciones administrativas inmediatas y retirar los cuadernos de la planta.",
+          "script": "Prohibiremos los cuadernos manuales de inmediato bajo apercibimiento formal para obligar a usar el software corporativo.",
+          "is_best": false,
+          "deltas": {
+            "TQ": -12,
+            "SIG": -8,
+            "EVI": -10,
+            "ADP": -9
+          },
+          "feedback": "Destruye la confianza operativa y desencadena sabotaje pasivo inmediato en el piso."
+        }
+      ]
     }
   ],
   "calibration_questions": [
