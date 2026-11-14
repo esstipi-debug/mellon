@@ -332,6 +332,23 @@ def test_con_ventana_larga_se_detecta_una_divergencia_sutil():
     assert r["conclusive"] is True
 
 
+@pytest.mark.parametrize("unidad", ["s", "ms", "us", "ns"])
+def test_la_tendencia_no_depende_de_la_resolucion_de_las_fechas(unidad):
+    """pandas 2 guarda las fechas en nanosegundos y pandas 3 en microsegundos.
+    La pendiente pasaba la fecha a entero y la dividia por los nanosegundos de
+    un dia: en microsegundos el eje quedaba mil veces mas corto, la pendiente
+    mil veces mas grande y el chequeo dejaba de ser concluyente.
+
+    La divergencia sembrada es 1,5 por dia; 0,15 son unos 3 errores estandar
+    con 14 dias de 40 filas y ruido 3."""
+    base = _panel_tendencias(14, 1.5, 3.0)
+    panel = base.assign(dia=base["dia"].astype(f"datetime64[{unidad}]"))
+    r = parallel_trends_check(panel, "ciclo", "grupo", "dia", CORTE)
+    assert r["divergence_per_day"] == pytest.approx(1.5, abs=0.15)
+    assert r["parallel_trends_ok"] is False
+    assert r["conclusive"] is True
+
+
 def test_sin_periodos_suficientes_no_se_afirma_nada():
     """`None` en `parallel_trends_ok` es 'sin verificar', que no es lo mismo que
     verificado. Devolver True aca seria firmar el supuesto sin mirarlo."""
