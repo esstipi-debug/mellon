@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Narvi · Decision Cockpit</title>
+<link rel="icon" href="data:,">
+<!-- Archivo armado por scripts/build_cockpit_page.py desde webapp/cockpit_page/. No editar a mano. -->
+<style>
+/* Narvi Decision Cockpit. Sistema: docs/designs/DESIGN.md (capas Surface / Panel / Well,
+   bordes de 1px, luz superior, numeros tabulares, color solo para estado).
+   Sin fuentes externas: la pagina no llama a ningun otro servidor. */
+:root {
+  color-scheme: dark;
+  --surface-base: #08090d;
+  --surface-panel: #11141c;
+  --surface-well: #0c0e14;
+  --surface-raised: #171b26;
+  --border-hairline: rgba(255, 255, 255, 0.08);
+  --border-highlight: rgba(255, 255, 255, 0.16);
+  --inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  /* DESIGN.md pide #64748b; sobre el panel mide 3,9:1. Este mide 5,3:1. */
+  --text-muted: #7c8ba1;
+  --text-faint: #334155;
+  --ok-fg: #34d399;
+  --ok-bg: rgba(16, 185, 129, 0.08);
+  --ok-border: rgba(16, 185, 129, 0.25);
+  --note-fg: #fbbf24;
+  --note-bg: rgba(245, 158, 11, 0.08);
+  --note-border: rgba(245, 158, 11, 0.25);
+  --alert-fg: #f87171;
+  --alert-bg: rgba(239, 68, 68, 0.08);
+  --alert-border: rgba(239, 68, 68, 0.25);
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-fg: #a5b4fc;
+  --accent-bg: rgba(99, 102, 241, 0.1);
+  --accent-border: rgba(99, 102, 241, 0.35);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  --font-sans: "Inter", "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --z-sticky: 10;
+  --z-toast: 20;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--surface-base); }
+body {
+  min-height: 100vh;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: 14px/1.5 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent-fg); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.num { text-align: right; white-space: nowrap; }
+.micro {
+  font: 600 11px/1.3 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.muted { color: var(--text-muted); }
+.soft { color: var(--text-secondary); }
+
+/* ---- cabecera ---- */
+.top {
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  background: var(--surface-base);
+  border-bottom: 1px solid var(--border-hairline);
+}
+.top-inner {
+  max-width: 1360px; margin: 0 auto; padding: 10px 24px;
+  display: flex; align-items: center; gap: 16px 24px; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; font-size: 14px; font-weight: 400; line-height: 1.2; }
+.brand-mark { font: 700 15px/1 var(--font-mono); letter-spacing: 0.14em; }
+.brand-sub { color: var(--text-secondary); font-size: 13px; }
+.steps { display: flex; gap: 2px; list-style: none; padding: 3px; background: var(--surface-well);
+  border: 1px solid var(--border-hairline); border-radius: var(--radius-md); }
+.step {
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  background: none; border: 1px solid transparent; border-radius: var(--radius-sm);
+  color: var(--text-secondary); font-size: 13px; cursor: pointer;
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+.step-n { font: 600 11px/1 var(--font-mono); padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.06); }
+.step:hover:not(:disabled) { color: var(--text-primary); }
+.step:disabled { color: var(--text-muted); opacity: 0.6; cursor: not-allowed; }
+.step[aria-current="step"] { background: var(--surface-panel); border-color: var(--border-hairline);
+  color: var(--text-primary); box-shadow: var(--inner-highlight); }
+.step[aria-current="step"] .step-n { background: var(--accent); color: #fff; }
+.step.done .step-n { background: var(--ok-bg); color: var(--ok-fg); }
+.seal { display: flex; align-items: center; gap: 8px; padding: 5px 10px; font: 500 11px/1.3 var(--font-mono);
+  color: var(--text-secondary); background: var(--surface-well); border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-full); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); flex: none; }
+.dot.ok { background: var(--ok-fg); }
+.dot.note { background: var(--note-fg); }
+.dot.alert { background: var(--alert-fg); }
+
+/* ---- estructura ---- */
+main { max-width: 1360px; margin: 0 auto; padding: 24px 24px 72px; }
+.banner { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; margin-bottom: 20px;
+  border: 1px solid var(--note-border); background: var(--note-bg); border-radius: var(--radius-md); font-size: 13px; }
+.banner.alert { border-color: var(--alert-border); background: var(--alert-bg); align-items: flex-end; }
+.banner .dot { margin-top: 7px; }
+.banner .field { flex: 1; }
+.banner strong { font-weight: 600; }
+.view { animation: enter 220ms var(--ease-out); }
+@keyframes enter { from { opacity: 0.4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; margin-bottom: 20px; }
+.head h1, .head h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; text-wrap: balance; }
+.head p { color: var(--text-secondary); max-width: 68ch; margin-top: 6px; text-wrap: pretty; }
+.head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+.cols { display: grid; gap: 20px; align-items: start; }
+.cols.intake { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+.cols.mirror { grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); }
+.cols.decision { grid-template-columns: 400px minmax(0, 1fr); }
+.cols.twin { grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); }
+.stack { display: grid; gap: 20px; }
+.panel { background: var(--surface-panel); border: 1px solid var(--border-hairline); border-radius: var(--radius-lg);
+  box-shadow: var(--inner-highlight); min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px;
+  border-bottom: 1px solid var(--border-hairline); }
+.panel-body { padding: 18px; }
+.well { background: var(--surface-well); border: 1px solid var(--border-hairline); border-radius: var(--radius-md); }
+
+/* ---- controles ---- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px;
+  background: var(--surface-panel); border: 1px solid var(--border-highlight); border-radius: var(--radius-md);
+  box-shadow: var(--inner-highlight); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+  transition: background 140ms var(--ease-out), border-color 140ms var(--ease-out), transform 80ms var(--ease-out);
+}
+.btn:hover:not(:disabled) { background: var(--surface-raised); border-color: rgba(255, 255, 255, 0.26); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { color: var(--text-muted); border-color: var(--border-hairline); cursor: not-allowed; box-shadow: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.btn.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn.primary:disabled { background: var(--surface-raised); border-color: var(--border-hairline); color: var(--text-muted); }
+.btn.danger { background: var(--alert-bg); border-color: var(--alert-border); color: var(--alert-fg); }
+.btn.danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.16); border-color: var(--alert-fg); }
+.btn.quiet { background: none; border-color: transparent; box-shadow: none; color: var(--text-secondary); }
+.btn.quiet:hover:not(:disabled) { background: var(--surface-raised); color: var(--text-primary); }
+.btn.sm { padding: 5px 10px; font-size: 12px; }
+.btn[aria-busy="true"] { cursor: progress; }
+.btn[aria-busy="true"]::before { content: ""; width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent; animation: spin 700ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; font: 500 11px/1.5 var(--font-mono);
+  color: var(--text-secondary); background: var(--surface-well); border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-full); white-space: nowrap; }
+.chip.ok { color: var(--ok-fg); background: var(--ok-bg); border-color: var(--ok-border); }
+.chip.note { color: var(--note-fg); background: var(--note-bg); border-color: var(--note-border); }
+.chip.alert { color: var(--alert-fg); background: var(--alert-bg); border-color: var(--alert-border); }
+.chip.accent { color: var(--accent-fg); background: var(--accent-bg); border-color: var(--accent-border); }
+.field { display: grid; gap: 6px; }
+.field label, .field .label { font-size: 12px; color: var(--text-secondary); }
+.input.readonly { border-style: dashed; border-color: var(--border-hairline); color: var(--text-secondary); }
+.head h2:focus { outline: none; }
+.head h2:focus-visible { outline: 2px solid var(--accent-fg); outline-offset: 4px; }
+.field small { color: var(--text-muted); font-size: 12px; }
+.input { width: 100%; padding: 7px 10px; background: var(--surface-well); border: 1px solid var(--border-highlight);
+  border-radius: var(--radius-sm); }
+.input.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.input:hover:not(:disabled) { border-color: rgba(255, 255, 255, 0.26); }
+.input:disabled { color: var(--text-muted); border-color: var(--border-hairline); }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.note-line { display: flex; gap: 8px; align-items: baseline; font-size: 13px; color: var(--text-secondary); }
+.msg { padding: 10px 12px; border-radius: var(--radius-md); font-size: 13px; border: 1px solid var(--border-hairline);
+  background: var(--surface-well); color: var(--text-secondary); overflow-wrap: anywhere; }
+.msg.alert { border-color: var(--alert-border); background: var(--alert-bg); color: var(--text-primary); }
+.msg.note { border-color: var(--note-border); background: var(--note-bg); color: var(--text-primary); }
+.msg.ok { border-color: var(--ok-border); background: var(--ok-bg); color: var(--text-primary); }
+code { font: 12px/1.5 var(--font-mono); padding: 1px 5px; background: rgba(255, 255, 255, 0.06); border-radius: 3px;
+  overflow-wrap: anywhere; }
+
+/* ---- tablas ---- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { padding: 9px 14px; text-align: left; font: 600 11px/1.3 var(--font-mono); letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted); background: var(--surface-well);
+  border-bottom: 1px solid var(--border-hairline); white-space: nowrap; }
+th.num { text-align: right; }
+td { padding: 9px 14px; border-bottom: 1px solid var(--border-hairline); color: var(--text-secondary); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.strong { color: var(--text-primary); font-weight: 500; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---- paso 1: ingesta ---- */
+.drop { display: grid; place-items: center; align-content: center; gap: 10px; min-height: 260px; padding: 32px 24px; text-align: center;
+  border: 1px dashed var(--border-highlight); border-radius: var(--radius-md); background: var(--surface-well);
+  cursor: pointer; transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out); }
+.drop:hover, .drop.over { border-color: var(--accent-fg); background: var(--accent-bg); }
+.drop.off { cursor: not-allowed; border-style: solid; border-color: var(--border-hairline); }
+.drop.off:hover { background: var(--surface-well); }
+.drop-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+.facts { display: grid; gap: 8px; margin-top: 16px; list-style: none; font-size: 13px; color: var(--text-secondary); }
+.facts li { display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: baseline; }
+.facts li::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted);
+  transform: translateY(-2px); }
+.samples { list-style: none; }
+.sample { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: center; width: 100%;
+  padding: 14px 18px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--border-hairline);
+  cursor: pointer; transition: background 140ms var(--ease-out); }
+.samples li:last-child .sample { border-bottom: 0; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+.sample:hover:not(:disabled) { background: var(--surface-raised); }
+.sample:disabled { cursor: progress; }
+.sample-title { font-weight: 600; }
+.sample-desc { grid-column: 1; color: var(--text-secondary); font-size: 13px; }
+.sample-go { grid-row: 1 / span 2; grid-column: 2; color: var(--accent-fg); font-size: 13px; }
+
+/* ---- paso 2: espejo ---- */
+.flow { display: flex; height: 28px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-hairline); }
+.flow-seg { min-width: 3px; background: var(--note-fg); opacity: 0.75; border-right: 1px solid var(--surface-base); }
+.flow-seg.ok { background: var(--ok-fg); }
+.flow-seg:last-child { border-right: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--text-secondary); }
+.legend span { display: inline-flex; align-items: baseline; gap: 7px; }
+.cells { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+
+/* ---- paso 3: bandeja y decision ---- */
+.tray { position: sticky; top: 76px; }
+.filters { display: flex; gap: 4px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--border-hairline); }
+.filter { padding: 3px 9px; font: 500 11px/1.5 var(--font-mono); color: var(--text-secondary); background: none;
+  border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; }
+.filter:hover { color: var(--text-primary); }
+.filter[aria-pressed="true"] { color: var(--text-primary); background: var(--surface-raised); border-color: var(--border-hairline); }
+.tray-list { list-style: none; max-height: calc(100vh - 260px); min-height: 160px; overflow-y: auto; }
+.item { display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 10px; width: 100%; padding: 11px 14px;
+  text-align: left; background: none; border: 0; border-bottom: 1px solid var(--border-hairline); cursor: pointer;
+  transition: background 120ms var(--ease-out); }
+.item:hover { background: var(--surface-raised); }
+.item[aria-current="true"] { background: var(--accent-bg); box-shadow: inset 0 0 0 1px var(--accent-border); }
+.item-rank { grid-row: 1 / span 2; font: 500 12px/1.6 var(--font-mono); color: var(--text-muted); }
+.item-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item-value { font: 600 13px/1.5 var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.item-meta { grid-column: 2 / span 2; display: flex; justify-content: space-between; gap: 8px; align-items: center;
+  font-size: 12px; color: var(--text-muted); }
+.empty { padding: 28px 18px; text-align: center; color: var(--text-secondary); font-size: 13px; }
+.line-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 16px 18px;
+  border-bottom: 1px solid var(--border-hairline); }
+.line-value { text-align: right; }
+.line-value .num { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; }
+.diff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.diff .well { padding: 14px 16px; }
+.diff .well.next { border-color: var(--accent-border); }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 7px 16px; margin-top: 10px; font-size: 13px; }
+.kv dt { color: var(--text-secondary); }
+.kv dd { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.kv dd.hot { color: var(--accent-fg); font-weight: 600; }
+.rule { padding: 14px 16px; }
+.rule ol { list-style: none; display: grid; gap: 5px; margin: 10px 0; font: 13px/1.5 var(--font-mono);
+  color: var(--text-secondary); counter-reset: paso; }
+.rule li { display: grid; grid-template-columns: 20px 1fr; counter-increment: paso; }
+.rule li::before { content: counter(paso); color: var(--text-muted); }
+.rule .conclusion { font-weight: 600; color: var(--text-primary); }
+.adjust { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+.adjust-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.planbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px 24px; align-items: center; padding: 16px 18px; }
+.planbar-sum { display: flex; flex-wrap: wrap; gap: 6px 24px; align-items: baseline; }
+.planbar-sum b { font: 600 15px/1.4 var(--font-mono); font-variant-numeric: tabular-nums; }
+.planbar-act { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; justify-content: flex-end; }
+.planbar-act .field { width: 190px; }
+details > summary { cursor: pointer; padding: 12px 18px; color: var(--text-secondary); font-size: 13px; list-style: none;
+  border-top: 1px solid var(--border-hairline); }
+details > summary::before { content: "+"; display: inline-block; width: 16px; font-family: var(--font-mono); }
+details[open] > summary::before { content: "-"; }
+details > summary:hover { color: var(--text-primary); }
+.undo { display: grid; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--ok-border); background: var(--ok-bg); }
+.undo-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.undo-track { height: 3px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; overflow: hidden; }
+.undo-fill { height: 100%; background: var(--ok-fg); transform-origin: left; animation: drain 15s linear forwards; }
+@keyframes drain { to { transform: scaleX(0); } }
+.sig { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px 24px; padding: 14px 18px; }
+.sig dt { margin-bottom: 2px; }
+.sig dd { font: 13px/1.5 var(--font-mono); overflow-wrap: anywhere; }
+
+/* ---- paso 4: gemelo ---- */
+.sheets td:first-child { font-family: var(--font-mono); color: var(--text-primary); white-space: nowrap; }
+.downloads { display: grid; gap: 10px; }
+.downloads .btn { justify-content: flex-start; }
+
+.toast { position: fixed; right: 24px; bottom: 24px; z-index: var(--z-toast); max-width: 420px; padding: 10px 14px;
+  background: var(--surface-raised); border: 1px solid var(--border-highlight); border-radius: var(--radius-md);
+  font-size: 13px; animation: enter 200ms var(--ease-out); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (max-width: 1100px) {
+  .cols.intake, .cols.mirror, .cols.decision, .cols.twin { grid-template-columns: minmax(0, 1fr); }
+  .tray { position: static; }
+  .tray-list { max-height: 320px; }
+}
+@media (max-width: 640px) {
+  main { padding: 16px 16px 56px; }
+  .top { position: static; }
+  .top-inner { padding: 10px 16px; }
+  .step-label { display: none; }
+  .head h1, .head h2 { font-size: 20px; }
+  .diff, .adjust, .planbar { grid-template-columns: minmax(0, 1fr); }
+  .planbar-act { justify-content: stretch; }
+  .planbar-act .field, .planbar-act .btn { width: 100%; }
+  .toast { left: 16px; right: 16px; bottom: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+  .undo-fill { animation: none; }
+  .btn[aria-busy="true"]::before { animation: none; border-right-color: currentColor; opacity: 0.5; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <h1 class="brand"><span class="brand-mark">NARVI</span><span class="brand-sub">Decision Cockpit · Nivel 1</span></h1>
+    <nav aria-label="Pasos del flujo"><ol class="steps" id="steps"></ol></nav>
+    <div class="seal" id="seal" role="status"><span class="dot"></span><span>Conectando</span></div>
+  </div>
+</header>
+<main>
+  <div id="banner"></div>
+  <div id="view"><p class="soft">Cargando el cockpit.</p></div>
+  <noscript><p class="msg alert">Esta consola necesita JavaScript para leer la planilla y mostrar el plan.</p></noscript>
+</main>
+<div id="live" class="sr" aria-live="polite"></div>
+<script id="narvi-snapshot" type="application/json">{"meta":{"generated_at":"2026-11-10T16:13:35+00:00","kern_commit":"b5c17a9"},"runs":{"cobertura":{"approve_error":{"detail":"Supera el umbral financiero: requiere firma de Finanzas. El cockpit no firma ese nivel. (52,396 exceeds the 50,000 auto-approve threshold - requires finance sign-off before committing.)","status":409},"intake":{"defaults":{"cover_periods":8.0,"order_up_to_factor":2.0},"expires_in_seconds":3600,"filename":"plan_electrico.xlsx","mirror":{"checks":[{"cells":[],"count":0,"detail":"Ninguna.","key":"filas_total","label":"Filas de cierre (TOTAL, subtotal)","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"filas_sin_codigo","label":"Filas con stock y sin código","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"stock_no_numerico","label":"Códigos con stock no numérico","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"sin_senal","label":"Códigos sin señal de planificación","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"celdas_combinadas","label":"Celdas combinadas","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"columnas_vacias","label":"Columnas vacías sin nombre","state":"ok"},{"cells":[],"count":0,"detail":"Ninguno.","key":"codigos_con_ceros","label":"Códigos de texto con ceros a la izquierda","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"codigos_numericos","label":"Códigos guardados como número","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"texto_con_forma_de_formula","label":"Texto con forma de fórmula","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"formulas_sin_valor","label":"Fórmulas sin valor guardado","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"formulas_dde","label":"Fórmulas que llaman a otro programa (DDE)","state":"ok"}],"columns":[{"header":"SKU","letter":"A","role":"sku"},{"header":"Existencias","letter":"C","role":"stock"},{"header":"Demanda Semanal","letter":"D","role":"demand"},{"header":"Costo Unitario","letter":"E","role":"cost"},{"header":"Por recibir","letter":"F","role":"on_order"}],"data_rows":8,"filename":"plan_electrico.xlsx","header_row":2,"mode":"demand-cover","plannable_rows":8,"review_parts":{"graficos":0,"imagenes":0,"macros":0,"tablas_dinamicas":0},"sha256":"bd945f72522b660cf6165eff8fb4a9a25db17ccfcfab136ba2ca0fbc6ebc4361","sheet":"Plan"},"preview":[{"cost":890.0,"demand_per_period":3.0,"name":"Variador de frecuencia 5,5 kW","on_hand":6.0,"on_order":4.0,"reorder_point":null,"row":3,"sku":"EL-1001"},{"cost":2150.0,"demand_per_period":2.0,"name":"Variador de frecuencia 11 kW","on_hand":2.0,"on_order":0.0,"reorder_point":null,"row":4,"sku":"EL-1002"},{"cost":620.0,"demand_per_period":1.5,"name":"PLC compacto 24 E/S","on_hand":5.0,"on_order":0.0,"reorder_point":null,"row":5,"sku":"EL-2001"},{"cost":85.0,"demand_per_period":6.0,"name":"Fuente 24 V 10 A","on_hand":30.0,"on_order":12.0,"reorder_point":null,"row":6,"sku":"EL-2002"},{"cost":48.0,"demand_per_period":4.0,"name":"Guardamotor 6-10 A","on_hand":55.0,"on_order":0.0,"reorder_point":null,"row":7,"sku":"EL-3001"},{"cost":36.0,"demand_per_period":5.0,"name":"Relé térmico 9-13 A","on_hand":8.0,"on_order":0.0,"reorder_point":null,"row":8,"sku":"EL-3002"},{"cost":210.0,"demand_per_period":2.5,"name":"Cable de control 4x1,5 mm (rollo 100 m)","on_hand":3.0,"on_order":0.0,"reorder_point":null,"row":9,"sku":"EL-4001"},{"cost":22.0,"demand_per_period":3.0,"name":"Botonera doble con piloto","on_hand":12.0,"on_order":0.0,"reorder_point":null,"row":10,"sku":"EL-4002"}],"sample":"cobertura","session":"aad49eb175e8f261c7917dac87c4794a","source":"sample"},"solve":{"approvable":false,"blocked_reason":"Supera el umbral financiero (52.396 > 50.000): requiere firma de Finanzas. El cockpit no firma ese nivel.","changeset":{"content_hash":"2bf3f635a8f718cafb832f568fc18bccc5fef3710e4a01006f8aa358781b67c6","guards":[{"cell":"C3","value":6},{"cell":"D3","value":3},{"cell":"C4","value":2},{"cell":"D4","value":2},{"cell":"C5","value":5},{"cell":"D5","value":1.5},{"cell":"C6","value":30},{"cell":"D6","value":6},{"cell":"C8","value":8},{"cell":"D8","value":5},{"cell":"C9","value":3},{"cell":"D9","value":2.5},{"cell":"C10","value":12},{"cell":"D10","value":3}],"key":"excel-replenish-a544153dae26","reason":"replenish 7 SKU(s) to target (demand-cover)","risk_tier":"reversible","target":"excel:plan_electrico.xlsx","writes":[{"after":"Pedir (Kern)","before":null,"cell":"G2"},{"after":14.0,"before":null,"cell":"G3"},{"after":14.0,"before":null,"cell":"G4"},{"after":7.0,"before":null,"cell":"G5"},{"after":6.0,"before":null,"cell":"G6"},{"after":32.0,"before":null,"cell":"G8"},{"after":17.0,"before":null,"cell":"G9"},{"after":12.0,"before":null,"cell":"G10"}]},"escalation":{"escalated":true,"reason":"52,396 exceeds the 50,000 auto-approve threshold - requires finance sign-off before committing.","route_to":"finance approver","sla":"before commitment","threshold":50000.0,"value":52396.0},"exceptions":["EL-1002","EL-1001","EL-2001","EL-4001","EL-3002","EL-2002","EL-4002"],"lines":[{"cell":"G3","engine_qty":14.0,"evidence":{"conclusion":"Pedir 14","formula":"pedir = demanda × períodos de cobertura − posición (nunca menos de 0)","rule":"cobertura-de-demanda","steps":"posición = stock + en tránsito: 6 + 4 = 10 · objetivo = demanda × cobertura: 3 × 8 = 24 · pedir = 24 − 10 = 14"},"name":"Variador de frecuencia 5,5 kW","on_hand":6.0,"on_order":4.0,"order_value":12460.0,"overridden":false,"position":10.0,"reason":"","restock_qty":14.0,"row":3,"sku":"EL-1001","source":"client_sheet","status":"pedir","target":24.0,"trigger":null,"unit_cost":890.0},{"cell":"G4","engine_qty":14.0,"evidence":{"conclusion":"Pedir 14","formula":"pedir = demanda × períodos de cobertura − posición (nunca menos de 0)","rule":"cobertura-de-demanda","steps":"posición = stock + en tránsito: 2 + 0 = 2 · objetivo = demanda × cobertura: 2 × 8 = 16 · pedir = 16 − 2 = 14"},"name":"Variador de frecuencia 11 kW","on_hand":2.0,"on_order":0.0,"order_value":30100.0,"overridden":false,"position":2.0,"reason":"","restock_qty":14.0,"row":4,"sku":"EL-1002","source":"client_sheet","status":"pedir","target":16.0,"trigger":null,"unit_cost":2150.0},{"cell":"G5","engine_qty":7.0,"evidence":{"conclusion":"Pedir 7","formula":"pedir = demanda × períodos de cobertura − posición (nunca menos de 0)","rule":"cobertura-de-demanda","steps":"posición = stock + en tránsito: 5 + 0 = 5 · objetivo = demanda × cobertura: 1,5 × 8 = 12 · pedir = 12 − 5 = 7"},"name":"PLC compacto 24 E/S","on_hand":5.0,"on_order":0.0,"order_value":4340.0,"overridden":false,"position":5.0,"reason":"","restock_qty":7.0,"row":5,"sku":"EL-2001","source":"client_sheet","status":"pedir","target":12.0,"trigger":null,"unit_cost":620.0},{"cell":"G6","engine_qty":6.0,"evidence":{"conclusion":"Pedir 6","formula":"pedir = demanda × períodos de cobertura − posición (nunca menos de 0)","rule":"cobertura-de-demanda","steps":"posición = stock + en tránsito: 30 + 12 = 42 · objetivo = demanda × cobertura: 6 × 8 = 48 · pedir = 48 − 42 = 6"},"name":"Fuente 24 V 10 A","on_hand":30.0,"on_order":12.0,"order_value":510.0,"overridden":false,"position":42.0,"reason":"","restock_qty":6.0,"row":6,"sku":"EL-2002","source":"client_sheet","status":"pedir","target":48.0,"trigger":null,"unit_cost":85.0},{"cell":"G7","engine_qty":0.0,"evidence":{"conclusion":"No pedir: la posición 55 cubre el objetivo 32","formula":"pedir = demanda × períodos de cobertura − posición (nunca menos de 0)","rule":"cobertura-de-demanda","steps":"posición = stock + en tránsito: 55 + 0 = 55 · objetivo = demanda × cobertura: 4 × 8 = 32 · 55 ≥ 32"},"name":"Guardamotor 6-10 A","on_hand":55.0,"on_order":0.0,"order_value":0.0,"overridden":false,"position":55.0,"reason":"","restock_qty":0.0,"row":7,"sku":"EL-3001","source":"client_sheet","status":"en_banda","target":32.0,"trigger":null,"unit_cost":48.0},{"cell":"G8","engine_qty":32.0,"evidence":{"conclusion":"Pedir 32","formula":"pedir = demanda × períodos de cobertura − posición (nunca menos de 0)","rule":"cobertura-de-demanda","steps":"posición = stock + en tránsito: 8 + 0 = 8 · objetivo = demanda × cobertura: 5 × 8 = 40 · pedir = 40 − 8 = 32"},"name":"Relé térmico 9-13 A","on_hand":8.0,"on_order":0.0,"order_value":1152.0,"overridden":false,"position":8.0,"reason":"","restock_qty":32.0,"row":8,"sku":"EL-3002","source":"client_sheet","status":"pedir","target":40.0,"trigger":null,"unit_cost":36.0},{"cell":"G9","engine_qty":17.0,"evidence":{"conclusion":"Pedir 17","formula":"pedir = demanda × períodos de cobertura − posición (nunca menos de 0)","rule":"cobertura-de-demanda","steps":"posición = stock + en tránsito: 3 + 0 = 3 · objetivo = demanda × cobertura: 2,5 × 8 = 20 · pedir = 20 − 3 = 17"},"name":"Cable de control 4x1,5 mm (rollo 100 m)","on_hand":3.0,"on_order":0.0,"order_value":3570.0,"overridden":false,"position":3.0,"reason":"","restock_qty":17.0,"row":9,"sku":"EL-4001","source":"client_sheet","status":"pedir","target":20.0,"trigger":null,"unit_cost":210.0},{"cell":"G10","engine_qty":12.0,"evidence":{"conclusion":"Pedir 12","formula":"pedir = demanda × períodos de cobertura − posición (nunca menos de 0)","rule":"cobertura-de-demanda","steps":"posición = stock + en tránsito: 12 + 0 = 12 · objetivo = demanda × cobertura: 3 × 8 = 24 · pedir = 24 − 12 = 12"},"name":"Botonera doble con piloto","on_hand":12.0,"on_order":0.0,"order_value":264.0,"overridden":false,"position":12.0,"reason":"","restock_qty":12.0,"row":10,"sku":"EL-4002","source":"client_sheet","status":"pedir","target":24.0,"trigger":null,"unit_cost":22.0}],"mode":"demand-cover","params":{"cover_periods":8.0,"financial_threshold":50000.0,"order_up_to_factor":2.0},"qa_issues":[],"ranking":{"basis":"valor"},"session":"aad49eb175e8f261c7917dac87c4794a","summary":"Read 8 plannable SKU(s) from plan_electrico.xlsx (Plan, demand-cover); 7 below target (102 units short), staged as a dry-run.","totals":{"lines_without_cost":0,"n_lines":8,"n_netted":8,"n_overridden":0,"n_restock":7,"n_skipped_rows":0,"n_total_rows":0,"n_unplanned":0,"units":102.0,"value":52396.0},"unplanned":[]}},"repuestos":{"approve":{"approved_at":"2026-11-10T16:13:35+00:00","approved_by":"sin autenticar: operador","authenticated":false,"content_hash":"c14e41bbecc931555ff39a45bb2ee068e124c9bb55d84239ec5a2b29d5c31d06","expires_at":"2026-11-10T16:28:35+00:00","guards":16,"key":"excel-replenish-7d648e464513","signature":"51dfcec1ace73f83","signed":true,"state":"aprobado","status":"applied","undo_window_seconds":15,"writes":9},"intake":{"defaults":{"cover_periods":8.0,"order_up_to_factor":2.0},"expires_in_seconds":3600,"filename":"repuestos_muestra.xlsx","mirror":{"checks":[{"cells":[],"count":0,"detail":"Ninguna.","key":"filas_total","label":"Filas de cierre (TOTAL, subtotal)","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"filas_sin_codigo","label":"Filas con stock y sin código","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"stock_no_numerico","label":"Códigos con stock no numérico","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"sin_senal","label":"Códigos sin señal de planificación","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"celdas_combinadas","label":"Celdas combinadas","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"columnas_vacias","label":"Columnas vacías sin nombre","state":"ok"},{"cells":[],"count":12,"detail":"Se leen completos, con sus ceros.","key":"codigos_con_ceros","label":"Códigos de texto con ceros a la izquierda","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"codigos_numericos","label":"Códigos guardados como número","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"texto_con_forma_de_formula","label":"Texto con forma de fórmula","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"formulas_sin_valor","label":"Fórmulas sin valor guardado","state":"ok"},{"cells":[],"count":0,"detail":"Ninguna.","key":"formulas_dde","label":"Fórmulas que llaman a otro programa (DDE)","state":"ok"}],"columns":[{"header":"Codigo","letter":"A","role":"sku"},{"header":"Stock","letter":"C","role":"stock"},{"header":"Punto Reorden","letter":"D","role":"rop"},{"header":"Costo Unitario","letter":"F","role":"cost"},{"header":"En transito","letter":"E","role":"on_order"}],"data_rows":12,"filename":"repuestos_muestra.xlsx","header_row":1,"mode":"reorder-point","plannable_rows":12,"review_parts":{"graficos":0,"imagenes":0,"macros":0,"tablas_dinamicas":0},"sha256":"36ec793030bf26bc1a736c349ebe84c354ebb42ccb1f66390e7330e1de70837b","sheet":"Stock"},"preview":[{"cost":185.0,"demand_per_period":null,"name":"Motor trifásico 1/2 HP","on_hand":4.0,"on_order":0.0,"reorder_point":6.0,"row":2,"sku":"00412"},{"cost":240.0,"demand_per_period":null,"name":"Motor trifásico 1 HP","on_hand":2.0,"on_order":0.0,"reorder_point":4.0,"row":3,"sku":"00455"},{"cost":14.5,"demand_per_period":null,"name":"Filtro hidráulico serie B","on_hand":310.0,"on_order":0.0,"reorder_point":60.0,"row":4,"sku":"00891"},{"cost":8.2,"demand_per_period":null,"name":"Rodamiento 6204-2RS","on_hand":110.0,"on_order":0.0,"reorder_point":300.0,"row":5,"sku":"01004"},{"cost":9.1,"demand_per_period":null,"name":"Rodamiento 6205-2RS","on_hand":95.0,"on_order":200.0,"reorder_point":250.0,"row":6,"sku":"01011"},{"cost":18.0,"demand_per_period":null,"name":"Correa en V A-42","on_hand":68.0,"on_order":0.0,"reorder_point":90.0,"row":7,"sku":"00122"},{"cost":42.0,"demand_per_period":null,"name":"Sensor inductivo M12","on_hand":34.0,"on_order":0.0,"reorder_point":20.0,"row":8,"sku":"00205"},{"cost":65.0,"demand_per_period":null,"name":"Válvula solenoide 24 V","on_hand":18.0,"on_order":0.0,"reorder_point":30.0,"row":9,"sku":"00319"},{"cost":38.0,"demand_per_period":null,"name":"Contactor 3P 25 A","on_hand":12.0,"on_order":10.0,"reorder_point":25.0,"row":10,"sku":"00560"},{"cost":120.0,"demand_per_period":null,"name":"Sello mecánico 35 mm","on_hand":0.0,"on_order":0.0,"reorder_point":8.0,"row":11,"sku":"00777"},{"cost":27.5,"demand_per_period":null,"name":"Acople flexible L-100","on_hand":40.0,"on_order":0.0,"reorder_point":15.0,"row":12,"sku":"00903"},{"cost":96.0,"demand_per_period":null,"name":"Grasa litio EP2 18 kg","on_hand":9.0,"on_order":0.0,"reorder_point":12.0,"row":13,"sku":"01250"}],"sample":"repuestos","session":"5bbb2b65c0ae3f4e7cec3e6a9f0e8e3b","source":"sample"},"rollback":{"key":"excel-replenish-7d648e464513","restored":25,"status":"rolled_back"},"solve":{"approvable":true,"blocked_reason":"","changeset":{"content_hash":"c14e41bbecc931555ff39a45bb2ee068e124c9bb55d84239ec5a2b29d5c31d06","guards":[{"cell":"C2","value":4},{"cell":"D2","value":6},{"cell":"C3","value":2},{"cell":"D3","value":4},{"cell":"C5","value":110},{"cell":"D5","value":300},{"cell":"C7","value":68},{"cell":"D7","value":90},{"cell":"C9","value":18},{"cell":"D9","value":30},{"cell":"C10","value":12},{"cell":"D10","value":25},{"cell":"C11","value":0},{"cell":"D11","value":8},{"cell":"C13","value":9},{"cell":"D13","value":12}],"key":"excel-replenish-7d648e464513","reason":"replenish 8 SKU(s) to target (reorder-point)","risk_tier":"reversible","target":"excel:repuestos_muestra.xlsx","writes":[{"after":"Pedir (Kern)","before":null,"cell":"G1"},{"after":8.0,"before":null,"cell":"G2"},{"after":6.0,"before":null,"cell":"G3"},{"after":490.0,"before":null,"cell":"G5"},{"after":112.0,"before":null,"cell":"G7"},{"after":42.0,"before":null,"cell":"G9"},{"after":28.0,"before":null,"cell":"G10"},{"after":16.0,"before":null,"cell":"G11"},{"after":15.0,"before":null,"cell":"G13"}]},"escalation":{"escalated":false,"reason":"","route_to":"","sla":"","threshold":50000.0,"value":16108.0},"exceptions":["01004","00319","00122","00777","00412","01250","00455","00560"],"lines":[{"cell":"G2","engine_qty":8.0,"evidence":{"conclusion":"Pedir 8","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 4 + 0 = 4 · 4 \u003c 6 (punto de reorden) · objetivo = 6 × 2 = 12 · pedir = 12 − 4 = 8"},"name":"Motor trifásico 1/2 HP","on_hand":4.0,"on_order":0.0,"order_value":1480.0,"overridden":false,"position":4.0,"reason":"","restock_qty":8.0,"row":2,"sku":"00412","source":"client_sheet","status":"pedir","target":12.0,"trigger":6.0,"unit_cost":185.0},{"cell":"G3","engine_qty":6.0,"evidence":{"conclusion":"Pedir 6","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 2 + 0 = 2 · 2 \u003c 4 (punto de reorden) · objetivo = 4 × 2 = 8 · pedir = 8 − 2 = 6"},"name":"Motor trifásico 1 HP","on_hand":2.0,"on_order":0.0,"order_value":1440.0,"overridden":false,"position":2.0,"reason":"","restock_qty":6.0,"row":3,"sku":"00455","source":"client_sheet","status":"pedir","target":8.0,"trigger":4.0,"unit_cost":240.0},{"cell":"G4","engine_qty":0.0,"evidence":{"conclusion":"No pedir: la posición 310 no baja del punto de reorden 60","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 310 + 0 = 310 · 310 ≥ 60 (punto de reorden)"},"name":"Filtro hidráulico serie B","on_hand":310.0,"on_order":0.0,"order_value":0.0,"overridden":false,"position":310.0,"reason":"","restock_qty":0.0,"row":4,"sku":"00891","source":"client_sheet","status":"en_banda","target":120.0,"trigger":60.0,"unit_cost":14.5},{"cell":"G5","engine_qty":490.0,"evidence":{"conclusion":"Pedir 490","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 110 + 0 = 110 · 110 \u003c 300 (punto de reorden) · objetivo = 300 × 2 = 600 · pedir = 600 − 110 = 490"},"name":"Rodamiento 6204-2RS","on_hand":110.0,"on_order":0.0,"order_value":4018.0,"overridden":false,"position":110.0,"reason":"","restock_qty":490.0,"row":5,"sku":"01004","source":"client_sheet","status":"pedir","target":600.0,"trigger":300.0,"unit_cost":8.2},{"cell":"G6","engine_qty":0.0,"evidence":{"conclusion":"No pedir: la posición 295 no baja del punto de reorden 250","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 95 + 200 = 295 · 295 ≥ 250 (punto de reorden)"},"name":"Rodamiento 6205-2RS","on_hand":95.0,"on_order":200.0,"order_value":0.0,"overridden":false,"position":295.0,"reason":"","restock_qty":0.0,"row":6,"sku":"01011","source":"client_sheet","status":"en_banda","target":500.0,"trigger":250.0,"unit_cost":9.1},{"cell":"G7","engine_qty":112.0,"evidence":{"conclusion":"Pedir 112","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 68 + 0 = 68 · 68 \u003c 90 (punto de reorden) · objetivo = 90 × 2 = 180 · pedir = 180 − 68 = 112"},"name":"Correa en V A-42","on_hand":68.0,"on_order":0.0,"order_value":2016.0,"overridden":false,"position":68.0,"reason":"","restock_qty":112.0,"row":7,"sku":"00122","source":"client_sheet","status":"pedir","target":180.0,"trigger":90.0,"unit_cost":18.0},{"cell":"G8","engine_qty":0.0,"evidence":{"conclusion":"No pedir: la posición 34 no baja del punto de reorden 20","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 34 + 0 = 34 · 34 ≥ 20 (punto de reorden)"},"name":"Sensor inductivo M12","on_hand":34.0,"on_order":0.0,"order_value":0.0,"overridden":false,"position":34.0,"reason":"","restock_qty":0.0,"row":8,"sku":"00205","source":"client_sheet","status":"en_banda","target":40.0,"trigger":20.0,"unit_cost":42.0},{"cell":"G9","engine_qty":42.0,"evidence":{"conclusion":"Pedir 42","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 18 + 0 = 18 · 18 \u003c 30 (punto de reorden) · objetivo = 30 × 2 = 60 · pedir = 60 − 18 = 42"},"name":"Válvula solenoide 24 V","on_hand":18.0,"on_order":0.0,"order_value":2730.0,"overridden":false,"position":18.0,"reason":"","restock_qty":42.0,"row":9,"sku":"00319","source":"client_sheet","status":"pedir","target":60.0,"trigger":30.0,"unit_cost":65.0},{"cell":"G10","engine_qty":28.0,"evidence":{"conclusion":"Pedir 28","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 12 + 10 = 22 · 22 \u003c 25 (punto de reorden) · objetivo = 25 × 2 = 50 · pedir = 50 − 22 = 28"},"name":"Contactor 3P 25 A","on_hand":12.0,"on_order":10.0,"order_value":1064.0,"overridden":false,"position":22.0,"reason":"","restock_qty":28.0,"row":10,"sku":"00560","source":"client_sheet","status":"pedir","target":50.0,"trigger":25.0,"unit_cost":38.0},{"cell":"G11","engine_qty":16.0,"evidence":{"conclusion":"Pedir 16","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 0 + 0 = 0 · 0 \u003c 8 (punto de reorden) · objetivo = 8 × 2 = 16 · pedir = 16 − 0 = 16"},"name":"Sello mecánico 35 mm","on_hand":0.0,"on_order":0.0,"order_value":1920.0,"overridden":false,"position":0.0,"reason":"","restock_qty":16.0,"row":11,"sku":"00777","source":"client_sheet","status":"sin_stock","target":16.0,"trigger":8.0,"unit_cost":120.0},{"cell":"G12","engine_qty":0.0,"evidence":{"conclusion":"No pedir: la posición 40 no baja del punto de reorden 15","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 40 + 0 = 40 · 40 ≥ 15 (punto de reorden)"},"name":"Acople flexible L-100","on_hand":40.0,"on_order":0.0,"order_value":0.0,"overridden":false,"position":40.0,"reason":"","restock_qty":0.0,"row":12,"sku":"00903","source":"client_sheet","status":"en_banda","target":30.0,"trigger":15.0,"unit_cost":27.5},{"cell":"G13","engine_qty":15.0,"evidence":{"conclusion":"Pedir 15","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock + en tránsito: 9 + 0 = 9 · 9 \u003c 12 (punto de reorden) · objetivo = 12 × 2 = 24 · pedir = 24 − 9 = 15"},"name":"Grasa litio EP2 18 kg","on_hand":9.0,"on_order":0.0,"order_value":1440.0,"overridden":false,"position":9.0,"reason":"","restock_qty":15.0,"row":13,"sku":"01250","source":"client_sheet","status":"pedir","target":24.0,"trigger":12.0,"unit_cost":96.0}],"mode":"reorder-point","params":{"cover_periods":8.0,"financial_threshold":50000.0,"order_up_to_factor":2.0},"qa_issues":[],"ranking":{"basis":"valor"},"session":"5bbb2b65c0ae3f4e7cec3e6a9f0e8e3b","summary":"Read 12 plannable SKU(s) from repuestos_muestra.xlsx (Stock, reorder-point); 8 below target (717 units short), staged as a dry-run.","totals":{"lines_without_cost":0,"n_lines":12,"n_netted":12,"n_overridden":0,"n_restock":8,"n_skipped_rows":0,"n_total_rows":0,"n_unplanned":0,"units":717.0,"value":16108.0},"unplanned":[]}},"trampas":{"approve":{"approved_at":"2026-11-10T16:13:35+00:00","approved_by":"sin autenticar: operador","authenticated":false,"content_hash":"d3fc573808ff752d5f7815e514da1c832840609fab81754c9b33e2e2109b9e84","expires_at":"2026-11-10T16:28:35+00:00","guards":16,"key":"excel-replenish-64bcdfadc3f5","signature":"80968f24f4b1407c","signed":true,"state":"aprobado","status":"applied","undo_window_seconds":15,"writes":9},"intake":{"defaults":{"cover_periods":8.0,"order_up_to_factor":2.0},"expires_in_seconds":3600,"filename":"planilla_con_trampas.xlsx","mirror":{"checks":[{"cells":[],"count":1,"detail":"No son un producto: quedan fuera del plan.","key":"filas_total","label":"Filas de cierre (TOTAL, subtotal)","state":"aviso"},{"cells":["C14"],"count":1,"detail":"Tienen stock pero ningún código: el plan no las incluye.","key":"filas_sin_codigo","label":"Filas con stock y sin código","state":"aviso"},{"cells":[],"count":1,"detail":"El stock no es un número (texto, o fórmula sin valor guardado): quedan fuera del plan.","key":"stock_no_numerico","label":"Códigos con stock no numérico","state":"aviso"},{"cells":["C13"],"count":1,"detail":"Falta el punto de reorden: no se planifican.","key":"sin_senal","label":"Códigos sin señal de planificación","state":"aviso"},{"cells":[],"count":9,"detail":"Columnas: Familia (9). Una fila que hereda su código de una celda combinada no tiene código propio.","key":"celdas_combinadas","label":"Celdas combinadas","state":"aviso"},{"cells":[],"count":1,"detail":"Sin encabezado ni datos: se ignoran.","key":"columnas_vacias","label":"Columnas vacías sin nombre","state":"aviso"},{"cells":[],"count":10,"detail":"Se leen completos, con sus ceros.","key":"codigos_con_ceros","label":"Códigos de texto con ceros a la izquierda","state":"ok"},{"cells":["C7"],"count":1,"detail":"En Excel se ven con ceros, pero el valor guardado es un número y Kern lo lee sin ellos. Los ceros de un número son formato: guardá la columna como texto.","key":"codigos_numericos","label":"Códigos guardados como número","state":"alerta"},{"cells":["D9","D13"],"count":2,"detail":"Empieza con = + - o @. No se ejecuta: en el gemelo se escribe neutralizado.","key":"texto_con_forma_de_formula","label":"Texto con forma de fórmula","state":"aviso"},{"cells":["E10"],"count":1,"detail":"El archivo no trae su resultado: Kern las ve vacías. Abrí y guardá la planilla en Excel.","key":"formulas_sin_valor","label":"Fórmulas sin valor guardado","state":"aviso"},{"cells":[],"count":0,"detail":"Ninguna.","key":"formulas_dde","label":"Fórmulas que llaman a otro programa (DDE)","state":"ok"}],"columns":[{"header":"Código","letter":"C","role":"sku"},{"header":"Stock","letter":"E","role":"stock"},{"header":"Punto de Reorden","letter":"F","role":"rop"},{"header":"Costo","letter":"G","role":"cost"}],"data_rows":14,"filename":"planilla_con_trampas.xlsx","header_row":4,"mode":"reorder-point","plannable_rows":11,"review_parts":{"graficos":0,"imagenes":0,"macros":0,"tablas_dinamicas":0},"sha256":"303470fde5fd4795bb9fbe9b3e8f22bc614b5f7e8d30704c79e19d1670d8327f","sheet":"Inventario Bodega"},"preview":[{"cost":185.0,"demand_per_period":null,"name":"Motor trifásico 1/2 HP","on_hand":4.0,"on_order":null,"reorder_point":6.0,"row":5,"sku":"00412"},{"cost":240.0,"demand_per_period":null,"name":"Motor trifásico 1 HP","on_hand":2.0,"on_order":null,"reorder_point":4.0,"row":6,"sku":"00455"},{"cost":130.0,"demand_per_period":null,"name":"Motor monofásico 1/4 HP","on_hand":9.0,"on_order":null,"reorder_point":5.0,"row":7,"sku":"7731"},{"cost":8.2,"demand_per_period":null,"name":"Rodamiento 6204-2RS","on_hand":110.0,"on_order":null,"reorder_point":300.0,"row":8,"sku":"01004"},{"cost":9.1,"demand_per_period":null,"name":"=CMD|' /C calc'!A0","on_hand":95.0,"on_order":null,"reorder_point":250.0,"row":9,"sku":"01011"},{"cost":18.0,"demand_per_period":null,"name":"Correa en V A-42","on_hand":68.0,"on_order":null,"reorder_point":90.0,"row":12,"sku":"00122"},{"cost":21.0,"demand_per_period":null,"name":"-10% dto. proveedor: Correa en V B-60","on_hand":40.0,"on_order":null,"reorder_point":null,"row":13,"sku":"00130"},{"cost":120.0,"demand_per_period":null,"name":"Sello mecánico 35 mm","on_hand":0.0,"on_order":null,"reorder_point":8.0,"row":15,"sku":"00777"},{"cost":65.0,"demand_per_period":null,"name":"Válvula solenoide 24 V","on_hand":18.0,"on_order":null,"reorder_point":30.0,"row":16,"sku":"00319"},{"cost":38.0,"demand_per_period":null,"name":"Contactor 3P 25 A","on_hand":12.0,"on_order":null,"reorder_point":25.0,"row":17,"sku":"00560"},{"cost":42.0,"demand_per_period":null,"name":"Sensor inductivo M12","on_hand":34.0,"on_order":null,"reorder_point":20.0,"row":18,"sku":"00205"}],"sample":"trampas","session":"30add08baff98bbe4a01e53301ac2b3f","source":"sample"},"rollback":{"key":"excel-replenish-64bcdfadc3f5","restored":25,"status":"rolled_back"},"solve":{"approvable":true,"blocked_reason":"","changeset":{"content_hash":"d3fc573808ff752d5f7815e514da1c832840609fab81754c9b33e2e2109b9e84","guards":[{"cell":"E5","value":4},{"cell":"F5","value":6},{"cell":"E6","value":2},{"cell":"F6","value":4},{"cell":"E8","value":110},{"cell":"F8","value":300},{"cell":"E9","value":95},{"cell":"F9","value":250},{"cell":"E12","value":68},{"cell":"F12","value":90},{"cell":"E15","value":0},{"cell":"F15","value":8},{"cell":"E16","value":18},{"cell":"F16","value":30},{"cell":"E17","value":12},{"cell":"F17","value":25}],"key":"excel-replenish-64bcdfadc3f5","reason":"replenish 8 SKU(s) to target (reorder-point)","risk_tier":"reversible","target":"excel:planilla_con_trampas.xlsx","writes":[{"after":"Pedir (Kern)","before":null,"cell":"H4"},{"after":8.0,"before":null,"cell":"H5"},{"after":6.0,"before":null,"cell":"H6"},{"after":490.0,"before":null,"cell":"H8"},{"after":405.0,"before":null,"cell":"H9"},{"after":112.0,"before":null,"cell":"H12"},{"after":16.0,"before":null,"cell":"H15"},{"after":42.0,"before":null,"cell":"H16"},{"after":38.0,"before":null,"cell":"H17"}]},"escalation":{"escalated":false,"reason":"","route_to":"","sla":"","threshold":50000.0,"value":18733.5},"exceptions":["01004","01011","00319","00122","00777","00412","00560","00455"],"lines":[{"cell":"H5","engine_qty":8.0,"evidence":{"conclusion":"Pedir 8","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock 4 (la planilla no informa stock en tránsito) · 4 \u003c 6 (punto de reorden) · objetivo = 6 × 2 = 12 · pedir = 12 − 4 = 8"},"name":"Motor trifásico 1/2 HP","on_hand":4.0,"on_order":null,"order_value":1480.0,"overridden":false,"position":4.0,"reason":"","restock_qty":8.0,"row":5,"sku":"00412","source":"client_sheet","status":"pedir","target":12.0,"trigger":6.0,"unit_cost":185.0},{"cell":"H6","engine_qty":6.0,"evidence":{"conclusion":"Pedir 6","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock 2 (la planilla no informa stock en tránsito) · 2 \u003c 4 (punto de reorden) · objetivo = 4 × 2 = 8 · pedir = 8 − 2 = 6"},"name":"Motor trifásico 1 HP","on_hand":2.0,"on_order":null,"order_value":1440.0,"overridden":false,"position":2.0,"reason":"","restock_qty":6.0,"row":6,"sku":"00455","source":"client_sheet","status":"pedir","target":8.0,"trigger":4.0,"unit_cost":240.0},{"cell":"H7","engine_qty":0.0,"evidence":{"conclusion":"No pedir: la posición 9 no baja del punto de reorden 5","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock 9 (la planilla no informa stock en tránsito) · 9 ≥ 5 (punto de reorden)"},"name":"Motor monofásico 1/4 HP","on_hand":9.0,"on_order":null,"order_value":0.0,"overridden":false,"position":9.0,"reason":"","restock_qty":0.0,"row":7,"sku":"7731","source":"client_sheet","status":"en_banda","target":10.0,"trigger":5.0,"unit_cost":130.0},{"cell":"H8","engine_qty":490.0,"evidence":{"conclusion":"Pedir 490","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock 110 (la planilla no informa stock en tránsito) · 110 \u003c 300 (punto de reorden) · objetivo = 300 × 2 = 600 · pedir = 600 − 110 = 490"},"name":"Rodamiento 6204-2RS","on_hand":110.0,"on_order":null,"order_value":4018.0,"overridden":false,"position":110.0,"reason":"","restock_qty":490.0,"row":8,"sku":"01004","source":"client_sheet","status":"pedir","target":600.0,"trigger":300.0,"unit_cost":8.2},{"cell":"H9","engine_qty":405.0,"evidence":{"conclusion":"Pedir 405","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock 95 (la planilla no informa stock en tránsito) · 95 \u003c 250 (punto de reorden) · objetivo = 250 × 2 = 500 · pedir = 500 − 95 = 405"},"name":"=CMD|' /C calc'!A0","on_hand":95.0,"on_order":null,"order_value":3685.5,"overridden":false,"position":95.0,"reason":"","restock_qty":405.0,"row":9,"sku":"01011","source":"client_sheet","status":"pedir","target":500.0,"trigger":250.0,"unit_cost":9.1},{"cell":"H12","engine_qty":112.0,"evidence":{"conclusion":"Pedir 112","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock 68 (la planilla no informa stock en tránsito) · 68 \u003c 90 (punto de reorden) · objetivo = 90 × 2 = 180 · pedir = 180 − 68 = 112"},"name":"Correa en V A-42","on_hand":68.0,"on_order":null,"order_value":2016.0,"overridden":false,"position":68.0,"reason":"","restock_qty":112.0,"row":12,"sku":"00122","source":"client_sheet","status":"pedir","target":180.0,"trigger":90.0,"unit_cost":18.0},{"cell":"H15","engine_qty":16.0,"evidence":{"conclusion":"Pedir 16","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock 0 (la planilla no informa stock en tránsito) · 0 \u003c 8 (punto de reorden) · objetivo = 8 × 2 = 16 · pedir = 16 − 0 = 16"},"name":"Sello mecánico 35 mm","on_hand":0.0,"on_order":null,"order_value":1920.0,"overridden":false,"position":0.0,"reason":"","restock_qty":16.0,"row":15,"sku":"00777","source":"client_sheet","status":"sin_stock","target":16.0,"trigger":8.0,"unit_cost":120.0},{"cell":"H16","engine_qty":42.0,"evidence":{"conclusion":"Pedir 42","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock 18 (la planilla no informa stock en tránsito) · 18 \u003c 30 (punto de reorden) · objetivo = 30 × 2 = 60 · pedir = 60 − 18 = 42"},"name":"Válvula solenoide 24 V","on_hand":18.0,"on_order":null,"order_value":2730.0,"overridden":false,"position":18.0,"reason":"","restock_qty":42.0,"row":16,"sku":"00319","source":"client_sheet","status":"pedir","target":60.0,"trigger":30.0,"unit_cost":65.0},{"cell":"H17","engine_qty":38.0,"evidence":{"conclusion":"Pedir 38","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock 12 (la planilla no informa stock en tránsito) · 12 \u003c 25 (punto de reorden) · objetivo = 25 × 2 = 50 · pedir = 50 − 12 = 38"},"name":"Contactor 3P 25 A","on_hand":12.0,"on_order":null,"order_value":1444.0,"overridden":false,"position":12.0,"reason":"","restock_qty":38.0,"row":17,"sku":"00560","source":"client_sheet","status":"pedir","target":50.0,"trigger":25.0,"unit_cost":38.0},{"cell":"H18","engine_qty":0.0,"evidence":{"conclusion":"No pedir: la posición 34 no baja del punto de reorden 20","formula":"si posición \u003c punto de reorden: pedir = objetivo − posición; si no, 0","rule":"punto-de-reorden","steps":"posición = stock 34 (la planilla no informa stock en tránsito) · 34 ≥ 20 (punto de reorden)"},"name":"Sensor inductivo M12","on_hand":34.0,"on_order":null,"order_value":0.0,"overridden":false,"position":34.0,"reason":"","restock_qty":0.0,"row":18,"sku":"00205","source":"client_sheet","status":"en_banda","target":40.0,"trigger":20.0,"unit_cost":42.0}],"mode":"reorder-point","params":{"cover_periods":8.0,"financial_threshold":50000.0,"order_up_to_factor":2.0},"qa_issues":[],"ranking":{"basis":"valor"},"session":"30add08baff98bbe4a01e53301ac2b3f","summary":"Read 10 plannable SKU(s) from planilla_con_trampas.xlsx (Inventario Bodega, reorder-point); 8 below target (1,117 units short), staged as a dry-run. 1 SKU(s) NOT planned (blank reorder point); 1 row(s) skipped (non-numeric stock); 1 TOTAL row(s) excluded.","totals":{"lines_without_cost":0,"n_lines":10,"n_netted":0,"n_overridden":0,"n_restock":8,"n_skipped_rows":1,"n_total_rows":1,"n_unplanned":1,"units":1117.0,"value":18733.5},"unplanned":[{"name":"-10% dto. proveedor: Correa en V B-60","row":13,"sku":"00130","why":"sin punto de reorden en la planilla"}]}}},"samples":{"limits":{"financial_threshold":50000.0,"max_upload_bytes":26214400,"session_ttl_seconds":3600},"samples":[{"description":"Entrada sintética: 12 repuestos con punto de reorden, stock en tránsito y costo. Sin defectos.","filename":"repuestos_muestra.xlsx","id":"repuestos","title":"Repuestos industriales"},{"description":"Entrada sintética con los defectos de una planilla real: fila TOTAL, celdas combinadas, un código guardado como número, texto con forma de fórmula y filas incompletas.","filename":"planilla_con_trampas.xlsx","id":"trampas","title":"Planilla con trampas"},{"description":"Entrada sintética por cobertura de demanda: 8 ítems eléctricos cuyo plan supera el umbral financiero y no se puede firmar con un clic.","filename":"plan_electrico.xlsx","id":"cobertura","title":"Plan sobre el umbral"}],"signing":{"configured":true,"unsigned_allowed":false}}}</script>
+<script>
+"use strict";
+/* Narvi Decision Cockpit: estado, llamadas al servidor y acciones.
+   La pagina no calcula ningun numero del negocio: muestra lo que devuelve
+   /api/cockpit/* (webapp/cockpit.py). Sin servidor, repite una corrida real
+   del motor que viene congelada en el propio archivo, y lo dice. */
+
+const $ = (selector) => document.querySelector(selector);
+
+/** Crea un elemento. Todo texto entra como nodo de texto, nunca como HTML. */
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [key, value] of Object.entries(props || {})) {
+    if (value === null || value === undefined || value === false) continue;
+    if (key === "class") el.className = value;
+    else if (key.startsWith("on")) el.addEventListener(key.slice(2), value);
+    else el.setAttribute(key, value === true ? "" : value);
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+
+const numberFormat = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 2, useGrouping: "always" });
+const isBlank = (value) => value === null || value === undefined || value === "";
+const num = (value) => (isBlank(value) ? "s/d" : numberFormat.format(value));
+const money = (value) => (isBlank(value) ? "sin costo" : "$ " + numberFormat.format(value));
+const cellText = (value) => (isBlank(value) ? "vacía" : typeof value === "number" ? numberFormat.format(value) : String(value));
+const shortHash = (value) => (value ? value.slice(0, 12) + "…" + value.slice(-6) : "s/d");
+const when = (iso) => (iso ? new Date(iso).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" }) : "s/d");
+
+class ApiError extends Error {
+  constructor(status, detail) {
+    super(detail);
+    this.status = status;
+  }
+}
+
+function readSnapshot() {
+  try {
+    return JSON.parse($("#narvi-snapshot").textContent);
+  } catch (error) {
+    return null;
+  }
+}
+
+const snapshot = readSnapshot();
+const UNDO_HIGHLIGHT_MS = 15000;
+const BOOT_TIMEOUT_MS = 4000;
+const LOCAL_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
+
+const state = {
+  mode: "server", // "server" | "snapshot"
+  apiKey: "",
+  needsKey: false,
+  samples: [],
+  signing: null,
+  limits: null,
+  sampleId: null,
+  step: 1,
+  busy: "",
+  error: "",
+  intake: null,
+  params: null,
+  plan: null,
+  overrides: {},
+  selected: null,
+  filter: "todas",
+  showAllRows: false,
+  decision: null,
+  undoHot: false,
+  undone: false,
+  signer: "",
+  twinHash: "",
+  pendingSample: null,
+  draft: { sku: null, qty: "", reason: "" }, // lo que la persona esta escribiendo en el ajuste de una linea
+};
+let undoTimer = null;
+
+function describeDetail(detail, status) {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return detail.map((item) => item.msg || JSON.stringify(item)).join("; ");
+  return "El servidor respondió " + status + ".";
+}
+
+async function server(path, { method = "GET", json, form } = {}) {
+  const headers = {};
+  if (state.apiKey) headers["X-API-Key"] = state.apiKey;
+  if (json) headers["Content-Type"] = "application/json";
+  let response;
+  try {
+    response = await fetch("/api/cockpit" + path, { method, headers, body: json ? JSON.stringify(json) : form });
+  } catch (error) {
+    throw new ApiError(0, "No se pudo llegar al servidor del cockpit.");
+  }
+  if (!response.ok) {
+    let detail = null;
+    try {
+      detail = (await response.json()).detail;
+    } catch (error) {
+      detail = null; // el cuerpo no era JSON: queda el codigo de estado
+    }
+    throw new ApiError(response.status, describeDetail(detail, response.status));
+  }
+  return response;
+}
+
+const DEFAULT_KEYS = ["cover_periods", "order_up_to_factor"];
+
+/** Sin servidor: devuelve lo que respondio el motor cuando se congelo la corrida. */
+function frozen(path, { json, form } = {}) {
+  if (path === "/samples") return snapshot.samples;
+  if (path === "/intake") {
+    const id = form && form.get("sample");
+    if (!id || !snapshot.runs[id]) throw new ApiError(0, "Sin servidor no se puede leer un archivo: elegí una muestra.");
+    state.sampleId = id;
+    return snapshot.runs[id].intake;
+  }
+  const run = snapshot.runs[state.sampleId];
+  if (path === "/solve") {
+    const defaults = run.intake.defaults;
+    const changed = DEFAULT_KEYS.some((key) => json[key] !== defaults[key]) || Object.keys(json.overrides || {}).length > 0;
+    if (changed) throw new ApiError(0, "Sin servidor no se recalcula: el plan que ves es el de la corrida congelada.");
+    return run.solve;
+  }
+  if (path === "/approve-t2") {
+    if (run.approve_error) throw new ApiError(run.approve_error.status, run.approve_error.detail);
+    return run.approve;
+  }
+  if (path === "/rollback") return run.rollback;
+  throw new ApiError(0, "Sin servidor no se genera el archivo.");
+}
+
+async function call(path, options) {
+  if (state.mode === "snapshot") return frozen(path, options);
+  return (await server(path, options)).json();
+}
+
+function say(text) {
+  $("#live").textContent = text;
+}
+
+/** Corre una accion mostrando que esta en curso y dejando el error a la vista. */
+async function run(name, action) {
+  if (state.busy) return;
+  // Mientras dura la accion los botones quedan deshabilitados y el foco se cae al
+  // documento. Se recuerda donde estaba para devolverlo al terminar.
+  const focusId = document.activeElement && document.activeElement.id;
+  state.busy = name;
+  state.error = "";
+  render();
+  try {
+    await action();
+  } catch (error) {
+    state.error = error instanceof ApiError ? error.message : "Error inesperado en la página: " + error.message;
+    if (error instanceof ApiError && error.status === 401) state.needsKey = true;
+    if (error instanceof ApiError && error.status === 404 && state.intake) {
+      state.error += " Volvé al paso 1.";
+    }
+    say(state.error);
+  } finally {
+    state.busy = "";
+    render();
+    const target = focusId && document.getElementById(focusId);
+    if (target && !target.disabled && document.activeElement === document.body) target.focus({ preventScroll: true });
+  }
+}
+
+function resetSession() {
+  clearTimeout(undoTimer);
+  Object.assign(state, {
+    intake: null, params: null, plan: null, overrides: {}, selected: null, filter: "todas", showAllRows: false,
+    decision: null, undoHot: false, undone: false, twinHash: "", sampleId: null, step: 1, error: "",
+    draft: { sku: null, qty: "", reason: "" },
+  });
+}
+
+function intake(form, label) {
+  return run("intake", async () => {
+    const data = await call("/intake", { method: "POST", form });
+    resetSession();
+    if (form.get("sample")) state.sampleId = form.get("sample");
+    state.intake = data;
+    state.params = { ...data.defaults };
+    state.step = 2;
+    say("Planilla leída: " + label + ".");
+  });
+}
+
+function loadSample(sample) {
+  const form = new FormData();
+  form.set("sample", sample.id);
+  state.pendingSample = sample.id;
+  return intake(form, sample.title);
+}
+
+function loadFile(file) {
+  if (!file) return null;
+  if (state.mode === "snapshot") {
+    state.error = "Sin servidor no se puede leer un archivo: elegí una muestra.";
+    return render();
+  }
+  const form = new FormData();
+  form.set("file", file);
+  return intake(form, file.name);
+}
+
+function planBody() {
+  return { session: state.intake.session, ...state.params, overrides: state.overrides };
+}
+
+async function refreshPlan() {
+  state.plan = await call("/solve", { method: "POST", json: planBody() });
+  const known = state.plan.lines.some((line) => line.sku === state.selected);
+  if (!known) state.selected = state.plan.exceptions[0] || (state.plan.lines[0] && state.plan.lines[0].sku) || null;
+}
+
+function solve() {
+  return run("solve", async () => {
+    await refreshPlan();
+    state.step = 3;
+    say("Plan calculado: " + state.plan.totals.n_restock + " líneas bajo su objetivo.");
+  });
+}
+
+/** Guarda, cambia o quita el ajuste de una linea y recalcula. Si falla, el ajuste no queda. */
+function adjust(sku, override) {
+  return run("adjust", async () => {
+    const before = state.overrides;
+    const next = { ...before };
+    if (override) next[sku] = override;
+    else delete next[sku];
+    state.overrides = next;
+    try {
+      await refreshPlan();
+    } catch (error) {
+      state.overrides = before;
+      throw error;
+    }
+    state.draft = { sku: null, qty: "", reason: "" };
+    say(override ? "Ajuste guardado para " + sku + "." : "La línea " + sku + " volvió al número del motor.");
+  });
+}
+
+function approve() {
+  return run("approve", async () => {
+    const changeset = state.plan.changeset;
+    state.decision = await call("/approve-t2", {
+      method: "POST",
+      json: { session: state.intake.session, changeset_key: changeset.key, content_hash: changeset.content_hash,
+              approved_by: state.signer.trim() || "operador" },
+    });
+    state.undone = false;
+    state.undoHot = true;
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(() => {
+      state.undoHot = false;
+      render();
+    }, UNDO_HIGHLIGHT_MS);
+    say("Plan aplicado en la copia de trabajo. Podés deshacerlo.");
+  });
+}
+
+function undo() {
+  return run("undo", async () => {
+    await call("/rollback", { method: "POST", json: { session: state.intake.session } });
+    clearTimeout(undoTimer);
+    state.decision = null;
+    state.undoHot = false;
+    state.undone = true;
+    await refreshPlan();
+    say("Plan deshecho: la copia de trabajo volvió a como estaba.");
+  });
+}
+
+/** El nombre que manda el servidor. Con acentos llega como filename*=utf-8''... (RFC 5987). */
+function downloadName(disposition) {
+  const encoded = /filename\*=utf-8''([^;]+)/i.exec(disposition);
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1]);
+    } catch (error) {
+      return "narvi.xlsx"; // secuencia mal codificada: un nombre fijo antes que uno roto
+    }
+  }
+  const plain = /filename="([^"]+)"/.exec(disposition);
+  return plain ? plain[1] : "narvi.xlsx";
+}
+
+function download(variant) {
+  return run("download-" + variant, async () => {
+    if (state.mode === "snapshot") throw new ApiError(0, "Sin servidor no se genera el archivo.");
+    const query = new URLSearchParams({ session: state.intake.session, variant });
+    const response = await server("/export-twin?" + query.toString());
+    const name = downloadName(response.headers.get("content-disposition") || "");
+    const link = h("a", { href: URL.createObjectURL(await response.blob()), download: name });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    if (variant === "gemelo") state.twinHash = response.headers.get("x-narvi-sha256") || "";
+    say("Archivo descargado.");
+  });
+}
+
+function goTo(step) {
+  if (step > maxStep()) return;
+  state.step = step;
+  state.error = "";
+  render();
+  window.scrollTo({ top: 0 });
+}
+
+function maxStep() {
+  if (!state.intake) return 1;
+  return state.plan ? 4 : 2;
+}
+
+function enterSnapshot() {
+  state.mode = "snapshot";
+  state.samples = snapshot.samples.samples;
+  state.signing = snapshot.samples.signing;
+  state.limits = snapshot.samples.limits;
+}
+
+async function connect() {
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new ApiError(0, "sin respuesta")), BOOT_TIMEOUT_MS));
+  const data = await Promise.race([server("/samples").then((response) => response.json()), timeout]);
+  state.mode = "server";
+  state.needsKey = false;
+  state.samples = data.samples;
+  state.signing = data.signing;
+  state.limits = data.limits;
+}
+
+async function boot() {
+  if (location.protocol === "file:" && snapshot) {
+    enterSnapshot();
+    return render();
+  }
+  try {
+    await connect();
+  } catch (error) {
+    const status = error instanceof ApiError ? error.status : 0;
+    // Solo se cae a la corrida congelada si no hay cockpit del otro lado (sin
+    // respuesta, o un servidor que no tiene estas direcciones). Un servidor que
+    // contesta con otro error tiene un problema, y taparlo con datos viejos lo esconderia.
+    if (status === 401) state.needsKey = true;
+    else if (snapshot && (status === 0 || status === 404)) enterSnapshot();
+    else state.error = status ? error.message : "No hay servidor del cockpit y este archivo no trae una corrida congelada.";
+  }
+  return render();
+}
+
+function useKey(key) {
+  state.apiKey = key.trim();
+  return run("key", connect);
+}
+/* Narvi Decision Cockpit: lo que se ve. Cada funcion arma un trozo de pantalla desde `state`. */
+
+const STEPS = ["Ingesta", "Espejo de calidad", "Bandeja y aprobación", "Libro gemelo"];
+const ROLE_LABELS = {
+  sku: "Código", stock: "Stock", rop: "Punto de reorden", demand: "Demanda por período",
+  cost: "Costo unitario", on_order: "En tránsito", order: "Columna de pedido",
+};
+const STATUS = {
+  pedir: ["accent", "pedir"], sin_stock: ["alert", "sin stock"], excluida: ["note", "excluida"],
+  en_banda: ["ok", "en banda"], sin_senal: ["note", "sin señal"],
+};
+const CHECK_STATE = { ok: "ok", aviso: "note", alerta: "alert" };
+const FILTERS = [
+  ["todas", "Todas"], ["pedir", "Pedir"], ["sin_stock", "Sin stock"], ["excluida", "Excluidas"],
+  ["en_banda", "En banda"], ["sin_senal", "Sin señal"],
+];
+const TWIN_SHEETS = [
+  ["Narvi_Datos", "La tabla normalizada con los nombres del motor, como Tabla de Excel."],
+  ["Narvi_Propuesta", "Antes, número del motor, propuesto y diferencia por línea. Cada fila recalcula la regla con "
+    + "fórmulas nativas que apuntan a tu hoja y dice si coincide con el número de Kern."],
+  ["Narvi_Calidad", "El espejo de calidad: cada control con su cantidad y las celdas afectadas."],
+  ["Narvi_Mapa", "Qué columna tuya es cada campo, los parámetros del plan y el cambio preparado con su clave y su huella."],
+];
+const PREVIEW_ROWS = 12;
+/** Cuantas filas dibuja una lista larga. Un plan de miles de lineas no puede trabar la pagina. */
+const LIST_LIMIT = 300;
+let renderedStep = 0;
+
+const chip = (kind, text) => h("span", { class: "chip " + kind }, text);
+const micro = (text) => h("div", { class: "micro" }, text);
+const message = (kind, ...kids) => h("div", { class: "msg " + kind, role: kind === "alert" ? "alert" : null }, kids);
+const errorBox = () => (state.error ? message("alert", state.error) : null);
+
+function actionButton(name, label, props) {
+  const busy = state.busy === name;
+  return h("button", { type: "button", ...props, class: "btn " + (props.class || ""),
+    disabled: props.disabled || Boolean(state.busy), "aria-busy": busy ? "true" : null }, label);
+}
+
+/** columns: [texto, esNumero]. rows: arreglos de celdas (texto o nodo). */
+function table(columns, rows, extraClass) {
+  const head = h("tr", {}, columns.map(([label, isNum]) => h("th", { scope: "col", class: isNum ? "num" : null }, label)));
+  const body = rows.map((row) => h("tr", {}, row.map((value, i) => h("td", { class: columns[i][1] ? "num" : null }, value))));
+  return h("div", { class: "table-wrap" }, h("table", { class: extraClass || null }, h("thead", {}, head), h("tbody", {}, body)));
+}
+
+function panel(title, aside, ...body) {
+  return h("section", { class: "panel" },
+    title ? h("div", { class: "panel-head" }, h("h3", {}, title), aside) : null, body);
+}
+
+function head(title, text, ...actions) {
+  return h("div", { class: "head" }, h("div", {}, h("h2", { id: "view-title", tabindex: "-1" }, title), h("p", {}, text)),
+    h("div", { class: "head-actions" }, actions));
+}
+
+// ---- cabecera -----------------------------------------------------------------------
+
+function renderSteps() {
+  const top = maxStep();
+  $("#steps").replaceChildren(...STEPS.map((label, i) => h("li", {},
+    h("button", { type: "button", id: "step-" + (i + 1), class: "step" + (i + 1 < state.step ? " done" : ""),
+      disabled: i + 1 > top, "aria-current": i + 1 === state.step ? "step" : null, onclick: () => goTo(i + 1) },
+      h("span", { class: "step-n" }, i + 1), h("span", { class: "step-label" }, label)))));
+}
+
+/** A donde va la planilla. La pagina solo sabe con que direccion habla, y dice eso. */
+function renderSeal() {
+  let kind = LOCAL_HOSTS.includes(location.hostname) ? "ok" : "";
+  let text = "SERVIDOR · " + location.host;
+  if (state.mode === "snapshot") {
+    kind = "note";
+    text = "SIN SERVIDOR · CORRIDA CONGELADA";
+  }
+  $("#seal").replaceChildren(h("span", { class: "dot " + kind }), h("span", {}, text));
+}
+
+function keyPrompt() {
+  const input = h("input", { class: "input", id: "api-key", type: "password", autocomplete: "off" });
+  return h("form", { class: "banner alert", onsubmit: (event) => { event.preventDefault(); useKey(input.value); } },
+    h("div", { class: "field" }, h("label", { for: "api-key" }, "Este servidor pide una clave API para usar el cockpit."), input),
+    actionButton("key", "Usar clave", { type: "submit", class: "primary" }));
+}
+
+function renderBanner() {
+  const kids = [];
+  if (state.mode === "snapshot") {
+    const meta = snapshot.meta;
+    kids.push(h("div", { class: "banner" }, h("span", { class: "dot note" }), h("div", {},
+      h("strong", {}, "Sin servidor. "),
+      "Estás viendo una corrida real del motor, congelada el " + when(meta.generated_at) + " sobre Kern "
+      + meta.kern_commit + ". Podés recorrer las tres muestras. No se puede subir un archivo, recalcular ni "
+      + "descargar. Aprobar y deshacer repiten esa corrida: nada se escribe.")));
+  }
+  if (state.needsKey) kids.push(keyPrompt());
+  $("#banner").replaceChildren(...kids);
+}
+
+// ---- paso 1: ingesta ----------------------------------------------------------------
+
+function intakeFacts() {
+  const limits = state.limits || {};
+  if (state.mode === "snapshot") {
+    return h("ul", { class: "facts" },
+      h("li", {}, "Las tres muestras se pueden recorrer completas: sus números salieron del motor."),
+      h("li", {}, "Para usar una planilla tuya, abrí el cockpit desde Kern con ", h("code", {}, "python scripts/run_cockpit.py"), "."));
+  }
+  const facts = ["Se trabaja sobre una copia: tu archivo no se modifica."];
+  if (LOCAL_HOSTS.includes(location.hostname)) {
+    facts.push("La planilla se envía a " + location.host + ". Si lanzaste el cockpit en esta máquina, no sale de acá.");
+  } else {
+    facts.push("La planilla se envía al servidor " + location.host + ".");
+  }
+  if (limits.session_ttl_seconds) facts.push("La sesión se borra sola a los " + Math.round(limits.session_ttl_seconds / 60) + " minutos.");
+  if (limits.max_upload_bytes) facts.push("Tope de archivo: " + Math.round(limits.max_upload_bytes / 1048576) + " MB.");
+  return h("ul", { class: "facts" }, facts.map((fact) => h("li", {}, fact)));
+}
+
+function dropZone() {
+  const off = state.mode === "snapshot";
+  const input = h("input", { type: "file", accept: ".xlsx,.xlsm", hidden: true,
+    onchange: (event) => loadFile(event.target.files[0]) });
+  const open = () => { if (!off && !state.busy) input.click(); };
+  const title = off ? "Sin servidor no se puede leer un archivo propio"
+    : state.busy === "intake" ? "Leyendo la planilla" : "Soltá la planilla acá, o hacé clic para elegirla";
+  const drop = h("div", { class: "drop" + (off ? " off" : ""), id: "drop", role: "button", tabindex: off ? null : "0",
+    "aria-disabled": off ? "true" : null, onclick: open,
+    onkeydown: (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } },
+    ondragover: (event) => { event.preventDefault(); if (!off) drop.classList.add("over"); },
+    ondragleave: () => drop.classList.remove("over"),
+    ondrop: (event) => { event.preventDefault(); drop.classList.remove("over"); if (!off) loadFile(event.dataTransfer.files[0]); } },
+    h("div", { class: "drop-title" }, title),
+    h("div", { class: "soft" }, "Excel (.xlsx o .xlsm) con una columna de código, una de stock y una de punto de reorden o de demanda."),
+    input);
+  return drop;
+}
+
+function viewIntake() {
+  const samples = state.samples.map((sample, i) => h("li", {},
+    h("button", { type: "button", class: "sample", id: "sample-" + i, disabled: Boolean(state.busy), onclick: () => loadSample(sample) },
+      h("span", { class: "sample-title" }, sample.title),
+      h("span", { class: "sample-desc" }, sample.description),
+      h("span", { class: "sample-go" }, state.busy === "intake" && state.pendingSample === sample.id ? "Leyendo" : "Cargar muestra"))));
+  return h("div", {},
+    head("Cargá la planilla de stock", "Kern encuentra la hoja, la fila de encabezado y las columnas. Antes de calcular te muestra qué leyó y qué dejó afuera."),
+    errorBox(),
+    h("div", { class: "cols intake" },
+      h("section", { class: "panel" }, h("div", { class: "panel-body" }, dropZone(), intakeFacts())),
+      panel("Planillas de muestra", chip("", "datos sintéticos"),
+        samples.length ? h("ul", { class: "samples" }, samples) : h("p", { class: "empty" }, "No hay muestras disponibles."))));
+}
+
+// ---- paso 2: espejo de calidad ------------------------------------------------------
+
+function rowFlow(mirror) {
+  const count = (key) => (mirror.checks.find((check) => check.key === key) || { count: 0 }).count;
+  const parts = [
+    ["leídas con código y stock", mirror.plannable_rows, true],
+    ["fila TOTAL", count("filas_total")],
+    ["con stock y sin código", count("filas_sin_codigo")],
+    ["stock no numérico", count("stock_no_numerico")],
+  ];
+  const rest = mirror.data_rows - parts.reduce((sum, part) => sum + part[1], 0);
+  if (rest > 0) parts.push(["sin código ni stock", rest]);
+  const shown = parts.filter((part) => part[1] > 0);
+  const label = shown.map(([name, n]) => n + " " + name).join(", ");
+  return h("div", { class: "panel-body" },
+    h("div", { class: "flow", role: "img", "aria-label": "De " + mirror.data_rows + " filas con datos: " + label },
+      shown.map(([name, n, ok]) => h("div", { class: "flow-seg" + (ok ? " ok" : ""), style: "flex:" + n, title: n + " " + name }))),
+    h("div", { class: "legend" }, shown.map(([name, n, ok]) => h("span", {},
+      h("span", { class: "dot " + (ok ? "ok" : "note") }), h("b", { class: "mono" }, n), name))));
+}
+
+function checksTable(mirror) {
+  return table([["Control"], ["Cant.", true], ["Estado"], ["Qué hizo Kern"]], mirror.checks.map((check) => [
+    h("span", { class: "strong" }, check.label),
+    num(check.count),
+    chip(CHECK_STATE[check.state] || "", check.state),
+    h("div", {}, check.detail, check.cells.length
+      ? h("div", { class: "cells" }, check.cells.map((cell) => chip("", cell))) : null),
+  ]));
+}
+
+function paramField(key, label, help) {
+  const off = state.mode === "snapshot";
+  return h("div", { class: "field" }, h("label", { for: "param-" + key }, label),
+    h("input", { class: "input num", id: "param-" + key, type: "number", min: "0", step: "any", disabled: off,
+      value: state.params[key], oninput: (event) => {
+        const value = Number(event.target.value);
+        if (Number.isFinite(value)) state.params[key] = value;
+      } }),
+    h("small", {}, help));
+}
+
+/** El umbral se muestra y no se edita: lo fija el servidor, no quien arma el plan. */
+function thresholdField() {
+  const value = state.limits && state.limits.financial_threshold;
+  return h("div", { class: "field" }, h("span", { class: "label" }, "Umbral financiero"),
+    h("div", { class: "input num readonly" }, isBlank(value) ? "mal configurado" : money(value)),
+    h("small", {}, "lo fija el servidor; sobre este valor, el plan pide firma de Finanzas"));
+}
+
+function paramsPanel(mirror) {
+  const byDemand = mirror.mode === "demand-cover";
+  return panel("Parámetros del plan", null, h("div", { class: "panel-body stack" },
+    h("div", { class: "fields" },
+      byDemand ? paramField("cover_periods", "Períodos de cobertura", "objetivo = demanda × períodos")
+        : paramField("order_up_to_factor", "Factor hasta el objetivo", "objetivo = punto de reorden × factor"),
+      thresholdField()),
+    state.mode === "snapshot" ? h("p", { class: "muted" }, "Sin servidor los parámetros quedan fijos.") : null,
+    actionButton("solve", "Calcular con estos parámetros", { id: "solve", onclick: solve })));
+}
+
+function previewPanel(mirror, preview) {
+  const byDemand = mirror.mode === "demand-cover";
+  const any = (key) => preview.some((row) => !isBlank(row[key]));
+  const columns = [["Fila", true], ["Código"], ["Descripción"], ["Stock", true],
+    [byDemand ? "Demanda" : "Punto de reorden", true]];
+  if (any("on_order")) columns.push(["En tránsito", true]);
+  if (any("cost")) columns.push(["Costo", true]);
+  const rows = (state.showAllRows ? preview : preview.slice(0, PREVIEW_ROWS)).map((row) => {
+    const cells = [row.row, h("span", { class: "mono strong" }, row.sku), row.name || "",
+      num(row.on_hand), num(byDemand ? row.demand_per_period : row.reorder_point)];
+    if (any("on_order")) cells.push(num(row.on_order));
+    if (any("cost")) cells.push(num(row.cost));
+    return cells;
+  });
+  const toggle = preview.length > PREVIEW_ROWS ? h("button", { type: "button", class: "btn quiet sm", id: "rows-toggle",
+    onclick: () => { state.showAllRows = !state.showAllRows; render(); } },
+    state.showAllRows ? "Ver menos" : "Ver las " + preview.length + " filas") : null;
+  return panel("Lo que Kern leyó", toggle, table(columns, rows));
+}
+
+function viewMirror() {
+  const { mirror, preview, filename } = state.intake;
+  const byDemand = mirror.mode === "demand-cover";
+  const columns = table([["Campo"], ["Col."], ["Encabezado en tu planilla"]], mirror.columns.map((column) => [
+    h("span", { class: "strong" }, ROLE_LABELS[column.role] || column.role),
+    h("span", { class: "mono" }, column.letter), column.header]));
+  return h("div", {},
+    head("Espejo de calidad",
+      filename + ": hoja «" + mirror.sheet + "», encabezado en la fila " + mirror.header_row + ". Kern leyó "
+      + mirror.plannable_rows + " códigos de " + mirror.data_rows + " filas con datos.",
+      h("button", { type: "button", class: "btn quiet", id: "change-file", onclick: () => goTo(1) }, "Cambiar planilla"),
+      actionButton("solve", "Calcular plan", { class: "primary", id: "solve-top", onclick: solve })),
+    errorBox(),
+    h("div", { class: "stack" },
+      panel("Adónde fue cada fila", h("span", { class: "muted mono" }, mirror.data_rows + " filas con datos"), rowFlow(mirror)),
+      h("div", { class: "cols mirror" },
+        panel("Controles", null, checksTable(mirror)),
+        h("div", { class: "stack" },
+          panel("Columnas reconocidas", chip("", byDemand ? "cobertura de demanda" : "punto de reorden"), columns),
+          paramsPanel(mirror))),
+      previewPanel(mirror, preview)));
+}
+
+// ---- paso 3: bandeja y aprobacion ---------------------------------------------------
+
+function trayEntries(plan) {
+  const bySku = new Map(plan.lines.map((line) => [line.sku, line]));
+  const ranked = plan.exceptions.map((sku, i) => ({ ...bySku.get(sku), rank: i + 1 }));
+  const unplanned = plan.unplanned.map((row) => ({ ...row, status: "sin_senal" }));
+  const inBand = plan.lines.filter((line) => line.status === "en_banda");
+  if (state.filter === "todas") return [...ranked, ...unplanned];
+  if (state.filter === "sin_senal") return unplanned;
+  if (state.filter === "en_banda") return inBand;
+  return ranked.filter((line) => line.status === state.filter);
+}
+
+function select(sku, focusId) {
+  state.selected = sku;
+  state.error = "";
+  render();
+  const target = focusId && document.getElementById(focusId);
+  if (target) target.focus();
+}
+
+function trayItem(entry, index, entries) {
+  const [kind, label] = STATUS[entry.status];
+  const value = entry.status === "sin_senal" ? "" : isBlank(entry.unit_cost) ? num(entry.restock_qty) + " u." : money(entry.order_value);
+  const move = (event) => {
+    const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+    const next = entries[index + step];
+    if (!step || !next) return;
+    event.preventDefault();
+    select(next.sku, "item-" + (index + step));
+  };
+  return h("li", {}, h("button", { type: "button", class: "item", id: "item-" + index,
+    "aria-current": entry.sku === state.selected ? "true" : null, onclick: () => select(entry.sku, "item-" + index), onkeydown: move },
+    h("span", { class: "item-rank" }, entry.rank || "·"),
+    h("span", { class: "item-name" }, entry.name || entry.sku),
+    h("span", { class: "item-value" }, value),
+    h("span", { class: "item-meta" }, h("span", { class: "mono" }, entry.sku), chip(kind, label))));
+}
+
+function tray(plan) {
+  const entries = trayEntries(plan);
+  const filters = FILTERS.map(([key, label]) => h("button", { type: "button", class: "filter", id: "filter-" + key,
+    "aria-pressed": String(state.filter === key), onclick: () => { state.filter = key; render(); } }, label));
+  const basis = plan.ranking.basis === "valor" ? "por valor del pedido" : "por unidades: la planilla no trae costo";
+  const shown = entries.slice(0, LIST_LIMIT);
+  return h("section", { class: "panel tray", "aria-label": "Excepciones" },
+    h("div", { class: "panel-head" }, h("h3", {}, "Excepciones"), h("span", { class: "muted mono" }, basis)),
+    h("div", { class: "filters" }, filters),
+    entries.length ? h("ul", { class: "tray-list" }, shown.map(trayItem))
+      : h("p", { class: "empty" }, state.filter === "todas"
+        ? "Ninguna línea quedó bajo su objetivo: no hay nada que pedir." : "Ninguna línea con este filtro."),
+    entries.length > shown.length ? h("p", { class: "empty" }, "Se muestran las " + shown.length + " de mayor valor, de "
+      + num(entries.length) + ". El plan y el libro gemelo las llevan todas.") : null);
+}
+
+function pair(label, value, hot) {
+  return [h("dt", {}, label), h("dd", { class: hot ? "hot" : null }, value)];
+}
+
+function diff(plan, line) {
+  const byDemand = plan.mode === "demand-cover";
+  const write = plan.changeset && plan.changeset.writes.find((item) => item.cell === line.cell);
+  return h("div", { class: "diff" },
+    h("div", { class: "well" }, micro("Planilla hoy"), h("dl", { class: "kv" },
+      pair("Celda de pedido " + line.cell, cellText(write ? write.before : null)),
+      pair("Stock", num(line.on_hand)),
+      pair("En tránsito", isBlank(line.on_order) ? "no informado" : num(line.on_order)),
+      pair("Posición", num(line.position)),
+      pair(byDemand ? "Demanda por período" : "Punto de reorden", num(byDemand ? line.target / plan.params.cover_periods : line.trigger)))),
+    h("div", { class: "well next" }, micro("Propuesta"), h("dl", { class: "kv" },
+      pair("Celda de pedido " + line.cell, line.restock_qty > 0 ? num(line.restock_qty) : "sin cambio", true),
+      pair("Objetivo", num(line.target)),
+      pair("Costo unitario", money(line.unit_cost)),
+      pair("Valor del pedido", money(line.order_value)),
+      pair("Origen", line.overridden ? "ajuste humano (motor: " + num(line.engine_qty) + ")" : "motor"))));
+}
+
+function rule(line) {
+  const evidence = line.evidence;
+  return h("div", { class: "well rule" }, micro("Regla aplicada"),
+    h("p", { class: "soft" }, evidence.formula),
+    h("ol", {}, evidence.steps.split(" · ").map((step) => h("li", {}, h("span", {}, step)))),
+    h("p", { class: "conclusion" }, evidence.conclusion),
+    line.overridden ? h("p", { class: "soft" }, "Motivo del ajuste: " + (line.reason || "sin motivo registrado")) : null);
+}
+
+function adjustForm(line) {
+  if (state.decision) return null;
+  if (state.mode === "snapshot") return h("p", { class: "muted" }, "Sin servidor no se pueden ajustar cantidades.");
+  if (state.draft.sku !== line.sku) state.draft = { sku: line.sku, qty: String(line.restock_qty), reason: line.reason || "" };
+  const draft = state.draft;
+  const save = () => {
+    const qty = Number(draft.qty.replace(",", "."));
+    if (draft.qty.trim() === "" || !Number.isFinite(qty) || qty < 0) {
+      state.error = "La cantidad tiene que ser un número mayor o igual a 0.";
+      return render();
+    }
+    return adjust(line.sku, { qty, reason: draft.reason.trim() });
+  };
+  return h("form", { onsubmit: (event) => { event.preventDefault(); save(); } },
+    h("div", { class: "adjust" },
+      h("div", { class: "field" }, h("label", { for: "adjust-qty" }, "Cantidad a pedir"),
+        h("input", { class: "input num", id: "adjust-qty", inputmode: "decimal", autocomplete: "off", value: draft.qty,
+          oninput: (event) => { draft.qty = event.target.value; } })),
+      h("div", { class: "field" }, h("label", { for: "adjust-reason" }, "Motivo del ajuste"),
+        h("input", { class: "input", id: "adjust-reason", maxlength: "300", autocomplete: "off", value: draft.reason,
+          oninput: (event) => { draft.reason = event.target.value; } })),
+      actionButton("adjust", "Guardar ajuste", { type: "submit", id: "adjust-save" })),
+    h("div", { class: "adjust-actions" },
+      actionButton("adjust", "Excluir línea", { class: "danger sm", id: "adjust-exclude",
+        onclick: () => adjust(line.sku, { qty: 0, reason: draft.reason.trim() }) }),
+      line.overridden ? actionButton("adjust", "Volver al número del motor", { class: "quiet sm", id: "adjust-restore",
+        onclick: () => adjust(line.sku, null) }) : null));
+}
+
+function lineDetail(plan) {
+  const line = plan.lines.find((item) => item.sku === state.selected);
+  if (!line) {
+    const row = plan.unplanned.find((item) => item.sku === state.selected);
+    if (!row) return panel("Sin selección", null, h("p", { class: "empty" }, "Elegí una línea de la bandeja."));
+    return h("section", { class: "panel" },
+      h("div", { class: "line-head" }, h("div", {}, h("h3", {}, row.name || row.sku),
+        h("div", { class: "note-line" }, h("span", { class: "mono" }, row.sku), "fila " + row.row, chip("note", "sin señal")))),
+      h("div", { class: "panel-body" }, message("note", "Kern no planifica esta fila: " + row.why
+        + ". Completá la celda en tu planilla y volvé a cargarla.")));
+  }
+  const [kind, label] = STATUS[line.status];
+  return h("section", { class: "panel" },
+    h("div", { class: "line-head" },
+      h("div", {}, h("h3", {}, line.name || line.sku), h("div", { class: "note-line" },
+        h("span", { class: "mono" }, line.sku), "fila " + line.row, chip(kind, label),
+        line.overridden ? chip("note", "ajuste humano") : null)),
+      h("div", { class: "line-value" }, micro("Valor del pedido"),
+        h("div", { class: "num" }, isBlank(line.unit_cost) ? num(line.restock_qty) + " u." : money(line.order_value)))),
+    h("div", { class: "panel-body stack" }, diff(plan, line), rule(line), adjustForm(line)));
+}
+
+function changesTable(changeset) {
+  const rows = [
+    ...changeset.writes.map((item) => [h("span", { class: "mono strong" }, item.cell), cellText(item.before), cellText(item.after), chip("accent", "escribe")]),
+    ...changeset.guards.map((item) => [h("span", { class: "mono strong" }, item.cell), cellText(item.value), cellText(item.value), chip("", "guarda")]),
+  ];
+  return h("details", { id: "changes" },
+    h("summary", {}, "Ver el cambio celda por celda: " + num(changeset.writes.length) + " escrituras y "
+      + num(changeset.guards.length) + " celdas guarda (si alguna cambia antes de aplicar, se rechaza)"),
+    table([["Celda"], ["Antes", true], ["Después", true], ["Tipo"]], rows.slice(0, LIST_LIMIT)),
+    rows.length > LIST_LIMIT ? h("p", { class: "empty" }, "Se muestran las primeras " + LIST_LIMIT + " de "
+      + num(rows.length) + " celdas. La hoja Narvi_Propuesta del libro gemelo las trae todas.") : null);
+}
+
+function signature(decision) {
+  const item = (label, value) => h("div", {}, h("dt", { class: "micro" }, label), h("dd", {}, value));
+  return h("dl", { class: "sig" },
+    item("Clave del cambio", decision.key),
+    item("Huella SHA-256", shortHash(decision.content_hash)),
+    item("Firma HMAC", decision.signed ? decision.signature + "… (primeros 16)" : "sin sello válido: modo de prueba"),
+    item("Aprobó", decision.approved_by),
+    item("La firma vence", when(decision.expires_at)));
+}
+
+function undoBlock(decision) {
+  return h("div", {},
+    h("div", { class: "undo" },
+      h("div", { class: "undo-row" },
+        h("div", {}, h("strong", {}, "Plan aplicado en la copia de trabajo. "),
+          decision.writes + " celdas escritas, con respaldo. Deshacer sigue disponible mientras dure la sesión."),
+        actionButton("undo", "Deshacer plan aplicado", { class: "danger", id: "undo", onclick: undo })),
+      state.undoHot ? h("div", { class: "undo-track", "aria-hidden": "true" }, h("div", { class: "undo-fill" })) : null),
+    state.mode === "snapshot" ? h("div", { class: "panel-body" }, message("note",
+      "Repetición de una corrida real del " + when(snapshot.meta.generated_at) + ": en este modo nada se escribe.")) : null,
+    signature(decision));
+}
+
+function signingNote() {
+  const signing = state.signing;
+  if (state.decision || state.mode === "snapshot" || !signing) return null;
+  if (signing.configured) return null;
+  if (signing.unsigned_allowed) return message("note", "Modo de prueba: el servidor no tiene clave de firma, así que la aprobación no lleva un sello válido.");
+  return message("alert", "El servidor no tiene clave de firma y va a rechazar la aprobación. Arrancá el cockpit con ",
+    h("code", {}, "python scripts/run_cockpit.py"), " o definí ", h("code", {}, "LINCHPIN_APPROVAL_SECRET"), ".");
+}
+
+function planPanel(plan) {
+  const totals = plan.totals;
+  const escalation = plan.escalation;
+  const threshold = isBlank(totals.value) ? chip("", "sin costo: valor desconocido")
+    : escalation.escalated ? chip("alert", "sobre el umbral de " + money(escalation.threshold))
+      : chip("ok", "bajo el umbral de " + money(escalation.threshold));
+  const signer = h("div", { class: "field" }, h("label", { for: "signer" }, "Quién aprueba"),
+    h("input", { class: "input", id: "signer", maxlength: "80", autocomplete: "off", value: state.signer,
+      disabled: Boolean(state.decision), oninput: (event) => { state.signer = event.target.value; } }));
+  return h("section", { class: "panel", "aria-label": "Plan" },
+    h("div", { class: "planbar" },
+      h("div", { class: "planbar-sum" },
+        h("span", {}, h("b", {}, num(totals.n_restock)), " líneas a pedir"),
+        h("span", {}, h("b", {}, num(totals.units)), " unidades"),
+        h("span", {}, h("b", {}, money(totals.value))), threshold),
+      h("div", { class: "planbar-act" }, signer,
+        actionButton("approve", "Aprobar plan (T2)", { class: "primary", id: "approve",
+          disabled: !plan.approvable || Boolean(state.decision), onclick: approve }))),
+    plan.blocked_reason || state.undone || signingNote() ? h("div", { class: "panel-body stack" },
+      plan.blocked_reason ? message("note", plan.blocked_reason) : null,
+      state.undone ? message("ok", "Plan deshecho: la copia de trabajo volvió a como estaba.") : null,
+      signingNote()) : null,
+    state.decision ? undoBlock(state.decision) : null,
+    plan.changeset ? changesTable(plan.changeset) : null);
+}
+
+function viewDecision() {
+  const plan = state.plan;
+  const totals = plan.totals;
+  const left = [totals.n_unplanned && totals.n_unplanned + " sin señal", totals.n_skipped_rows && totals.n_skipped_rows + " con stock no numérico",
+    totals.n_total_rows && totals.n_total_rows + " fila TOTAL descartada"].filter(Boolean);
+  return h("div", {},
+    head("Bandeja de decisiones",
+      totals.n_restock + " de " + totals.n_lines + " líneas planificadas quedaron bajo su objetivo. Los valores van en la moneda de la planilla."
+      + (left.length ? " Fuera del plan: " + left.join(", ") + "." : ""),
+      h("button", { type: "button", class: "btn quiet", id: "back-mirror", onclick: () => goTo(2) }, "Volver al espejo"),
+      h("button", { type: "button", class: "btn", id: "to-twin", onclick: () => goTo(4) }, "Ver libro gemelo")),
+    errorBox(),
+    h("div", { class: "cols decision" }, tray(plan), h("div", { class: "stack" }, lineDetail(plan), planPanel(plan))));
+}
+
+// ---- paso 4: libro gemelo -----------------------------------------------------------
+
+function viewTwin() {
+  const name = state.intake.filename.replace(/\.[^.]+$/, "");
+  const decision = state.decision;
+  const status = decision ? "aprobado por " + decision.approved_by : state.undone ? "deshecho" : "propuesto";
+  const item = (label, value) => h("div", {}, h("dt", { class: "micro" }, label), h("dd", {}, value));
+  return h("div", {},
+    head("Libro gemelo", "Un archivo aparte, " + name + ".narvi.xlsx: tu planilla como estaba, más cuatro hojas. Sin macros.",
+      h("button", { type: "button", class: "btn quiet", id: "back-decision", onclick: () => goTo(3) }, "Volver a la bandeja")),
+    errorBox(),
+    h("div", { class: "cols twin" },
+      h("div", { class: "stack" },
+        panel("Qué trae", null, table([["Hoja"], ["Contenido"]], TWIN_SHEETS, "sheets")),
+        message("", "Los parámetros viven en Narvi_Mapa (celdas B4 y B5). Si los cambiás en Excel, la columna recalculo_excel "
+          + "se mueve y la columna coincide marca REVISAR donde ya no da el número de Kern.")),
+      h("div", { class: "stack" },
+        panel("Descargas", null, h("div", { class: "panel-body downloads" },
+          actionButton("download-gemelo", "Descargar libro gemelo", { class: "primary", id: "download-twin",
+            disabled: state.mode === "snapshot", onclick: () => download("gemelo") }),
+          actionButton("download-aplicada", "Descargar planilla con el pedido aplicado", { id: "download-applied",
+            disabled: state.mode === "snapshot" || !decision, onclick: () => download("aplicada") }),
+          state.mode === "snapshot" ? h("p", { class: "muted" }, "Sin servidor no se genera el archivo.")
+            : !decision ? h("p", { class: "muted" }, "La planilla aplicada existe después de aprobar el plan.") : null)),
+        panel("Estado", null, h("dl", { class: "sig" },
+          item("Plan", status),
+          item("SHA-256 de tu planilla", shortHash(state.intake.mirror.sha256)),
+          item("SHA-256 del gemelo", state.twinHash ? shortHash(state.twinHash) : "se informa al descargar"))),
+        h("button", { type: "button", class: "btn", id: "restart", onclick: () => { resetSession(); render(); } }, "Cargar otra planilla"))));
+}
+
+// ---- armado -------------------------------------------------------------------------
+
+function render() {
+  const focused = document.activeElement && document.activeElement.id;
+  renderSteps();
+  renderSeal();
+  renderBanner();
+  const view = [viewIntake, viewMirror, viewDecision, viewTwin][state.step - 1]();
+  const stepChanged = renderedStep !== state.step;
+  const firstRender = renderedStep === 0;
+  if (stepChanged) view.classList.add("view");
+  renderedStep = state.step;
+  $("#view").replaceChildren(view);
+  // Al cambiar de paso el foco va al titulo de la pantalla nueva; si no, vuelve a donde estaba.
+  const target = stepChanged && !firstRender ? $("#view-title") : focused && document.getElementById(focused);
+  if (target && target !== document.activeElement) target.focus({ preventScroll: true });
+}
+
+boot();
+</script>
+</body>
+</html>
