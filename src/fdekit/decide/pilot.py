@@ -113,8 +113,12 @@ def load_calendar(path: str | Path) -> pd.DataFrame:
         "inicio": pd.to_datetime(df[c_ini]),
         "fin": pd.to_datetime(df[c_fin]),
     })
+    # Se pregunta si la columna es numerica y no si es `object`: pandas 3 lee el
+    # texto de un CSV como `str`, y con la pregunta vieja la lista de nombres
+    # caia en la rama numerica y valia un asistente por reunion.
+    asis = df[c_asis]
     out["asistentes"] = pd.to_numeric(
-        df[c_asis].astype(str).str.count(";").add(1) if df[c_asis].dtype == object else df[c_asis],
+        asis if pd.api.types.is_numeric_dtype(asis) else asis.astype(str).str.count(";").add(1),
         errors="coerce",
     ).fillna(1)
     out["agenda_escrita"] = (

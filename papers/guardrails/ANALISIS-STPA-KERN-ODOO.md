@@ -29,7 +29,7 @@ El objetivo de este análisis STPA (*Systems-Theoretic Process Analysis*) es ide
 * **$SSC_1$:** Ninguna transacción de inventario debe registrarse en el ERP si el balance contable asociado ($\sum \text{Débitos} - \sum \text{Créditos}$) no es idénticamente cero [$H_1$].
 * **$SSC_2$:** Ningún SKU debe transicionar al estado `AVAILABLE_FOR_SALE` (ATP $> 0$) sin confirmación criptográfica de recepción física e inspección previa [$H_2$].
 * **$SSC_3$:** La tasa de admisión de pedidos a inspección no debe exceder la capacidad física dimensionada $V$ de la zona de peritaje [$H_3$].
-* **$SSC_4$:** Toda acción de escritura debe contar con firma de hardware (HMAC), verificación de unicidad temporal (anti-replay) y, para mutaciones críticas, autorización explícita de un operador humano autenticado [$H_4$].
+* **$SSC_4$:** Toda acción de escritura debe contar con firma HMAC-SHA256 con secreto de servidor en variable de entorno (falla cerrada si está vacío, salvo opt-in explícito de desarrollo y tests), verificación de unicidad temporal (anti-replay) y, para mutaciones críticas, autorización explícita de un operador humano autenticado [$H_4$].
 
 ---
 

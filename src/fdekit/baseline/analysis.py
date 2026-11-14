@@ -215,7 +215,11 @@ def parallel_trends_check(
                     "queda SIN VERIFICAR, que no es lo mismo que verificado."
                 ),
             }
-        x = pd.to_numeric(daily.index).to_numpy(dtype=float) / 8.64e13
+        # Dias desde el primer periodo, sin suponer la resolucion de la fecha:
+        # pandas 2 la guarda en nanosegundos y pandas 3 en microsegundos, y
+        # dividir el entero por los nanosegundos de un dia daba una pendiente
+        # mil veces mas grande. Correr el origen no cambia la pendiente.
+        x = ((daily.index - daily.index[0]) / pd.Timedelta(days=1)).to_numpy(dtype=float)
         slopes[g], ses[g] = _slope_with_se(x, daily.to_numpy(dtype=float))
         dfs[g] = len(daily) - 2
 

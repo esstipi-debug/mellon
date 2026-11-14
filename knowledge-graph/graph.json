@@ -1366,6 +1366,69 @@
       "type": "Concept",
       "book": "ta",
       "description": "Behavioral profiles (Expert, Steward, Connector, Catalyst) that describe how consultants default to building trust with clients."
+    },
+    {
+      "id": "x_three_chasms",
+      "label": "The Three Chasms (Registro, Reparto, Sustento)",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Technology in operations fails not from algorithms, but from three pre-existing gaps: registration (ERP vs floor reality), distribution (who logs data does not get the benefit), and sustenance (disorder protects or pays someone)."
+    },
+    {
+      "id": "x_ceremonial_decoupling",
+      "label": "Ceremonial Decoupling & Metis",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Meyer & Rowan structural decoupling: formal systems exist for institutional legitimacy, while the floor runs on local metis (tacit knowledge). Mandating compliance without understanding metis triggers shadow records."
+    },
+    {
+      "id": "x_grudin_distribution_chasm",
+      "label": "Grudin Distribution Gap",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Grudin Law: systems requiring human data entry collapse when the person doing the work does not receive an immediate, tangible benefit on the same shift."
+    },
+    {
+      "id": "x_informal_rent_sustento",
+      "label": "Informal Rents & Resistance",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Operational opacity often protects overtime pay, deniability, or schedule flexibility. Deployments must buy out informal rents or align incentives rather than attacking them frontally."
+    },
+    {
+      "id": "x_bimodal_inventory_trap",
+      "label": "Bimodal Inventory & MOQ Distortion",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "Purchasing batch sizes (MOQs) and local unit cost discounts inflate working capital and create bimodal inventory: warehouses overflowing with slow-moving SKUs while lines shut down from missing critical parts."
+    },
+    {
+      "id": "x_last_50_meters_fracture",
+      "label": "Last 50 Meters Logistics Fracture",
+      "type": "CrossInsight",
+      "book": "fde",
+      "description": "The physical disconnect between central ERP systems and the execution edge. High-tech models fail when the last 50 meters rely on friction-heavy manual entry instead of zero-friction passive capture."
+    },
+    {
+      "id": "fde_eight_deployment_rules",
+      "label": "Eight Rules of Pragmatic Deployment",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Operational doctrine converting organizational sociology into 8 falsifiable rules: measure gap first, single bottleneck pass-through, same-day data generator payoff, shadow before authority, integrate local metis, buy out informal rents, counterfactual measurement, and analog fallback."
+    },
+    {
+      "id": "fde_bottleneck_pass_through",
+      "label": "Single Bottleneck Deployment",
+      "type": "FDEPractice",
+      "book": "fde",
+      "description": "Deploying strictly at the physical and operational bottleneck where all flows must pass (Goldratt), minimizing political surface and focusing on the system true constraint."
+    },
+    {
+      "id": "fde_mellon_brand_philosophy",
+      "label": "Mellon Brand Philosophy & Core Values",
+      "type": "Principle",
+      "book": "fde",
+      "description": "Foundational ethos of Mellon expressed in its M-leaf emblem: Ground (Gemba physical reality) x Alliance (Human alliance) x Rigor (Deterministic verification). Reconciles Boardroom, Engineering, and Floor."
     }
   ],
   "edges": [
@@ -3808,6 +3871,101 @@
       "source": "ta_trust_temperaments",
       "target": "book_ta",
       "relation": "FROM_BOOK"
+    },
+    {
+      "source": "fde_eight_deployment_rules",
+      "target": "x_three_chasms",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_eight_deployment_rules",
+      "target": "x_ceremonial_decoupling",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_eight_deployment_rules",
+      "target": "x_grudin_distribution_chasm",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_eight_deployment_rules",
+      "target": "x_informal_rent_sustento",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_eight_deployment_rules",
+      "target": "fde_bottleneck_pass_through",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_bottleneck_pass_through",
+      "target": "bps_prioritize_2x2",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "x_three_chasms",
+      "target": "fc_resistance",
+      "relation": "CAUSES"
+    },
+    {
+      "source": "x_ceremonial_decoupling",
+      "target": "x_behavior_over_opinion",
+      "relation": "ANALOGOUS_TO"
+    },
+    {
+      "source": "x_grudin_distribution_chasm",
+      "target": "sw_resistance_clarity",
+      "relation": "CAUSES"
+    },
+    {
+      "source": "x_informal_rent_sustento",
+      "target": "x_explicit_contracting",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "x_bimodal_inventory_trap",
+      "target": "htma_decomposition",
+      "relation": "MEASURES"
+    },
+    {
+      "source": "x_bimodal_inventory_trap",
+      "target": "sw_decision_paralysis",
+      "relation": "CAUSES"
+    },
+    {
+      "source": "x_last_50_meters_fracture",
+      "target": "x_three_chasms",
+      "relation": "CAUSES"
+    },
+    {
+      "source": "fde_value_case",
+      "target": "x_bimodal_inventory_trap",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_resistance_playbook",
+      "target": "x_informal_rent_sustento",
+      "relation": "APPLIES"
+    },
+    {
+      "source": "fde_mellon_brand_philosophy",
+      "target": "x_three_chasms",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "fde_mellon_brand_philosophy",
+      "target": "x_ceremonial_decoupling",
+      "relation": "MITIGATES"
+    },
+    {
+      "source": "fde_mellon_brand_philosophy",
+      "target": "x_resistance_is_information",
+      "relation": "SYNTHESIZES"
+    },
+    {
+      "source": "fde_eight_deployment_rules",
+      "target": "fde_mellon_brand_philosophy",
+      "relation": "APPLIES"
     }
   ],
   "resources": [

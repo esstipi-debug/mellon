@@ -5,6 +5,7 @@ proyecto es infalsable**, y cualquier resultado se puede narrar como exito. Es
 la misma violacion que el kit denuncia en los demas.
 """
 
+import contextlib
 from datetime import date, timedelta
 
 import pandas as pd
@@ -62,6 +63,25 @@ def test_el_calendario_da_la_variable_dependiente(tmp_path):
     assert b["horas_persona_semana"] == pytest.approx(8.0)  # 2 series x 1h x 4 personas
     assert b["reuniones_por_semana"] == 2.0
     assert b["series_recurrentes"] == 2
+
+
+def _texto_como_en_pandas_3():
+    """pandas 3 lee el texto de un CSV con dtype `str`. En pandas 2 ese modo se
+    pide con la opcion future.infer_string, que pandas 3 ya depreca."""
+    if int(pd.__version__.split(".")[0]) >= 3:
+        return contextlib.nullcontext()
+    return pd.option_context("future.infer_string", True)
+
+
+def test_los_asistentes_se_cuentan_aunque_el_texto_llegue_como_str(tmp_path):
+    """pandas 3 lee la columna de asistentes con dtype `str`, no `object`. La
+    rama que separa los nombres preguntaba por `object`: con `str` la columna
+    caia en la rama numerica, la coercion daba NaN y el relleno dejaba un
+    asistente por reunion. Horas-persona cuatro veces menores, sin un error."""
+    p = cal_csv(tmp_path)
+    with _texto_como_en_pandas_3():
+        b = baseline_from_calendar(load_calendar(p))
+    assert b["horas_persona_semana"] == pytest.approx(8.0)  # 2 series x 1h x 4 personas
 
 
 def test_detecta_reuniones_sin_agenda_escrita(tmp_path):
