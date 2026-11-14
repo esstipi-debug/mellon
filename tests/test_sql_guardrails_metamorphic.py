@@ -197,15 +197,23 @@ def test_a1_una_baja_sin_prueba_del_sensor_se_reporta(defecto):
     assert codigos(mutado) == ["SECURITY_ALERT"]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "pendiente: con is_cryptographically_verified y la divergencia en NULL, "
-    "`= FALSE` y `> 0.03` dan NULL y la baja pasa como verificada"
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
+    "pendiente: con is_cryptographically_verified en NULL, `= FALSE` da NULL y la "
+    "baja pasa como verificada"
 ))
-def test_a1_una_verificacion_desconocida_no_cuenta_como_verificada():
+def test_a1_una_firma_sin_verificar_no_cuenta_como_verificada():
     _, mutado = dos_corridas(1, a1_sano, sql(
-        "UPDATE fde_telemetry_scrap_events "
-        "SET is_cryptographically_verified = NULL, scale_weight_divergence_pct = NULL"
-    ))
+        "UPDATE fde_telemetry_scrap_events SET is_cryptographically_verified = NULL"))
+    assert len(mutado) >= 1
+
+
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
+    "pendiente: con scale_weight_divergence_pct en NULL, `> 0.03` da NULL y la baja "
+    "pasa como dentro del 3 por ciento"
+))
+def test_a1_una_divergencia_desconocida_no_cuenta_como_dentro_del_umbral():
+    _, mutado = dos_corridas(1, a1_sano, sql(
+        "UPDATE fde_telemetry_scrap_events SET scale_weight_divergence_pct = NULL"))
     assert len(mutado) >= 1
 
 
@@ -236,6 +244,26 @@ def test_a2_un_ajuste_sin_conteo_a_ciegas_se_reporta(defecto, esperado):
     sano, mutado = dos_corridas(2, a2_sano, defecto)
     assert sano == []
     assert codigos(mutado) == [esperado]
+
+
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
+    "pendiente: con counter_user_badge en NULL, `posting_user = counter_user_badge` "
+    "da NULL: no saber quien conto pasa como que conto otra persona"
+))
+def test_a2_un_contador_sin_identificar_no_cuenta_como_otra_persona():
+    _, mutado = dos_corridas(2, a2_sano, sql(
+        "UPDATE fde_blind_cycle_counts SET counter_user_badge = NULL"))
+    assert len(mutado) >= 1
+
+
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
+    "pendiente: con is_system_stock_revealed_on_rf en NULL, `= TRUE` da NULL: no "
+    "saber si se mostro el stock pasa como conteo a ciegas"
+))
+def test_a2_no_saber_si_se_mostro_el_stock_no_cuenta_como_conteo_a_ciegas():
+    _, mutado = dos_corridas(2, a2_sano, sql(
+        "UPDATE fde_blind_cycle_counts SET is_system_stock_revealed_on_rf = NULL"))
+    assert len(mutado) >= 1
 
 
 # ------------------------------- asercion 3: compra por MOQ sin aprobacion
@@ -291,7 +319,7 @@ def test_a3_la_aprobacion_de_otro_mandante_no_tapa_la_oc():
     assert codigos(mutado) == ["GOVERNANCE_BYPASS"]
 
 
-@pytest.mark.xfail(strict=True, reason=(
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
     "pendiente: sin pronostico de demanda la cobertura da NULL, `> 90` da NULL y "
     "la OC no sale: no poder evaluarla se lee como que cumple"
 ))
@@ -334,6 +362,21 @@ def test_a4_un_asiento_de_baja_en_fi_sin_documento_logistico_se_reporta():
         con, "0100000099", 5000.0, racct="00502000", budat="2026-11-04"))
     assert sano == []
     assert codigos(mutado) == ["ORPHAN_FI_WRITE_OFF"]
+
+
+def test_a4_una_baja_de_un_movimiento_que_no_se_concilia_no_se_llama_huerfana():
+    """Hallazgo de la revision final. Un 555 (desguace desde stock bloqueado)
+    imputa a la misma cuenta y tiene su documento en MSEG, pero esta asercion
+    solo concilia 551, 552, 701 y 702. Decir 'sin documento logistico' seria
+    falso: es un movimiento que la asercion no cubre, y sale con su codigo."""
+    def baja_555(con: sqlite3.Connection) -> None:
+        movimiento(con, "4900000404", "555", "2026-11-04", matnr="MAT-S", werks="P001",
+                   menge=3.0, dmbtr=300.0, shkzg="H")
+        asiento(con, "4900000404", 300.0, budat="2026-11-04")
+
+    sano, mutado = dos_corridas(4, a4_sano, baja_555)
+    assert sano == []
+    assert codigos(mutado) == ["UNCOVERED_MOVEMENT_TYPE"]
 
 
 def test_a4_un_552_que_revierte_cuadra_en_los_dos_libros():
@@ -422,6 +465,45 @@ def test_a5_un_exceso_real_a_traves_del_corte_se_sigue_reportando():
         "UPDATE s4_mseg SET menge = 60 WHERE bwart = '105'"))
     assert sano == []
     assert codigos(mutado) == ["MASS_CONSERVATION_BREACH"]
+
+
+def test_a5_un_103_anulado_antes_del_go_live_no_cuenta_como_recibido():
+    """Hallazgo de la revision final. Con el balance sobre toda la historia de la
+    linea, un 103 anulado por su 104 antes del corte seguia sumando como recibido
+    y tapaba un 105 mayor que lo que de verdad entro: una omision silenciosa que
+    el SQL anterior, con la ventana cortada, si veia."""
+    historia = cargas(recepcion("5000000021", "103", 50.0, "2026-10-20"),
+                      recepcion("5000000022", "104", 50.0, "2026-10-21"),
+                      recepcion("5000000023", "103", 50.0, "2026-11-02"),
+                      recepcion("5000000024", "105", 50.0, "2026-11-03"))
+    sano, mutado = dos_corridas(5, historia, sql(
+        "UPDATE s4_mseg SET menge = 60 WHERE bwart = '105'"))
+    assert sano == []
+    assert codigos(mutado) == ["MASS_CONSERVATION_BREACH"]
+    assert (mutado[0]["qty_103_gr_blocked"], mutado[0]["qty_105_released"]) == (50.0, 60.0)
+
+
+@pytest.mark.parametrize(
+    "anulada",
+    [
+        cargas(recepcion("5000000031", "106", 50.0, "2026-11-04"),
+               recepcion("5000000032", "105", 50.0, "2026-11-05")),
+        cargas(recepcion("5000000041", "124", 30.0, "2026-11-04"),
+               recepcion("5000000042", "125", 30.0, "2026-11-05")),
+        cargas(recepcion("5000000051", "122", 40.0, "2026-11-04"),
+               recepcion("5000000052", "123", 40.0, "2026-11-05"),
+               recepcion("5000000053", "122", 40.0, "2026-11-06")),
+    ],
+    ids=["105_anulado_por_106", "124_anulado_por_125", "122_anulado_por_123"],
+)
+def test_a5_una_anulacion_resta_lo_que_anula(anulada):
+    """Un movimiento anulado no cuenta: 106 resta del 105, 125 del 124 y 123 del
+    122. Sobre la base sana (103 y 105 de 50), cada caso queda en regla solo si
+    la anulacion resta; sumada como si no existiera, la linea sale como
+    violacion."""
+    sano, mutado = dos_corridas(5, A5_SANO, anulada)
+    assert sano == []
+    assert mutado == []
 
 
 def test_a5_una_linea_sin_movimiento_desde_el_go_live_queda_fuera():

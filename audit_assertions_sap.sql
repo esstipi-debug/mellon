@@ -9,9 +9,11 @@
 --   staging tables (fde_*). They have been executed only against an in-memory SQLite
 --   database with synthetic rows (tests/test_sql_guardrails_metamorphic.py): each assertion
 --   returns 0 rows on clean data and flags an injected defect with its exact violation code.
---   Two known gaps stay recorded there as expected failures: an unknown (NULL) signature
---   check passes Assertion 1, and a PO line with no demand baseline is never evaluated by
---   Assertion 3. They have NOT been executed against a live client SAP instance.
+--   Five known gaps stay recorded there as strict expected failures, all of them an
+--   unknown value read as compliant: a NULL signature check or a NULL scale divergence
+--   passes Assertion 1; a NULL counter badge or a NULL "stock revealed" flag passes
+--   Assertion 2; a PO line with no demand baseline is never evaluated by Assertion 3.
+--   They have NOT been executed against a live client SAP instance.
 --   Dates are compared as ISO-8601 text or DATE values. Raw SAP DATS values ('20261101')
 --   must be converted first: compared as text against an ISO date, every raw date of the
 --   go-live year passes the window filter, and nothing fails to say so.
@@ -224,6 +226,10 @@ WHERE ord.calculated_coverage_days > 90.0
 --       material document by material document, in BOTH directions:
 --       (a) a logistics document whose FI amount differs  -> LEDGER_DESYNCHRONIZATION
 --       (b) an FI write-down with no logistics document   -> ORPHAN_FI_WRITE_OFF
+--       (c) an FI write-down whose MSEG document carries only movement types outside
+--           551/552/701/702 (e.g. scrapping from quality-inspection or blocked stock,
+--           warehouse-management differences)          -> UNCOVERED_MOVEMENT_TYPE.
+--           Not an orphan: the document exists. Extend the movement set for that site.
 -- Conventions that keep the comparison honest:
 --   * Leading ledger only (RLDNR '0L'): parallel ledgers repeat the same posting.
 --   * Signed amounts: MSEG.DMBTR is unsigned and the debit/credit indicator (SHKZG) gives
@@ -285,7 +291,17 @@ SELECT
     0.0 AS total_logistics_loss_local,
     gl.total_financial_loss_local,
     ABS(gl.total_financial_loss_local) AS reconciliation_drift_usd,
-    'ORPHAN_FI_WRITE_OFF: Write-down posted in FI with no logistics document in MSEG' AS audit_violation_reason
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM s4_mseg any_doc
+            WHERE any_doc.mandt = gl.mandt
+              AND any_doc.mblnr = gl.mblnr
+              AND any_doc.mjahr = gl.mjahr
+        )
+            THEN 'UNCOVERED_MOVEMENT_TYPE: Write-down whose MSEG document has movement types this assertion does not reconcile'
+        ELSE 'ORPHAN_FI_WRITE_OFF: Write-down posted in FI with no logistics document in MSEG'
+    END AS audit_violation_reason
 FROM financial_loss gl
 LEFT JOIN logistics_loss log
     ON gl.mandt = log.mandt
@@ -303,10 +319,14 @@ WHERE log.mblnr IS NULL
 --           non-valuated GR blocked stock received at the dock (103) per PO line item.
 --       (b) Movement 122 (Return Delivery from valuated stock) CANNOT be posted against a PO line
 --           exceeding prior 105 valuated release (prevents premature financial reversal).
--- Window: the go-live date selects the PO lines (any 103/105/124/122 entered since go-live);
---         the balance of each selected line counts ALL of its movements. Filtering the
---         movements themselves by date left the 105 of a line in transit at cutover without
---         its 103, and reported a mass-conservation breach that does not exist.
+-- Window: the go-live date selects the PO lines (any receipt-chain movement or reversal
+--         entered since go-live); the balance of each selected line counts ALL of its
+--         movements. Filtering the movements themselves by date left the 105 of a line in
+--         transit at cutover without its 103, and reported a mass-conservation breach that
+--         does not exist.
+-- Reversals: each quantity is net of its reversal movement (104, 106, 125, 123). Counted
+--         over the whole history, a 103 reversed by its 104 before go-live would otherwise
+--         still read as received and hide a release above what really arrived.
 -- ----------------------------------------------------------------------------------------------
 WITH active_po_lines AS (
     SELECT DISTINCT
@@ -316,7 +336,7 @@ WITH active_po_lines AS (
     FROM s4_mseg mseg
     INNER JOIN s4_mkpf mkpf
         ON mseg.mandt = mkpf.mandt AND mseg.mblnr = mkpf.mblnr AND mseg.mjahr = mkpf.mjahr
-    WHERE mseg.bwart IN ('103', '105', '124', '122')
+    WHERE mseg.bwart IN ('103', '104', '105', '106', '122', '123', '124', '125')
       AND mkpf.cpudt >= :deployment_go_live_date
 ),
 po_receipt_balances AS (
@@ -324,16 +344,16 @@ po_receipt_balances AS (
         mseg.mandt,
         mseg.ebeln AS purchase_order,
         mseg.ebelp AS po_item_num,
-        SUM(CASE WHEN mseg.bwart = '103' THEN mseg.menge ELSE 0 END) AS qty_103_gr_blocked,
-        SUM(CASE WHEN mseg.bwart = '105' THEN mseg.menge ELSE 0 END) AS qty_105_released,
-        SUM(CASE WHEN mseg.bwart = '124' THEN mseg.menge ELSE 0 END) AS qty_124_return_blocked,
-        SUM(CASE WHEN mseg.bwart = '122' THEN mseg.menge ELSE 0 END) AS qty_122_return_valuated
+        SUM(CASE mseg.bwart WHEN '103' THEN mseg.menge WHEN '104' THEN -mseg.menge ELSE 0 END) AS qty_103_gr_blocked,
+        SUM(CASE mseg.bwart WHEN '105' THEN mseg.menge WHEN '106' THEN -mseg.menge ELSE 0 END) AS qty_105_released,
+        SUM(CASE mseg.bwart WHEN '124' THEN mseg.menge WHEN '125' THEN -mseg.menge ELSE 0 END) AS qty_124_return_blocked,
+        SUM(CASE mseg.bwart WHEN '122' THEN mseg.menge WHEN '123' THEN -mseg.menge ELSE 0 END) AS qty_122_return_valuated
     FROM s4_mseg mseg
     INNER JOIN active_po_lines scope
         ON mseg.mandt = scope.mandt
        AND mseg.ebeln = scope.ebeln
        AND mseg.ebelp = scope.ebelp
-    WHERE mseg.bwart IN ('103', '105', '124', '122')
+    WHERE mseg.bwart IN ('103', '104', '105', '106', '122', '123', '124', '125')
     GROUP BY mseg.mandt, mseg.ebeln, mseg.ebelp
 )
 SELECT
