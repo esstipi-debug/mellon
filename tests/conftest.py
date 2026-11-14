@@ -34,8 +34,11 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 
-# Lo que cambia solo y no cuenta como suciedad.
-_IGNORAR = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+# Lo que cambia solo y no cuenta como suciedad. `.hypothesis` es la cache que
+# Hypothesis escribe sola en el cwd (ejemplos y constantes), el mismo caso que
+# `.pytest_cache`: en un clon limpio nace en la primera corrida, y sin esta
+# entrada el guardia la acusaba como archivo nuevo en la raiz (exit 4).
+_IGNORAR = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".hypothesis"}
 _IGNORAR_SUFIJOS = {".pyc", ".pyo"}
 _IGNORAR_NOMBRES = {".coverage"}
 
