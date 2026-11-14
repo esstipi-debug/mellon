@@ -20,6 +20,7 @@ from fdekit.guard import (
     Hallazgo,
     Procedencia,
     Veredicto,
+    conservacion_de_masa,
     evaluar,
     medir_catalogo,
     no_negativo,
@@ -265,13 +266,55 @@ def test_la_nota_nombra_al_guardia_que_no_detecta():
     assert "VACUO: aprueba_todo" in nota
 
 
-@pytest.mark.parametrize("valor", [None, "", "n/a", float("nan")], ids=repr)
+@pytest.mark.parametrize(
+    "valor", [None, "", "n/a", float("nan"), float("inf"), "inf", "-Infinity"], ids=repr)
 def test_no_negativo_no_lee_un_valor_ilegible_como_sano(valor):
-    """Un stock vacio o NaN no es un stock positivo: el guardia revienta y
-    `evaluar` lo reporta como roto. `nan < 0` es falso, asi que sin este cuidado
-    un NaN pasaba como sano."""
+    """Un stock vacio, NaN o infinito no es un stock positivo: el guardia revienta
+    y `evaluar` lo reporta como roto. `nan < 0` es falso e `inf >= 0` es verdadero,
+    asi que sin este cuidado los dos pasaban como sanos; un infinito sale de una
+    division por cero aguas arriba."""
     g = no_negativo(("stock",))
     hallazgos = evaluar([g], [{"stock": 10}, {"stock": valor}])
+    assert len(hallazgos) == 1
+    assert "reviento" in hallazgos[0].evidencia
+
+
+def _cadena_103_105():
+    return conservacion_de_masa(("ebeln",), "menge", "bwart", entradas=("103",),
+                                salidas=("105",))
+
+
+def test_conservacion_de_masa_lee_codigos_que_llegan_como_numero():
+    """Hallazgo de la revision final. Desde pandas, una columna bwart con '103'
+    llega como el entero 103 (o 103.0 si hay vacios). Sin normalizar, ninguna
+    fila caia en la cadena y el balance vacio daba sano."""
+    g = _cadena_103_105()
+    for codigo_103, codigo_105 in [(103, 105), (103.0, 105.0), (" 103", "105 ")]:
+        filas = [{"ebeln": "45", "bwart": codigo_103, "menge": 50.0},
+                 {"ebeln": "45", "bwart": codigo_105, "menge": 999.0}]
+        assert evaluar([g], filas) == [g.hallazgo], (codigo_103, codigo_105)
+
+
+def test_conservacion_de_masa_no_acepta_un_texto_como_lista_de_codigos():
+    """`entradas="103"` se leia como los codigos '1', '0' y '3': un guardia que
+    aprueba todo."""
+    with pytest.raises(TypeError, match="lista de codigos"):
+        conservacion_de_masa(("ebeln",), "menge", "bwart", entradas="103", salidas="105")
+
+
+@pytest.mark.parametrize(
+    "filas",
+    [
+        [{"ebeln": "45", "bwart": "101", "menge": 50.0}],
+        [{"ebeln": "45", "bwart": "103", "menge": 50.0},
+         {"ebeln": "45", "bwart": None, "menge": 999.0}],
+    ],
+    ids=["ninguna_fila_de_la_cadena", "movimiento_nulo"],
+)
+def test_conservacion_de_masa_revienta_si_no_puede_mirar(filas):
+    """Filas sin ningun movimiento de la cadena, o con el movimiento en blanco:
+    el guardia no vio lo que tenia que vigilar, y eso no es 'sano'."""
+    hallazgos = evaluar([_cadena_103_105()], filas)
     assert len(hallazgos) == 1
     assert "reviento" in hallazgos[0].evidencia
 

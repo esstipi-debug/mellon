@@ -40,8 +40,9 @@ _TOLERANCIA = 1e-9
 
 
 def _numero(fila: Mapping[str, object], columna: str) -> float:
-    """El valor como numero, o revienta. `nan < 0` es falso: sin este cuidado
-    un NaN pasaria como un valor no negativo."""
+    """El valor como numero finito, o revienta. `nan < 0` es falso e `inf >= 0`
+    es verdadero: sin este cuidado los dos pasarian como sanos, y un infinito
+    suele salir de una division por cero aguas arriba."""
     valor = fila[columna]
     if isinstance(valor, bool):
         raise ValueError(f"{columna}={valor!r} es un booleano, no una cantidad")
@@ -49,9 +50,32 @@ def _numero(fila: Mapping[str, object], columna: str) -> float:
         numero = float(valor)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         raise ValueError(f"{columna}={valor!r} no es un numero") from None
-    if math.isnan(numero):
-        raise ValueError(f"{columna} es NaN")
+    if not math.isfinite(numero):
+        raise ValueError(f"{columna}={valor!r} no es un numero finito")
     return numero
+
+
+def _codigo(valor: object) -> str:
+    """Un codigo de movimiento como texto: 103, 103.0 y ' 103' son '103'. Desde
+    pandas, una columna de codigos llega como entero (o como float si tiene
+    vacios). Vacio, None o NaN revientan: sin codigo la fila no se puede ubicar."""
+    if isinstance(valor, float):
+        if math.isnan(valor):
+            raise ValueError("tipo de movimiento NaN")
+        if valor.is_integer():
+            valor = int(valor)
+    texto = "" if valor is None else str(valor).strip()
+    if not texto:
+        raise ValueError(f"tipo de movimiento vacio: {valor!r}")
+    return texto
+
+
+def _codigos(codigos: Iterable[object], nombre: str) -> frozenset[str]:
+    """Los codigos declarados. Un texto suelto ('103') se leeria letra por letra
+    como los codigos '1', '0' y '3': un guardia que aprueba todo."""
+    if isinstance(codigos, (str, bytes)):
+        raise TypeError(f"{nombre} tiene que ser una lista de codigos, no el texto {codigos!r}")
+    return frozenset(_codigo(c) for c in codigos)
 
 
 def _lista(clave: Sequence[str]) -> str:
@@ -94,20 +118,26 @@ def conservacion_de_masa(
 
     Los movimientos que no estan en `entradas` ni en `salidas` no son de esta
     cadena y no cuentan. Un tipo en las dos listas es ambiguo y no se construye.
+    Los codigos se comparan como texto normalizado (ver `_codigo`). Revienta,
+    en vez de dar sano, si una fila no trae codigo o si hay filas pero ninguna
+    es de la cadena: en los dos casos el guardia no vio lo que tenia que vigilar.
     """
     clave = tuple(clave)
-    entran, salen = frozenset(entradas), frozenset(salidas)
+    entran, salen = _codigos(entradas, "entradas"), _codigos(salidas, "salidas")
     if entran & salen:
         raise ValueError(f"movimientos en entradas y salidas a la vez: {sorted(entran & salen)}")
+    cadena = f"{', '.join(sorted(entran))} -> {', '.join(sorted(salen))}"
 
     def predicado(filas: Filas) -> bool:
         saldo: dict[tuple, float] = defaultdict(float)
         for f in filas:
-            k = tuple(f[c] for c in clave)
-            if f[movimiento] in entran:
-                saldo[k] += _numero(f, cantidad)
-            elif f[movimiento] in salen:
-                saldo[k] -= _numero(f, cantidad)
+            tipo = _codigo(f[movimiento])
+            if tipo in entran:
+                saldo[tuple(f[c] for c in clave)] += _numero(f, cantidad)
+            elif tipo in salen:
+                saldo[tuple(f[c] for c in clave)] -= _numero(f, cantidad)
+        if len(filas) and not saldo:
+            raise ValueError(f"ninguna fila es de la cadena {cadena}: no hubo nada que medir")
         return all(s >= -_TOLERANCIA for s in saldo.values())
 
     return Guardia(
