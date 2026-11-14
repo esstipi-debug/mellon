@@ -6,8 +6,15 @@
 -- SCOPE & EPISTEMIC NOTE:
 --   These queries are reference SQL assertions written against standard SAP S/4HANA table
 --   definitions (s4_mseg, s4_mkpf, s4_ekpo, s4_eket, s4_acdoca) paired with edge telemetry
---   staging tables (fde_*). They are provided as auditable architecture specifications and
---   have NOT been executed against a live proprietary client SAP production instance.
+--   staging tables (fde_*). They have been executed only against an in-memory SQLite
+--   database with synthetic rows (tests/test_sql_guardrails_metamorphic.py): each assertion
+--   returns 0 rows on clean data and flags an injected defect with its exact violation code.
+--   Two known gaps stay recorded there as expected failures: an unknown (NULL) signature
+--   check passes Assertion 1, and a PO line with no demand baseline is never evaluated by
+--   Assertion 3. They have NOT been executed against a live client SAP instance.
+--   Dates are compared as ISO-8601 text or DATE values. Raw SAP DATS values ('20261101')
+--   must be converted first: compared as text against an ISO date, every raw date of the
+--   go-live year passes the window filter, and nothing fails to say so.
 --   Before production use, adapt table prefixes/views to the client's ingestion layer
 --   (e.g., SAP Datasphere, Snowflake CDC mirror, or HANA Calculation Views).
 --
@@ -137,16 +144,33 @@ WHERE posting_user = counter_user_badge
 -- Table: s4_ekpo (Purchase Order Item), s4_eket (Schedule Lines), s4_mara (Material Master)
 -- Rule: If PO coverage > 90 days and net carrying cost > volume discount, the order MUST have
 --       a CFO cryptographic signature in fde_governance_approvals.
+-- Grain: one row per PO item (mandt, ebeln, ebelp). EKET holds one row per schedule line
+--        (etenr), so it is collapsed to the item grain BEFORE the join: joined raw, an item
+--        with three schedule lines came out three times and tripled any sum of the result.
+--        The approval is matched on the same grain, client included (mandt_ref).
+-- Assumption: fde_demand_forecast_baselines holds one current row per (matnr, werks).
 -- ----------------------------------------------------------------------------------------------
-WITH moq_order_eval AS (
-    SELECT 
+WITH schedule_lines AS (
+    SELECT
+        sched.mandt,
+        sched.ebeln,
+        sched.ebelp,
+        MIN(sched.eindt) AS first_delivery_date,
+        COUNT(*) AS schedule_line_count
+    FROM s4_eket sched
+    GROUP BY sched.mandt, sched.ebeln, sched.ebelp
+),
+moq_order_eval AS (
+    SELECT
+        po_item.mandt,
         po_item.ebeln AS purchase_order,
         po_item.ebelp AS po_item_num,
         po_item.matnr AS material_number,
         po_item.werks AS plant,
         po_item.netpr AS unit_price,
         po_item.menge AS ordered_quantity,
-        sched.eindt AS delivery_date,
+        sched.first_delivery_date AS delivery_date,
+        sched.schedule_line_count,
         COALESCE(mara.plifz, 30) AS vendor_lead_time_days,
         COALESCE(forecast.daily_consumption_rate, 1.0) AS daily_demand_rate,
         (po_item.menge / NULLIF(forecast.daily_consumption_rate, 0)) AS calculated_coverage_days,
@@ -156,7 +180,7 @@ WITH moq_order_eval AS (
             - (po_item.netpr * 0.03 * po_item.menge)
         ) AS net_working_capital_destruction_usd
     FROM s4_ekpo po_item
-    INNER JOIN s4_eket sched
+    INNER JOIN schedule_lines sched
         ON po_item.mandt = sched.mandt
        AND po_item.ebeln = sched.ebeln
        AND po_item.ebelp = sched.ebelp
@@ -166,24 +190,29 @@ WITH moq_order_eval AS (
         ON po_item.matnr = forecast.matnr AND po_item.werks = forecast.werks
     WHERE po_item.aedat >= :deployment_go_live_date
 )
-SELECT 
+SELECT
+    ord.mandt,
     ord.purchase_order,
     ord.po_item_num,
     ord.material_number,
     ord.plant,
     ord.ordered_quantity,
+    ord.schedule_line_count,
     ord.calculated_coverage_days,
     ord.net_working_capital_destruction_usd,
     'GOVERNANCE_BYPASS: Unapproved PO with coverage > 90 days and positive cash destruction' AS audit_violation_reason
 FROM moq_order_eval ord
-LEFT JOIN fde_governance_approvals gov 
-    ON ord.purchase_order = gov.ebeln_ref
-   AND ord.po_item_num = gov.ebelp_ref
-   AND gov.approval_level = 'CFO_EXECUTIVE_RED_LANE'
-   AND gov.digital_signature_verified = TRUE
 WHERE ord.calculated_coverage_days > 90.0
   AND ord.net_working_capital_destruction_usd > 50000.00
-  AND gov.approval_id IS NULL;
+  AND NOT EXISTS (
+      SELECT 1
+      FROM fde_governance_approvals gov
+      WHERE gov.mandt_ref = ord.mandt
+        AND gov.ebeln_ref = ord.purchase_order
+        AND gov.ebelp_ref = ord.po_item_num
+        AND gov.approval_level = 'CFO_EXECUTIVE_RED_LANE'
+        AND gov.digital_signature_verified = TRUE
+  );
 -- EXPECTED RESULT: 0 rows.
 
 
@@ -191,29 +220,46 @@ WHERE ord.calculated_coverage_days > 90.0
 -- ASSERTION 4: Subledger Reconciliation - Parity between MM (MSEG) and FI (ACDOCA)
 -- Table: s4_acdoca (Universal Journal Entry)
 -- Rule: Every dollar of inventory loss posted in logistics (MSEG) must match the exact 
---       reconciliation credit/debit on the inventory write-down account (e.g. RACCT '00501000').
+--       reconciliation credit/debit on the inventory write-down account (e.g. RACCT '00501000'),
+--       material document by material document, in BOTH directions:
+--       (a) a logistics document whose FI amount differs  -> LEDGER_DESYNCHRONIZATION
+--       (b) an FI write-down with no logistics document   -> ORPHAN_FI_WRITE_OFF
+-- Conventions that keep the comparison honest:
+--   * Leading ledger only (RLDNR '0L'): parallel ledgers repeat the same posting.
+--   * Signed amounts: MSEG.DMBTR is unsigned and the debit/credit indicator (SHKZG) gives
+--     the sign: H (stock out) is a loss, S (stock in, reversal) a negative loss. ACDOCA.HSL
+--     is already signed: a debit to the write-down account is a loss. When an extract drops
+--     SHKZG, the standard direction of the movement type is used: 551 and 702 are H,
+--     552 and 701 are S.
+--   * One date on both sides: the posting date (BUDAT), never the entry date (CPUDT).
 -- ----------------------------------------------------------------------------------------------
-WITH logistics_scrap_totals AS (
+WITH logistics_loss AS (
     SELECT 
         mseg.mandt,
         mseg.mblnr,
         mseg.mjahr,
-        SUM(mseg.dmbtr) AS total_logistics_loss_local
+        SUM(
+            CASE COALESCE(mseg.shkzg, CASE WHEN mseg.bwart IN ('551', '702') THEN 'H' ELSE 'S' END)
+                WHEN 'H' THEN mseg.dmbtr
+                ELSE -mseg.dmbtr
+            END
+        ) AS total_logistics_loss_local
     FROM s4_mseg mseg
     INNER JOIN s4_mkpf mkpf 
         ON mseg.mandt = mkpf.mandt AND mseg.mblnr = mkpf.mblnr AND mseg.mjahr = mkpf.mjahr
-    WHERE mseg.bwart IN ('551', '702')
-      AND mkpf.cpudt >= :deployment_go_live_date
+    WHERE mseg.bwart IN ('551', '552', '701', '702')
+      AND mkpf.budat >= :deployment_go_live_date
     GROUP BY mseg.mandt, mseg.mblnr, mseg.mjahr
 ),
-financial_gl_totals AS (
+financial_loss AS (
     SELECT 
         acdoca.mandt,
         acdoca.awref AS mblnr,
         acdoca.gjahr AS mjahr,
         SUM(acdoca.hsl) AS total_financial_loss_local
     FROM s4_acdoca acdoca
-    WHERE acdoca.racct IN ('00501000', '00502000') -- Inventory write-down accounts
+    WHERE acdoca.rldnr = '0L'
+      AND acdoca.racct IN ('00501000', '00502000') -- Inventory write-down accounts
       AND acdoca.budat >= :deployment_go_live_date
     GROUP BY acdoca.mandt, acdoca.awref, acdoca.gjahr
 )
@@ -225,12 +271,28 @@ SELECT
     COALESCE(gl.total_financial_loss_local, 0.0) AS total_financial_loss_local,
     ABS(log.total_logistics_loss_local - COALESCE(gl.total_financial_loss_local, 0.0)) AS reconciliation_drift_usd,
     'LEDGER_DESYNCHRONIZATION: Logistics write-off diverges from FI Universal Journal' AS audit_violation_reason
-FROM logistics_scrap_totals log
-LEFT JOIN financial_gl_totals gl
+FROM logistics_loss log
+LEFT JOIN financial_loss gl
     ON log.mandt = gl.mandt
    AND log.mblnr = gl.mblnr
    AND log.mjahr = gl.mjahr
-WHERE ABS(log.total_logistics_loss_local - COALESCE(gl.total_financial_loss_local, 0.0)) > 0.01;
+WHERE ABS(log.total_logistics_loss_local - COALESCE(gl.total_financial_loss_local, 0.0)) > 0.01
+UNION ALL
+SELECT
+    gl.mandt,
+    gl.mblnr AS material_doc_reference,
+    gl.mjahr AS fiscal_year,
+    0.0 AS total_logistics_loss_local,
+    gl.total_financial_loss_local,
+    ABS(gl.total_financial_loss_local) AS reconciliation_drift_usd,
+    'ORPHAN_FI_WRITE_OFF: Write-down posted in FI with no logistics document in MSEG' AS audit_violation_reason
+FROM financial_loss gl
+LEFT JOIN logistics_loss log
+    ON gl.mandt = log.mandt
+   AND gl.mblnr = log.mblnr
+   AND gl.mjahr = log.mjahr
+WHERE log.mblnr IS NULL
+  AND ABS(gl.total_financial_loss_local) > 0.01;
 -- EXPECTED RESULT: 0 rows.
 
 
@@ -241,8 +303,23 @@ WHERE ABS(log.total_logistics_loss_local - COALESCE(gl.total_financial_loss_loca
 --           non-valuated GR blocked stock received at the dock (103) per PO line item.
 --       (b) Movement 122 (Return Delivery from valuated stock) CANNOT be posted against a PO line
 --           exceeding prior 105 valuated release (prevents premature financial reversal).
+-- Window: the go-live date selects the PO lines (any 103/105/124/122 entered since go-live);
+--         the balance of each selected line counts ALL of its movements. Filtering the
+--         movements themselves by date left the 105 of a line in transit at cutover without
+--         its 103, and reported a mass-conservation breach that does not exist.
 -- ----------------------------------------------------------------------------------------------
-WITH po_receipt_balances AS (
+WITH active_po_lines AS (
+    SELECT DISTINCT
+        mseg.mandt,
+        mseg.ebeln,
+        mseg.ebelp
+    FROM s4_mseg mseg
+    INNER JOIN s4_mkpf mkpf
+        ON mseg.mandt = mkpf.mandt AND mseg.mblnr = mkpf.mblnr AND mseg.mjahr = mkpf.mjahr
+    WHERE mseg.bwart IN ('103', '105', '124', '122')
+      AND mkpf.cpudt >= :deployment_go_live_date
+),
+po_receipt_balances AS (
     SELECT
         mseg.mandt,
         mseg.ebeln AS purchase_order,
@@ -252,10 +329,11 @@ WITH po_receipt_balances AS (
         SUM(CASE WHEN mseg.bwart = '124' THEN mseg.menge ELSE 0 END) AS qty_124_return_blocked,
         SUM(CASE WHEN mseg.bwart = '122' THEN mseg.menge ELSE 0 END) AS qty_122_return_valuated
     FROM s4_mseg mseg
-    INNER JOIN s4_mkpf mkpf
-        ON mseg.mandt = mkpf.mandt AND mseg.mblnr = mkpf.mblnr AND mseg.mjahr = mkpf.mjahr
+    INNER JOIN active_po_lines scope
+        ON mseg.mandt = scope.mandt
+       AND mseg.ebeln = scope.ebeln
+       AND mseg.ebelp = scope.ebelp
     WHERE mseg.bwart IN ('103', '105', '124', '122')
-      AND mkpf.cpudt >= :deployment_go_live_date
     GROUP BY mseg.mandt, mseg.ebeln, mseg.ebelp
 )
 SELECT
