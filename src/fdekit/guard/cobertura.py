@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .sonda import ResultadoSonda, Veredicto
+
 BUGS_HISTORICOS = 17
 """Los bugs de clase 'no falla, miente' documentados en HANDOFF.md. Es el
 denominador del unico puntaje que hace falsable al harness."""
@@ -40,6 +42,12 @@ class CoberturaGuardia:
     el propio agente dice haber tocado no contiene a un agente que omite. Se
     publica en `nota()` porque este objeto existe justamente para decir lo que el
     harness NO garantiza."""
+
+    sondas: tuple[ResultadoSonda, ...] = ()
+    """Lo que midio la sonda de dos corridas (`sonda.py`) sobre cada guardia. Es
+    otra medida que `bugs_atrapados`: dice si cada guardia detecta SU mutacion y
+    no salta sobre su objeto sano, no cuantos de los bugs historicos atrapa.
+    Vacio significa que no se corrio, y la nota no dice nada de sondas."""
 
     @property
     def is_complete(self) -> bool:
@@ -66,4 +74,13 @@ class CoberturaGuardia:
                 "con la frontera del testigo verificada contra la AUTODECLARACION del agente, no "
                 "contra un diff real -- el runner de dos arboles todavia no existe."
             )
+        if self.sondas:
+            detectan = sum(1 for r in self.sondas if r.veredicto is Veredicto.DETECTA)
+            nota += (
+                f"\nSondas de dos corridas: {detectan} de {len(self.sondas)} guardias "
+                "detectan su mutacion sin saltar sobre el sano."
+            )
+            for r in self.sondas:
+                if r.veredicto is not Veredicto.DETECTA:
+                    nota += f"\n  {r.veredicto.name}: {r.guardia} -- {r.evidencia}"
         return nota
