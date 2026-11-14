@@ -112,7 +112,7 @@ For four decades, the enterprise technology industry has approached industrial o
 * Coercive "change management" programs that treat frontline workers as broken components to be disciplined.
 
 The consequence is always the same: **the host organization mounts an institutional immune response**. 
-The MIT NANDA 2025 research confirms that **95% of enterprise AI pilots fail to move the P&L**. They fail because frontline operators quietly bypass the system, falsify required fields to protect their shift metrics, and retreat to clandestine spreadsheets to keep the business moving.
+The MIT NANDA report of 2025, a preliminary industry study, found that **95% of organisations saw no measurable P&L impact from their generative-AI pilots**; the cause it names is brittle workflows and missing context. Mellon's field reading, not the report's, is what that looks like on the floor: frontline operators quietly bypass the system, falsify required fields to protect their shift metrics, and retreat to clandestine spreadsheets to keep the business moving.
 
 > **The Mellon Axiom:**  
 > **You cannot conquer an operating floor; you can only earn the right to enter as an ally.**  
