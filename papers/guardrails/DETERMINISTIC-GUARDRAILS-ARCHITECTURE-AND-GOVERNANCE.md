@@ -5,7 +5,7 @@
 > **Version:** 1.1 — October 25, 2026 (see the corrections log at the end)  
 > **Author:** Marcos Stipicich  
 > **Evidence Taxonomy:**  
-> `[EMPIRICAL]` = Codebase verification (`kern`, `mellon`; `mellon` collects 1,079 automated tests as of October 25, 2026); no telemetry audits have been run yet.  
+> `[EMPIRICAL]` = Codebase verification (`kern`, `mellon`; `mellon` passes 1,141 automated tests on a clean install as of November 14, 2026); no telemetry audits have been run yet.  
 > `[CANON]` = Physical conservation laws, double-entry bookkeeping, and formal systems engineering literature.  
 > `[REGULATORY]` = Enforced statutory articles (EU AI Act, GDPR, Chilean Labor Code, German BetrVG).  
 > `[MODELING]` = Flow-conservation balances, state closure theorems, and queueing theory.
@@ -267,4 +267,5 @@ gantt
 * Corrected the descriptions of GDPR Art. 35, Chile's Labor Code Art. 154 and BetrVG §87.
 * Removed "As proven in *The Deployment Chasm*" and fixed the arithmetic: 5 failed receptions per day, not per shift.
 * Replaced the "972 automated guard tests" figure with the count verified on October 25, 2026 (`mellon`: 1,079 tests collected).
+* Replaced the `mellon` count of 1,079 tests collected with 1,141 tests passing on a clean install, verified on November 14, 2026.
 * Added OWASP's 2025–2026 agentic publications and this reference list.
