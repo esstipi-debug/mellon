@@ -10,6 +10,12 @@ Field papers for operators and executives, on the same thesis as this series. Th
 
 * **[The Smith and the Tailor](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/the-smith-and-the-tailor.pdf)** *(10 pages · PDF)*: why many deployments are cut before anyone measures the floor, and two rules a CEO can set before kickoff.
 * **[Nobody Pays for Being Wrong](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/nobody-pays-for-being-wrong.pdf)** *(27 pages · PDF)*: why obeying the system and dodging it answer the same rule, and what a rule looks like when nobody has to carry it.
+* **[The Shortcut Is Not a Lapse](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/the-shortcut-is-not-a-lapse.pdf)** *(8 pages · PDF)*: why dented units ship, and three questions a COO can ask where the record is written.
+* **[The Damage Has No Name](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/the-damage-has-no-name.pdf)** *(8 pages · PDF)*: why the fastest driver on the report can be the most expensive one in the ledger, and how a CFO can trace three lines of damage to a name.
+* **[When Exceptions Outrun the Desk](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/when-exceptions-outrun-the-desk.pdf)** *(8 pages · PDF)*: why exceptions the desk cannot clear leave the procedure, and four numbers a COO can watch each week before the record drifts.
+* **[The Tow the System Calls Idle](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/the-tow-the-system-calls-idle.pdf)** *(8 pages · PDF)*: why minutes the time standard has no category for are charged to the operator, and five steps a COO can take to let the floor contest them.
+* **[A Hundred Eyes, One Percent](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/a-hundred-eyes-one-percent.pdf)** *(9 pages · PDF)*: why a human approval can get weaker as the system it checks gets better, and how a CFO can test the control, not the signature.
+* **[Use It or Lose It](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/use-it-or-lose-it.pdf)** *(8 pages · PDF)*: why a budget that expires on a fixed date pays for a rush in its last week, and the rule a CEO can change.
 
 ---
 
