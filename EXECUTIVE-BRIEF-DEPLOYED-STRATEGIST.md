@@ -113,7 +113,7 @@ flowchart TD
     
     Gate -->|For CTOs, Lead Architects & Security Auditors| DOC07["<b>DOC-07 (L3): Formal Mechanics & Code Audit</b><br/>FORMAL-MECHANICS-EMPIRICAL-AUDIT.md<br/>• Theorem 1: Inventory absorption proof E[tau] -> inf<br/>• Pydantic V2 contracts & zero-bypass FSM<br/>• ANSI SQL audit assertion suite for SAP S/4HANA<br/>• Econometric inference pipeline & TOST equivalence"]
     
-    Gate -->|For Investment Committees & Peer Reviewers| DOC08["<b>DOC-08 (L2C): Executive Evidence Dossier (62 Citations)</b><br/>EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md<br/>• Stanford, MIT, Harvard & RAND empirical evidence<br/>• Comprehensive classified bibliography"]
+    Gate -->|For Investment Committees & Peer Reviewers| DOC08["<b>DOC-08 (L2C): Executive Evidence Dossier (62 Citations)</b><br/>EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md<br/>• 62 graded sources: 13 peer-reviewed or official [D], 49 reports and press [R]<br/>• Comprehensive classified bibliography"]
 ```
 
 ### Consolidated Asset Index
@@ -124,7 +124,7 @@ flowchart TD
 | **DOC-02** | **L0** | **The 21st-Century Polymath Manifesto** | [`THE-21ST-CENTURY-POLYMATH-MANIFESTO.md`](THE-21ST-CENTURY-POLYMATH-MANIFESTO.md) | Global Founders, C-Level | Foundational epistemology & philosophy (15 min) |
 | **DOC-01** | **L2A** | **Master Whitepaper: DS Doctrine & I/T/C Distortions** | [`DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md`](DEPLOYMENT-STRATEGIST-WHITEPAPER-MASTER.md) | CEO, VP Transformation, COO | Canonical operational doctrine (35 min) |
 | **DOC-03** | **L2B** | **C-Level Whitepaper: MOQs vs. Working Capital** | [`MOQ-WORKING-CAPITAL-GOVERNANCE-WHITEPAPER.md`](MOQ-WORKING-CAPITAL-GOVERNANCE-WHITEPAPER.md) | CFO, CPO, Supply Chain Directors | TCO model, PPV paradox, Tweedie frontier (20 min) |
-| **DOC-08** | **L2C** | **Executive Evidence Dossier (62 Scientific Citations)** | [`EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md`](EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md) | Audit Committees, Peer Reviewers | Academic & industry empirical evidence (25 min) |
+| **DOC-08** | **L2C** | **Executive Evidence Dossier (62 Citations)** | [`EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md`](EXECUTIVE-EVIDENCE-DOSSIER-62-CITATIONS.md) | Audit Committees, Peer Reviewers | Graded bibliography: 13 peer-reviewed or official (`[D]`), 49 reports, working papers and press (`[R]`) (25 min) |
 | **DOC-04-06** | **L2D** | **30-Day Frontline Field Toolkit** | [`field-toolkit/`](field-toolkit/README.md) | Deployment Strategists, FDEs | Executable field contracts & protocols (30 min) |
 | **DOC-07** | **L3** | **Formal Code Mechanics & Empirical Audit** | [`FORMAL-MECHANICS-EMPIRICAL-AUDIT.md`](FORMAL-MECHANICS-EMPIRICAL-AUDIT.md) | Lead Architects, FDEs, Auditors | Pydantic contracts, FSM, DiD econometrics (45 min) |
 | **CODE** | **ENG** | **Mathematical Solver & Tweedie Boundary Engine** | [`inventory_mechanics.py`](inventory_mechanics.py) | Operations Researchers | Theorem 1 simulation & Tweedie solver (Executable) |
