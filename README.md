@@ -28,6 +28,7 @@ Field papers for operators and executives. The PDFs open in the browser.
 | **[A Hundred Eyes, One Percent](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/a-hundred-eyes-one-percent.pdf)** *(9 pages · PDF)* | An approval only controls what the approver would catch. When errors are rare, people can miss more of them, and the log looks the same. Test the control, not the signature, as airports test their screeners. |
 | **[Use It or Lose It](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/use-it-or-lose-it.pdf)** *(8 pages · PDF)* | When a budget expires on a fixed date, the rule decides who pays for the rush. The step for a CEO is to change the rule, not to preach. |
 | **[Who Is Allowed to Be Right?](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/who-is-allowed-to-be-right.pdf)** *(8 pages · PDF)* | After a go-live, being right about a rule and being allowed to stop it can sit two weeks apart. A CEO can measure the gap for one rule: who sees it fail first, who can stop it, and how many days pass in between. |
+| **[Put the Toll on the Bridge](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/put-the-toll-on-the-bridge.pdf)** *(10 pages · PDF)* | A step that guards an expensive mistake earns its place on a shift screen. The same step on every line teaches the crew to get around it. Before approving the next screen, a COO can list every step that is not the work, time it on the floor, and ask which mistake each one would let through if it disappeared. |
 
 ---
 
