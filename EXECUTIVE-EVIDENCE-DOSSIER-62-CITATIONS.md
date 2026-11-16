@@ -109,83 +109,87 @@ Good-faith memos and ceremonial paper audits (such as static ISO 9001 certificat
 
 ## 6. Comprehensive Classified Bibliography (62 Documented Sources)
 
+Each source carries one grade, for what the source is and not for what it says. `[D]`: a peer-reviewed article with a DOI, or an official source: a regulator, a standards project, or a vendor's own documentation (valid for what it says about the vendor's product, not for how well the product works). `[R]`: everything else: industry and analyst reports, working papers, preprints, theses, press, blogs and vendor marketing. A peer-reviewed article that the link does not identify by its DOI stays `[R]` until the DOI is cited. Result: 13 `[D]` and 49 `[R]`.
+
 ### AI Project Failure & Organizational Breakdown
-1. [FDE Academy: Why AI Projects Fail and How Forward Deployed Engineers Fix It](https://fde.academy/blog/why-ai-projects-fail-and-how-forward-deployed-engineers-fix-it)
-2. [Pertama Partners: AI Project Failure Statistics (2026)](https://www.pertamapartners.com/insights/ai-project-failure-statistics-2026)
-3. [Challapally, Pease, Raskar & Chari (MIT NANDA, July 2025): The GenAI Divide: State of AI in Business 2025, preliminary findings (PDF copy)](https://webberwentzel.com/News/Documents/2025/MIT1757411281972.pdf)
-4. [RAND Corporation: Research Reports RRA2680-1 on AI Failure](https://www.rand.org/pubs/research_reports/RRA2680-1.html)
-5. [AIBL Media: AI Failure Research - Misread Postmortems](https://aiblmedia.com/posts/ai-failure-research-misread-postmortems/)
-6. [Grid Dynamics: Why Enterprise AI Initiatives Fail](https://aie.griddynamics.com/insights/articles/why-ai-initiatives-fail)
-7. [MarTech / Gartner: 40% of Agentic AI Projects Will Fail](https://martech.org/gartner-40-of-agentic-ai-projects-will-fail-making-humans-indispensable/)
-8. [Meyer & Rowan (American Journal of Sociology, 1977): Institutionalized Organizations: Formal Structure as Myth and Ceremony](https://doi.org/10.1086/226550)
-9. [Domino AI: Navigating Enterprise AI Project Failure](https://domino.ai/blog/why-ai-projects-fail)
+1. [FDE Academy: Why AI Projects Fail and How Forward Deployed Engineers Fix It](https://fde.academy/blog/why-ai-projects-fail-and-how-forward-deployed-engineers-fix-it) `[R]`
+2. [Pertama Partners: AI Project Failure Statistics (2026)](https://www.pertamapartners.com/insights/ai-project-failure-statistics-2026) `[R]`
+3. [Challapally, Pease, Raskar & Chari (MIT NANDA, July 2025): The GenAI Divide: State of AI in Business 2025, preliminary findings (PDF copy)](https://webberwentzel.com/News/Documents/2025/MIT1757411281972.pdf) `[R]`
+4. [RAND Corporation: Research Reports RRA2680-1 on AI Failure](https://www.rand.org/pubs/research_reports/RRA2680-1.html) `[R]`
+5. [AIBL Media: AI Failure Research - Misread Postmortems](https://aiblmedia.com/posts/ai-failure-research-misread-postmortems/) `[R]`
+6. [Grid Dynamics: Why Enterprise AI Initiatives Fail](https://aie.griddynamics.com/insights/articles/why-ai-initiatives-fail) `[R]`
+7. [MarTech / Gartner: 40% of Agentic AI Projects Will Fail](https://martech.org/gartner-40-of-agentic-ai-projects-will-fail-making-humans-indispensable/) `[R]`
+8. [Meyer & Rowan (American Journal of Sociology, 1977): Institutionalized Organizations: Formal Structure as Myth and Ceremony](https://doi.org/10.1086/226550) `[D]`
+9. [Domino AI: Navigating Enterprise AI Project Failure](https://domino.ai/blog/why-ai-projects-fail) `[R]`
 
 ### Data Governance & Quality Realities
-10. [Gartner: Lack of AI-Ready Data Puts Enterprise AI at Risk](https://www.gartner.com/en/newsroom/press-releases/2025-02-26-lack-of-ai-ready-data-puts-ai-projects-at-risk)
-11. [CDO Magazine: Ignore Data Culture and 60% of AI Governance Efforts Fail](https://www.cdomagazine.tech/aiml/gartner-ignore-data-culture-and-60-of-ai-governance-efforts-will-fail-by-2027)
-12. [Gartner: Predicting AI Governance Pitfalls Through 2027](https://www.gartner.com/en/newsroom/press-releases/2026-09-21-gartner-predicts-60-percent-of-organizations-that-ignore-data-governance-culture-challenges-will-fail-to-govern-ai-successfully-by-2027)
-13. [Bloom, Codreanu & Fletcher (NBER Working Paper 33384, 2025): Rationalizing Firm Forecasts](https://www.nber.org/papers/w33384)
-14. [Gartner: Generative AI Project Failure Patterns](https://www.gartner.com/en/articles/genai-project-failure)
-15. [ProjectManagement.com: Structural Drivers of AI Project Dissolution](https://www.projectmanagement.com/blog-post/79154/why-do-ai-projects-fail-)
+10. [Gartner: Lack of AI-Ready Data Puts Enterprise AI at Risk](https://www.gartner.com/en/newsroom/press-releases/2025-02-26-lack-of-ai-ready-data-puts-ai-projects-at-risk) `[R]`
+11. [CDO Magazine: Ignore Data Culture and 60% of AI Governance Efforts Fail](https://www.cdomagazine.tech/aiml/gartner-ignore-data-culture-and-60-of-ai-governance-efforts-will-fail-by-2027) `[R]`
+12. [Gartner: Predicting AI Governance Pitfalls Through 2027](https://www.gartner.com/en/newsroom/press-releases/2026-09-21-gartner-predicts-60-percent-of-organizations-that-ignore-data-governance-culture-challenges-will-fail-to-govern-ai-successfully-by-2027) `[R]`
+13. [Bloom, Codreanu & Fletcher (NBER Working Paper 33384, 2025): Rationalizing Firm Forecasts](https://www.nber.org/papers/w33384) `[R]`
+14. [Gartner: Generative AI Project Failure Patterns](https://www.gartner.com/en/articles/genai-project-failure) `[R]`
+15. [ProjectManagement.com: Structural Drivers of AI Project Dissolution](https://www.projectmanagement.com/blog-post/79154/why-do-ai-projects-fail-) `[R]`
 
 ### Incentive Alignment, Agency Theory & Management Economics
-16. [OER Collective: Principles of Strategic Management Accounting (Agency Theory)](https://oercollective.caul.edu.au/principles-strategic-management-accounting/chapter/196/)
-17. [Emerald Insights: Unintended Distortionary Effects of Monetary Incentives](https://www.emerald.com/ijopm/article/doi/10.1108/IJOPM-02-2026-0309/1401072/The-unintended-effect-of-monetary-incentives-on)
-18. [Journal of Supply Chain Management: Supply Chain Incentive Alignment Gap](https://journal.oscm-forum.org/publication/pdf/supply-chain-incentive-alignment-the-gap-between-perceived-importance-and-actual-practice)
-19. [Bloom, Sadun & Van Reenen (American Economic Review, 2012): Americans Do IT Better: US Multinationals and the Productivity Miracle](https://doi.org/10.1257/aer.102.1.167)
-20. [Harvard Business School (Bloom et al.): Measuring Management Practices](https://www.hbs.edu/ris/Publication%20Files/Management_Practices_cd1ecd8a-6aeb-43e0-9d3d-f912ed242bf9.pdf)
-21. [David Card / UC Berkeley: Management Practices and Productivity](https://davidcard.berkeley.edu/papers/management-march-2016.pdf)
-22. [ResearchGate: Explaining Management Practices Across Firms and Countries](https://www.researchgate.net/publication/230556896_Measuring_and_Explaining_Management_Practices_Across_Firms_and_Countries)
-23. [American Economic Association: Management As a Technology](https://www.aeaweb.org/conference/2013/retrieve.php?pdfid=537)
-24. [Campbell (Evaluation and Program Planning, 1979): Assessing the Impact of Planned Social Change](https://doi.org/10.1016/0149-7189%2879%2990048-X)
-25. [Kerr (Academy of Management Journal, 1975): On the Folly of Rewarding A, While Hoping for B](https://doi.org/10.2307/255378)
+16. [OER Collective: Principles of Strategic Management Accounting (Agency Theory)](https://oercollective.caul.edu.au/principles-strategic-management-accounting/chapter/196/) `[R]`
+17. [Emerald Insights: Unintended Distortionary Effects of Monetary Incentives](https://www.emerald.com/ijopm/article/doi/10.1108/IJOPM-02-2026-0309/1401072/The-unintended-effect-of-monetary-incentives-on) `[D]`
+18. [Journal of Supply Chain Management: Supply Chain Incentive Alignment Gap](https://journal.oscm-forum.org/publication/pdf/supply-chain-incentive-alignment-the-gap-between-perceived-importance-and-actual-practice) `[R]`
+19. [Bloom, Sadun & Van Reenen (American Economic Review, 2012): Americans Do IT Better: US Multinationals and the Productivity Miracle](https://doi.org/10.1257/aer.102.1.167) `[D]`
+20. [Harvard Business School (Bloom et al.): Measuring Management Practices](https://www.hbs.edu/ris/Publication%20Files/Management_Practices_cd1ecd8a-6aeb-43e0-9d3d-f912ed242bf9.pdf) `[R]`
+21. [David Card / UC Berkeley: Management Practices and Productivity](https://davidcard.berkeley.edu/papers/management-march-2016.pdf) `[R]`
+22. [ResearchGate: Explaining Management Practices Across Firms and Countries](https://www.researchgate.net/publication/230556896_Measuring_and_Explaining_Management_Practices_Across_Firms_and_Countries) `[R]`
+23. [American Economic Association: Management As a Technology](https://www.aeaweb.org/conference/2013/retrieve.php?pdfid=537) `[R]`
+24. [Campbell (Evaluation and Program Planning, 1979): Assessing the Impact of Planned Social Change](https://doi.org/10.1016/0149-7189%2879%2990048-X) `[D]`
+25. [Kerr (Academy of Management Journal, 1975): On the Folly of Rewarding A, While Hoping for B](https://doi.org/10.2307/255378) `[D]`
 
 ### Forecasting Behavior (FVA) & Phantom Inventory
-26. [International Journal of Forecasting (Fildes, Goodwin et al.): Forecast Value Added](https://econpapers.repec.org/RePEc:eee:intfor:v:41:y:2025:i:2:p:649-669)
-27. [DeHoratius & Raman (Management Science, 2008): Inventory Record Inaccuracy: An Empirical Analysis](https://doi.org/10.1287/mnsc.1070.0789)
-28. [University of Manchester: Empirical Evaluation of Judgmental Adjustments](https://research.manchester.ac.uk/en/publications/effective-forecasting-and-judgmental-adjustments-an-empirical-eva/)
-29. [Nicolas Vandeput: Forecast Value Added Metrics in Supply Chain](https://nicolas-vandeput.medium.com/forecast-value-added-ebc163d7ccd)
-30. [University of Birmingham: Doctoral Thesis on Demand Forecasting Under Asymmetric Loss](https://etheses.bham.ac.uk/id/eprint/12756/13/Elegbede2022PhD.pdf)
-31. [arXiv: 2610.19829: Stochastic Inventory Discrepancy Modeling](https://arxiv.org/pdf/2610.19829)
-32. [Atlantis Press: Phantom Inventory Detection in Retail Supply Chains using Federated Learning (ICAISDA 2025 proceedings)](https://www.atlantis-press.com/proceedings/icaisda-25/126022694)
-33. [Supply Chain Dive: Phantom Inventory Management and Retail Bias](https://www.supplychaindive.com/news/phantom-inventory-management-retail-sales-forecasts/433231/)
-34. [MIT DSpace: Inventory Discrepancies in Retail Store Operations](https://dspace.mit.edu/entities/publication/3869cd6f-ce70-4537-a682-33ee76b3c64d)
+26. [International Journal of Forecasting (Fildes, Goodwin et al.): Forecast Value Added](https://econpapers.repec.org/RePEc:eee:intfor:v:41:y:2025:i:2:p:649-669) `[R]`
+27. [DeHoratius & Raman (Management Science, 2008): Inventory Record Inaccuracy: An Empirical Analysis](https://doi.org/10.1287/mnsc.1070.0789) `[D]`
+28. [University of Manchester: Empirical Evaluation of Judgmental Adjustments](https://research.manchester.ac.uk/en/publications/effective-forecasting-and-judgmental-adjustments-an-empirical-eva/) `[R]`
+29. [Nicolas Vandeput: Forecast Value Added Metrics in Supply Chain](https://nicolas-vandeput.medium.com/forecast-value-added-ebc163d7ccd) `[R]`
+30. [University of Birmingham: Doctoral Thesis on Demand Forecasting Under Asymmetric Loss](https://etheses.bham.ac.uk/id/eprint/12756/13/Elegbede2022PhD.pdf) `[R]`
+31. [arXiv: 2610.19829: Stochastic Inventory Discrepancy Modeling](https://arxiv.org/pdf/2610.19829) `[R]`
+32. [Atlantis Press: Phantom Inventory Detection in Retail Supply Chains using Federated Learning (ICAISDA 2025 proceedings)](https://www.atlantis-press.com/proceedings/icaisda-25/126022694) `[R]`
+33. [Supply Chain Dive: Phantom Inventory Management and Retail Bias](https://www.supplychaindive.com/news/phantom-inventory-management-retail-sales-forecasts/433231/) `[R]`
+34. [MIT DSpace: Inventory Discrepancies in Retail Store Operations](https://dspace.mit.edu/entities/publication/3869cd6f-ce70-4537-a682-33ee76b3c64d) `[R]`
 
 ### Forward Deployed Engineering & Enterprise Ontology
-35. [Forward Deployed Book: Palantir vs Traditional IT Consulting](https://forwarddeployedbook.com/palantir-vs-traditional-consulting)
-36. [Medium: A Comprehensive Analysis of Palantir's FDE Operating Model](https://medium.com/activated-thinker/a-comprehensive-analysis-of-palantirs-forward-deployed-engineering-model-4502a036b5e4)
-37. [Galde.app: Forward Deployed Engineering Methodology](https://galde.app/en/thought-leadership/forward-deployed-engineering-palantir-model)
-38. [EnTrans AI: How Modern Tech Companies Deploy Forward Engineers](https://www.entrans.ai/blog/how-companies-use-forward-deployed-engineers)
-39. [Elementum AI: Palantir Ontology Principles and Architecture](https://www.elementum.ai/blog/palantir-ontology-explained)
-40. [Palantir Docs: Foundry Enterprise Ontology Architecture](https://palantir.com/docs/foundry/architecture-center/ontology-system/)
-41. [OvalEdge: Agentic Context Engineering for Enterprise AI](https://www.ovaledge.com/blog/agentic-context-engineering)
+35. [Forward Deployed Book: Palantir vs Traditional IT Consulting](https://forwarddeployedbook.com/palantir-vs-traditional-consulting) `[R]`
+36. [Medium: A Comprehensive Analysis of Palantir's FDE Operating Model](https://medium.com/activated-thinker/a-comprehensive-analysis-of-palantirs-forward-deployed-engineering-model-4502a036b5e4) `[R]`
+37. [Galde.app: Forward Deployed Engineering Methodology](https://galde.app/en/thought-leadership/forward-deployed-engineering-palantir-model) `[R]`
+38. [EnTrans AI: How Modern Tech Companies Deploy Forward Engineers](https://www.entrans.ai/blog/how-companies-use-forward-deployed-engineers) `[R]`
+39. [Elementum AI: Palantir Ontology Principles and Architecture](https://www.elementum.ai/blog/palantir-ontology-explained) `[R]`
+40. [Palantir Docs: Foundry Enterprise Ontology Architecture](https://palantir.com/docs/foundry/architecture-center/ontology-system/) `[D]`
+41. [OvalEdge: Agentic Context Engineering for Enterprise AI](https://www.ovaledge.com/blog/agentic-context-engineering) `[R]`
 
 ### Compliance as Code & Poka-Yoke Systems
-42. [EAE Business School: ISO 9001 Quality Framework Limitations](https://retos-operaciones-logistica.eae.es/todo-lo-que-hay-que-saber-sobre-los-certificados-de-calidad-iso-9001/)
-43. [Oritain: Strategic Supply Chain Compliance Architecture](https://oritain.com/resources/blog/compliance-in-supply-chain-management-strategic-guide)
-44. [AR Racking: Poka-Yoke Engineering in Warehouse Systems](https://www.ar-racking.com/en/blog/poka-yoke-in-logistics-zero-errors-in-warehouse-design-and-operation/)
-45. [Merca.team: Training Within Industry (TWI) Job Instruction Standards](https://merca.team/en/training-within-industry/)
-46. [U.S. SEC (2013): SEC Charges Knight Capital With Violations of Market Access Rule](https://www.sec.gov/news/press-release/2013-222)
-47. [Boiral (Organization Science, 2003): ISO 9000: Outside the Iron Cage](https://doi.org/10.1287/orsc.14.6.720.24873)
-48. [Levine & Toffel (Management Science, 2010): Quality Management and Job Quality: How the ISO 9001 Standard for Quality Management Systems Affects Employees and Employers](https://doi.org/10.1287/mnsc.1100.1159)
-49. [OWASP Top 10 for LLM Applications (2025): LLM06 Excessive Agency](https://genai.owasp.org/llmrisk/llm06/)
+42. [EAE Business School: ISO 9001 Quality Framework Limitations](https://retos-operaciones-logistica.eae.es/todo-lo-que-hay-que-saber-sobre-los-certificados-de-calidad-iso-9001/) `[R]`
+43. [Oritain: Strategic Supply Chain Compliance Architecture](https://oritain.com/resources/blog/compliance-in-supply-chain-management-strategic-guide) `[R]`
+44. [AR Racking: Poka-Yoke Engineering in Warehouse Systems](https://www.ar-racking.com/en/blog/poka-yoke-in-logistics-zero-errors-in-warehouse-design-and-operation/) `[R]`
+45. [Merca.team: Training Within Industry (TWI) Job Instruction Standards](https://merca.team/en/training-within-industry/) `[R]`
+46. [U.S. SEC (2013): SEC Charges Knight Capital With Violations of Market Access Rule](https://www.sec.gov/news/press-release/2013-222) `[D]`
+47. [Boiral (Organization Science, 2003): ISO 9000: Outside the Iron Cage](https://doi.org/10.1287/orsc.14.6.720.24873) `[D]`
+48. [Levine & Toffel (Management Science, 2010): Quality Management and Job Quality: How the ISO 9001 Standard for Quality Management Systems Affects Employees and Employers](https://doi.org/10.1287/mnsc.1100.1159) `[D]`
+49. [OWASP Top 10 for LLM Applications (2025): LLM06 Excessive Agency](https://genai.owasp.org/llmrisk/llm06/) `[D]`
 
 ### Technical Architecture (Sidecar, CDC, Safe-Staging)
-50. [Microsoft TechCommunity: SAP CDC Connector and SLT Replication Architecture](https://techcommunity.microsoft.com/blog/sapapplications/sap-cdc-connector-and-slt---part-1---overview-and-architecture/3775190)
-51. [SAP Community: Architecture Alternatives for Transactional HANA Applications](https://community.sap.com/t5/technology-blog-posts-by-members/architecture-alternatives-for-transactional-hana-applications-an-overview/ba-p/12987716)
-52. [Data Flair Training: SAP HANA Sidecar Deployment Scenarios](https://data-flair.training/blogs/sap-hana-sidecar-scenario/)
-53. [Nextlytics: Best Practices for Change Data Capture (CDC) Implementation](https://www.nextlytics.com/blog/best-practices-of-implementing-change-data-capture-cdc-on-cds-views)
-54. [Azure Docs: SAP Change Data Capture Architecture Guide](https://docs.azure.cn/en-us/data-factory/sap-change-data-capture-introduction-architecture)
-55. [SAP Community: SLT Configuration for Sidecar Deployments](https://community.sap.com/t5/technology-blog-posts-by-members/implementing-slt-configuration-for-sidecar-in-sap-hana/ba-p/13407176)
-56. [SAP Help: Operational Data Provisioning (ODP) Framework](https://help.sap.com/docs/SAP_DATA_SERVICES/e54136ab6a4a43e6a370265bf0a2d744/1752bddf523c45f18ce305ac3bcd7e08.html)
-57. [SAP Learning: Staging Tables as Intermediate Storage in S/4HANA](https://learning.sap.com/videos/staging-tables-as-intermediate-storage-in-sap-s-4hana-migration-cockpit-pet-2026)
-58. [ResearchGate: Supply Chain Governance Models for Retail Compliance](https://www.researchgate.net/publication/398654559_A_Supply_Chain_Governance_Model_for_Enhancing_Compliance_and_Operational_Quality_Across_Retail_Networks)
-59. [Emerald Insights: Contractual Incentive Alignment Along the Supply Chain](https://www.emerald.com/ijopm/article/45/6/1250/465140/How-incentive-alignment-along-the-supply-chain)
+50. [Microsoft TechCommunity: SAP CDC Connector and SLT Replication Architecture](https://techcommunity.microsoft.com/blog/sapapplications/sap-cdc-connector-and-slt---part-1---overview-and-architecture/3775190) `[R]`
+51. [SAP Community: Architecture Alternatives for Transactional HANA Applications](https://community.sap.com/t5/technology-blog-posts-by-members/architecture-alternatives-for-transactional-hana-applications-an-overview/ba-p/12987716) `[R]`
+52. [Data Flair Training: SAP HANA Sidecar Deployment Scenarios](https://data-flair.training/blogs/sap-hana-sidecar-scenario/) `[R]`
+53. [Nextlytics: Best Practices for Change Data Capture (CDC) Implementation](https://www.nextlytics.com/blog/best-practices-of-implementing-change-data-capture-cdc-on-cds-views) `[R]`
+54. [Azure Docs: SAP Change Data Capture Architecture Guide](https://docs.azure.cn/en-us/data-factory/sap-change-data-capture-introduction-architecture) `[D]`
+55. [SAP Community: SLT Configuration for Sidecar Deployments](https://community.sap.com/t5/technology-blog-posts-by-members/implementing-slt-configuration-for-sidecar-in-sap-hana/ba-p/13407176) `[R]`
+56. [SAP Help: Operational Data Provisioning (ODP) Framework](https://help.sap.com/docs/SAP_DATA_SERVICES/e54136ab6a4a43e6a370265bf0a2d744/1752bddf523c45f18ce305ac3bcd7e08.html) `[D]`
+57. [SAP Learning: Staging Tables as Intermediate Storage in S/4HANA](https://learning.sap.com/videos/staging-tables-as-intermediate-storage-in-sap-s-4hana-migration-cockpit-pet-2026) `[R]`
+58. [ResearchGate: Supply Chain Governance Models for Retail Compliance](https://www.researchgate.net/publication/398654559_A_Supply_Chain_Governance_Model_for_Enhancing_Compliance_and_Operational_Quality_Across_Retail_Networks) `[R]`
+59. [Emerald Insights: Contractual Incentive Alignment Along the Supply Chain](https://www.emerald.com/ijopm/article/45/6/1250/465140/How-incentive-alignment-along-the-supply-chain) `[R]`
 
 ### Financial Econometrics & Causal Inference
-60. [Harvard Business School: Difference-in-Differences with Variation in Treatment Timing](https://www.hbs.edu/ris/Publication%20Files/21-112_8a5a4ab3-b9e7-447d-a0fe-a504b3890fb9.pdf)
-61. [MetricGate: Callaway & Sant'Anna Staggered DiD Econometrics](https://metricgate.com/docs/did-staggered-callaway-santanna/)
-62. [Fask.ai: Causal Identification of Retail Inventory Discrepancies](https://fask.ai/use-cases/inventory-discrepancies/)
+60. [Harvard Business School: Difference-in-Differences with Variation in Treatment Timing](https://www.hbs.edu/ris/Publication%20Files/21-112_8a5a4ab3-b9e7-447d-a0fe-a504b3890fb9.pdf) `[R]`
+61. [MetricGate: Callaway & Sant'Anna Staggered DiD Econometrics](https://metricgate.com/docs/did-staggered-callaway-santanna/) `[R]`
+62. [Fask.ai: Causal Identification of Retail Inventory Discrepancies](https://fask.ai/use-cases/inventory-discrepancies/) `[R]`
 
 ---
 *Bibliography revised on 2026-10-23: off-topic and unverifiable sources were replaced with the primary sources the text relies on (MIT NANDA, DeHoratius & Raman, Meyer & Rowan, Boiral, Levine & Toffel, Campbell, Kerr, Bloom et al., SEC, OWASP).*
+
+*Grades added on 2026-11-15 under the rule at the top of this section: 13 `[D]` and 49 `[R]`.*
