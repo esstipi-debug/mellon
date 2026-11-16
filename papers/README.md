@@ -16,6 +16,7 @@ Field papers for operators and executives, on the same thesis as this series. Th
 * **[The Tow the System Calls Idle](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/the-tow-the-system-calls-idle.pdf)** *(8 pages · PDF)*: why minutes the time standard has no category for are charged to the operator, and five steps a COO can take to let the floor contest them.
 * **[A Hundred Eyes, One Percent](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/a-hundred-eyes-one-percent.pdf)** *(9 pages · PDF)*: why a human approval can get weaker as the system it checks gets better, and how a CFO can test the control, not the signature.
 * **[Use It or Lose It](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/use-it-or-lose-it.pdf)** *(8 pages · PDF)*: why a budget that expires on a fixed date pays for a rush in its last week, and the rule a CEO can change.
+* **[Who Is Allowed to Be Right?](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/who-is-allowed-to-be-right.pdf)** *(8 pages · PDF)*: why the person who sees a rule fail after go-live may not be the one who can stop it, and how a CEO can measure the gap.
 
 ---
 

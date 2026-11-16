@@ -27,6 +27,7 @@ Field papers for operators and executives. The PDFs open in the browser.
 | **[The Tow the System Calls Idle](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/the-tow-the-system-calls-idle.pdf)** *(8 pages · PDF)* | A minute needs a name: a fact the time standard has no category for goes to whatever category is left, and lands on the driver. Let the floor contest the record, and count the reasons that come back: each one is a name the standard is missing. |
 | **[A Hundred Eyes, One Percent](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/a-hundred-eyes-one-percent.pdf)** *(9 pages · PDF)* | An approval only controls what the approver would catch. When errors are rare, people can miss more of them, and the log looks the same. Test the control, not the signature, as airports test their screeners. |
 | **[Use It or Lose It](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/use-it-or-lose-it.pdf)** *(8 pages · PDF)* | When a budget expires on a fixed date, the rule decides who pays for the rush. The step for a CEO is to change the rule, not to preach. |
+| **[Who Is Allowed to Be Right?](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/who-is-allowed-to-be-right.pdf)** *(8 pages · PDF)* | After a go-live, being right about a rule and being allowed to stop it can sit two weeks apart. A CEO can measure the gap for one rule: who sees it fail first, who can stop it, and how many days pass in between. |
 
 ---
 
