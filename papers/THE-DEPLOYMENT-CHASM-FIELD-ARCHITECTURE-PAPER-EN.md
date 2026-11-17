@@ -1,9 +1,9 @@
 # THE DEPLOYMENT CHASM — FIELD ARCHITECTURE WHITEPAPER
 ## Deterministic Guardrails, Ground-Truth Accounting, and Economic Governance for Enterprise ERP, WMS, and Industrial AI Deployments (FDS 2.0)
 
-**Author:** Marcos Stipicich — *Forward Deployed Strategist & Ground-Truth Systems Architect*  
+**Author:** Marcos Stipicich — *Deployment Strategist · Supply Chain & Operations*  
 **Edition:** October 2026 — *Field Architecture & Executive Engineering Whitepaper*  
-**Canonical Source Work:** Authorized technical and executive extract derived from the comprehensive treatise *The Deployment Chasm: Why Enterprise Technology Collapses on the Gemba — And How to Build for the Ground Truth* (Definitive Master Edition, 14 Chapters).  
+**Canonical Source Work:** Authorized technical and executive extract derived from the comprehensive treatise *The Deployment Chasm: Why Enterprise Technology Collapses on the Gemba — And How to Build for the Ground Truth* (Definitive Master Edition, 15 Chapters).  
 **Scope:** Executable reference architecture, operational theorems, physical-accounting integration over enterprise ERP schemas (including SAP MM/FI `T156`/`OBYC` specifications), P&L econometrics, 134-day cutover protocol, and `IRB-12` pre-deployment audit instrument  
 **Methodological Standard:** *Kill the Fluff* Protocol — Every claim requires an explicit causal mechanism, an observable empirical metric, and a formal falsification condition.
 

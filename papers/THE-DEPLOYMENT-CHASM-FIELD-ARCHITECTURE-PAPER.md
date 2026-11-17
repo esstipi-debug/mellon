@@ -1,7 +1,7 @@
 # EL ABISMO DEL DESPLIEGUE — WHITEPAPER DE ARQUITECTURA DE TERRENO
 ## Guardarraíles Deterministas, Contabilidad de Terreno y Gobernanza Económica para Despliegues de ERP, WMS e Inteligencia Artificial Industrial (FDS 2.0)
 
-**Autor:** Marcos Stipicich · *Estratega de Despliegue en Terreno (Forward Deployed Strategist) y Arquitecto de Sistemas de Planta (Ground-Truth Systems Architect)*  
+**Autor:** Marcos Stipicich · *Deployment Strategist · Supply Chain & Operations*  
 **Edición:** Octubre de 2026 — *Whitepaper Ejecutivo y de Arquitectura de Terreno*  
 **Documento Canónico de Origen:** Extracto técnico y ejecutivo autorizado del tratado mayor *El Abismo del Despliegue: Por Qué la Tecnología Empresarial Colapsa en el Gemba — Y Cómo Construir para el Terreno* (Edición Definitiva Master, 14 Capítulos).  
 **Alcance:** Arquitectura de referencia ejecutable, teoremas operativos, integración físico-contable sobre esquemas de ERP empresariales (incluyendo especificaciones SAP MM/FI `T156`/`OBYC`), econometría de P&L, protocolo de corte de 134 días e instrumento de auditoría pre-despliegue `IRB-12`  
