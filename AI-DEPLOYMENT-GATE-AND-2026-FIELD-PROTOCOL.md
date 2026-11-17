@@ -5,7 +5,7 @@
 **Author:** Marcos Stipicich  
 **Jurisdictional & Technical Scope:** Jurisdiction-agnostic (`US / Europe / LatAm` · functional currency `USD` · accounting standards `IFRS / US GAAP` · reference transactional schemas applicable to `SAP S/4HANA`, `Oracle NetSuite`, `Microsoft Dynamics 365`, `Manhattan Active`, and `Odoo Enterprise`).  
 **Target Audience:** Private Equity Operating Partners, CFOs, COOs, AI Investment Committees, Global Expert Networks, and Enterprise `ERP/WMS` Architects.  
-**Relationship to Canonical Corpus:** Standalone financial, governance, and empirical field-study companion to the [Field Architecture Whitepaper](papers/THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md) and [DOC-07 Formal Mechanics Specification](FORMAL-MECHANICS-EMPIRICAL-AUDIT.md).
+**Relationship to Canonical Corpus:** Standalone financial, governance, and empirical field-study companion to the [22-Page Field Architecture Whitepaper (`PDF`)](papers/THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.pdf) ([Markdown source](papers/THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md)) and [DOC-07 Formal Mechanics Specification](FORMAL-MECHANICS-EMPIRICAL-AUDIT.md).
 
 **Mandatory Epistemic Evidence Taxonomy:**
 * `[D]` Empirical finding read directly from a published primary source (peer-reviewed journal, regulatory `SEC 10-K/10-Q` filing, or institutional report with declared methodology).
