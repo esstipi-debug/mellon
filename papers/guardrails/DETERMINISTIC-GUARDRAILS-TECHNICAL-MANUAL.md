@@ -79,7 +79,7 @@ class YardGateEvent(BaseModel):
 
 In cyber-physical deployments, modeling operational flow via a single scalar state variable (e.g., `STATUS = 'IN_RECEIVING'`) produces deadlock. If arriving cargo exhibits physical defects during night-shift unsealing, a 1D state machine forces the facility into a false dilemma: either detain the carrier on the apron indefinitely to avoid financial posting, or post the goods to clear the dock and assume the unverified liability.
 
-We formally decouple the state of each handling unit (`SSCC`) across three orthogonal coordinates ([`THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER.md:167-208`](../THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md)):
+We formally decouple the state of each handling unit (`SSCC`) across three orthogonal coordinates ([`THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md:168-209`](../THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md)):
 
 $$\mathbf{X}_t = (s_t, a_t, d_t) \in \mathcal{S} \times \mathcal{A} \times \mathcal{D}$$
 

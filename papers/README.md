@@ -21,16 +21,14 @@ Field papers for operators and executives, on the same thesis as this series. Th
 
 ---
 
-## ⚡ 1. The Executive Field Architecture Specification (24 Pages)
+## ⚡ 1. The Executive Field Architecture Specification
 
-For executive leadership, investment committees, and engineering architects, the mathematical proofs, code contracts, transition tables, and accounting transmission models are condensed into the 24-page **Field Architecture Paper**:
+For executive leadership, investment committees, and engineering architects, the mathematical proofs, code contracts, transition tables, and accounting transmission models are condensed into the **Field Architecture Paper**. The Markdown below is the current text. The PDF editions built on 2026-10-26 were withdrawn on 2026-11-17 because they predate corrections made to the source text.
 
 | Document | Format | Link |
 | :--- | :---: | :--- |
-| **English Field Architecture Paper (24 pages)** | PDF | [`THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.pdf`](THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.pdf) |
-| **English Field Architecture Specification** | Markdown | [`THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md`](THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md) |
-| **Spanish Field Architecture Paper (25 pages)** | PDF | [`THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER.pdf`](THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER.pdf) |
-| **Spanish Field Architecture Specification** | Markdown | [`THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER.md`](THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER.md) |
+| **English Field Architecture Paper** | Markdown | [`THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md`](THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER-EN.md) |
+| **Spanish Field Architecture Paper** | Markdown | [`THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER.md`](THE-DEPLOYMENT-CHASM-FIELD-ARCHITECTURE-PAPER.md) |
 
 ---
 
