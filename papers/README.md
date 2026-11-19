@@ -18,6 +18,7 @@ Field papers for operators and executives, on the same thesis as this series. Th
 * **[Use It or Lose It](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/use-it-or-lose-it.pdf)** *(8 pages · PDF)*: why a budget that expires on a fixed date pays for a rush in its last week, and the rule a CEO can change.
 * **[Who Is Allowed to Be Right?](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/who-is-allowed-to-be-right.pdf)** *(8 pages · PDF)*: why the person who sees a rule fail after go-live may not be the one who can stop it, and how a CEO can measure the gap.
 * **[Put the Toll on the Bridge](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/put-the-toll-on-the-bridge.pdf)** *(10 pages · PDF)*: why a step that guards an expensive mistake earns its place on a shift screen while the same step on every line teaches the crew to get around it, and four questions a COO can ask before approving the next screen. In Spanish: [Poné el peaje en el puente](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/pone-el-peaje-en-el-puente.pdf).
+* **[Who the Form Is For](https://cdn.jsdelivr.net/gh/esstipi-debug/esstipi-debug@main/papers/who-the-form-is-for.pdf)** *(9 pages · PDF)*: why a quality record built for the auditor teaches the floor to fill it rather than use it, and four questions a COO can ask of the records an auditor reads.
 
 ---
 
