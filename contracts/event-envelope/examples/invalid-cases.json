@@ -1,0 +1,771 @@
+[
+  {
+    "case": "float in payload",
+    "error": "floating-point number",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "blind_count.recorded",
+        "kind": "record",
+        "actor": {
+          "type": "system",
+          "role": "rf-scanner",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "bin",
+            "id": "A-01-03"
+          }
+        ],
+        "summary": "Blind count of 48 units at bin A-01-03 for delivery DLV-2207.",
+        "occurred_at": "2026-11-22T13:05:00Z",
+        "recorded_at": "2026-11-22T13:05:01Z",
+        "payload": {
+          "counted_units": 48.5,
+          "unit": "each"
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "sha256": "9b2e7c4a1f6d3b8e5c0a7f2d9b4e1c6a3f8d5b0e7c2a9f4d1b6e3c8a5f0d7b2e"
+          }
+        ],
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "aa41a4ef37778cc364ccdffe0cbca5f81d7ebbb144d60dfc01898b988c192024",
+        "hash": "c0642e4b2aeca42074222d2744e8324c9b005419755a14613518e852577f492b"
+      }
+    ]
+  },
+  {
+    "case": "name in actor",
+    "error": "actor carries 'name'",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0003",
+        "event_type": "quarantine.approved",
+        "kind": "signature",
+        "actor": {
+          "type": "person",
+          "role": "shift-lead",
+          "seal": "3f1c9a7e5b2d4c6f8a0e1b3d5c7f9a2e4b6d8c0f1a3e5b7d9c2f4a6e8b0d1c3f",
+          "name": "Jane Doe"
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          }
+        ],
+        "summary": "The shift lead approved the quarantine hold proposed in rcv-0002.",
+        "occurred_at": "2026-11-22T13:09:40Z",
+        "recorded_at": "2026-11-22T13:09:41Z",
+        "payload": {
+          "decision": "approved",
+          "proposal_event_id": "rcv-0002"
+        },
+        "signature_ref": "approval-7f3a",
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "e12b510fc11ae6f23c686bec15195292574c17399617270b31d7f71c36753cc0",
+        "hash": "f195eb32977289f97d68e3b23c7a01696f6a40ad6f70bfc4636c5750d9ae0c4d"
+      }
+    ]
+  },
+  {
+    "case": "badge number as a field",
+    "error": "unknown field: operator_badge_id",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "blind_count.recorded",
+        "kind": "record",
+        "actor": {
+          "type": "system",
+          "role": "rf-scanner",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "bin",
+            "id": "A-01-03"
+          }
+        ],
+        "summary": "Blind count of 48 units at bin A-01-03 for delivery DLV-2207.",
+        "occurred_at": "2026-11-22T13:05:00Z",
+        "recorded_at": "2026-11-22T13:05:01Z",
+        "payload": {
+          "counted_units": 48,
+          "unit": "each"
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "sha256": "9b2e7c4a1f6d3b8e5c0a7f2d9b4e1c6a3f8d5b0e7c2a9f4d1b6e3c8a5f0d7b2e"
+          }
+        ],
+        "signature_ref": null,
+        "operator_badge_id": "B-4471",
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "aa41a4ef37778cc364ccdffe0cbca5f81d7ebbb144d60dfc01898b988c192024",
+        "hash": "9ba883868c25d67e34a7a2796012fdff2c192ad4de2a7740ae5264c24a6efd38"
+      }
+    ]
+  },
+  {
+    "case": "kind outside the list",
+    "error": "kind 'decision' must be one of",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0003",
+        "event_type": "quarantine.approved",
+        "kind": "decision",
+        "actor": {
+          "type": "person",
+          "role": "shift-lead",
+          "seal": "3f1c9a7e5b2d4c6f8a0e1b3d5c7f9a2e4b6d8c0f1a3e5b7d9c2f4a6e8b0d1c3f"
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          }
+        ],
+        "summary": "The shift lead approved the quarantine hold proposed in rcv-0002.",
+        "occurred_at": "2026-11-22T13:09:40Z",
+        "recorded_at": "2026-11-22T13:09:41Z",
+        "payload": {
+          "decision": "approved",
+          "proposal_event_id": "rcv-0002"
+        },
+        "signature_ref": "approval-7f3a",
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "e12b510fc11ae6f23c686bec15195292574c17399617270b31d7f71c36753cc0",
+        "hash": "6c14f5ad105b341f670241141ceaf61a300485f4a3cdb13048c8d315e62a5f64"
+      }
+    ]
+  },
+  {
+    "case": "local time instead of UTC",
+    "error": "must be UTC",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "blind_count.recorded",
+        "kind": "record",
+        "actor": {
+          "type": "system",
+          "role": "rf-scanner",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "bin",
+            "id": "A-01-03"
+          }
+        ],
+        "summary": "Blind count of 48 units at bin A-01-03 for delivery DLV-2207.",
+        "occurred_at": "2026-11-22T10:05:00-03:00",
+        "recorded_at": "2026-11-22T13:05:01Z",
+        "payload": {
+          "counted_units": 48,
+          "unit": "each"
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "sha256": "9b2e7c4a1f6d3b8e5c0a7f2d9b4e1c6a3f8d5b0e7c2a9f4d1b6e3c8a5f0d7b2e"
+          }
+        ],
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "aa41a4ef37778cc364ccdffe0cbca5f81d7ebbb144d60dfc01898b988c192024",
+        "hash": "66a7c6207c2050963f664270cd24c6930e67ceee8907347c2d1b646d2551cbfb"
+      }
+    ]
+  },
+  {
+    "case": "execution without its approval",
+    "error": "needs signature_ref",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0004",
+        "event_type": "stock.moved_to_quarantine",
+        "kind": "execution",
+        "actor": {
+          "type": "system",
+          "role": "wms-adapter",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "location",
+            "id": "Q-01"
+          }
+        ],
+        "summary": "48 units of DLV-2207 moved from DOCK-3 to quarantine location Q-01.",
+        "occurred_at": "2026-11-22T13:10:05Z",
+        "recorded_at": "2026-11-22T13:10:06Z",
+        "payload": {
+          "from_location": "DOCK-3",
+          "to_location": "Q-01",
+          "units": 48
+        },
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "2e987494c22235959ee21cbbcaa12775e333318cdbf884270b56663e539cdce0",
+        "hash": "bd9182be101a40c974143e6ce084dccde2802243baed71957cb88aca37977f18"
+      }
+    ]
+  },
+  {
+    "case": "media inline",
+    "error": "media travel by hash",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "blind_count.recorded",
+        "kind": "record",
+        "actor": {
+          "type": "system",
+          "role": "rf-scanner",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "bin",
+            "id": "A-01-03"
+          }
+        ],
+        "summary": "Blind count of 48 units at bin A-01-03 for delivery DLV-2207.",
+        "occurred_at": "2026-11-22T13:05:00Z",
+        "recorded_at": "2026-11-22T13:05:01Z",
+        "payload": {
+          "counted_units": 48,
+          "unit": "each"
+        },
+        "attachments": [
+          {
+            "type": "audio",
+            "data": "UklGRiQAAABXQVZF"
+          }
+        ],
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "aa41a4ef37778cc364ccdffe0cbca5f81d7ebbb144d60dfc01898b988c192024",
+        "hash": "e41d4c3fa7595c1bd5998752275676f015cf2315c90040d2734e2298794437ad"
+      }
+    ]
+  },
+  {
+    "case": "summary edited after sealing",
+    "error": "hash does not match the envelope",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "blind_count.recorded",
+        "kind": "record",
+        "actor": {
+          "type": "system",
+          "role": "rf-scanner",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "bin",
+            "id": "A-01-03"
+          }
+        ],
+        "summary": "Blind count of 50 units at bin A-01-03 for delivery DLV-2207.",
+        "occurred_at": "2026-11-22T13:05:00Z",
+        "recorded_at": "2026-11-22T13:05:01Z",
+        "payload": {
+          "counted_units": 48,
+          "unit": "each"
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "sha256": "9b2e7c4a1f6d3b8e5c0a7f2d9b4e1c6a3f8d5b0e7c2a9f4d1b6e3c8a5f0d7b2e"
+          }
+        ],
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "aa41a4ef37778cc364ccdffe0cbca5f81d7ebbb144d60dfc01898b988c192024",
+        "hash": "c0642e4b2aeca42074222d2744e8324c9b005419755a14613518e852577f492b"
+      }
+    ]
+  },
+  {
+    "case": "payload edited after sealing",
+    "error": "payload_sha256 does not match the payload",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "blind_count.recorded",
+        "kind": "record",
+        "actor": {
+          "type": "system",
+          "role": "rf-scanner",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "bin",
+            "id": "A-01-03"
+          }
+        ],
+        "summary": "Blind count of 48 units at bin A-01-03 for delivery DLV-2207.",
+        "occurred_at": "2026-11-22T13:05:00Z",
+        "recorded_at": "2026-11-22T13:05:01Z",
+        "payload": {
+          "counted_units": 50,
+          "unit": "each"
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "sha256": "9b2e7c4a1f6d3b8e5c0a7f2d9b4e1c6a3f8d5b0e7c2a9f4d1b6e3c8a5f0d7b2e"
+          }
+        ],
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "aa41a4ef37778cc364ccdffe0cbca5f81d7ebbb144d60dfc01898b988c192024",
+        "hash": "36fd63a7dfc88aafab4a7d7147da6671b642c08b15c5a82cc95ecd8cc264b449"
+      }
+    ]
+  },
+  {
+    "case": "gap in the stream",
+    "error": "there is a gap or a repeat",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "blind_count.recorded",
+        "kind": "record",
+        "actor": {
+          "type": "system",
+          "role": "rf-scanner",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "bin",
+            "id": "A-01-03"
+          }
+        ],
+        "summary": "Blind count of 48 units at bin A-01-03 for delivery DLV-2207.",
+        "occurred_at": "2026-11-22T13:05:00Z",
+        "recorded_at": "2026-11-22T13:05:01Z",
+        "payload": {
+          "counted_units": 48,
+          "unit": "each"
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "sha256": "9b2e7c4a1f6d3b8e5c0a7f2d9b4e1c6a3f8d5b0e7c2a9f4d1b6e3c8a5f0d7b2e"
+          }
+        ],
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "aa41a4ef37778cc364ccdffe0cbca5f81d7ebbb144d60dfc01898b988c192024",
+        "hash": "c0642e4b2aeca42074222d2744e8324c9b005419755a14613518e852577f492b"
+      },
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0003",
+        "event_type": "quarantine.approved",
+        "kind": "signature",
+        "actor": {
+          "type": "person",
+          "role": "shift-lead",
+          "seal": "3f1c9a7e5b2d4c6f8a0e1b3d5c7f9a2e4b6d8c0f1a3e5b7d9c2f4a6e8b0d1c3f"
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          }
+        ],
+        "summary": "The shift lead approved the quarantine hold proposed in rcv-0002.",
+        "occurred_at": "2026-11-22T13:09:40Z",
+        "recorded_at": "2026-11-22T13:09:41Z",
+        "payload": {
+          "decision": "approved",
+          "proposal_event_id": "rcv-0002"
+        },
+        "signature_ref": "approval-7f3a",
+        "contract": "event-envelope/1",
+        "seq": 3,
+        "prev_hash": "e90ba847efcdba51acca16490413af27db1e531e9b796c9cb8b75b63c7bc2b61",
+        "payload_sha256": "e12b510fc11ae6f23c686bec15195292574c17399617270b31d7f71c36753cc0",
+        "hash": "efe2957ef9ef59a46b30a461dff811cfa03e6fb8941e150766abb9a562dfe014"
+      }
+    ]
+  },
+  {
+    "case": "chain broken",
+    "error": "prev_hash does not match the hash of envelope 1",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "blind_count.recorded",
+        "kind": "record",
+        "actor": {
+          "type": "system",
+          "role": "rf-scanner",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "bin",
+            "id": "A-01-03"
+          }
+        ],
+        "summary": "Blind count of 48 units at bin A-01-03 for delivery DLV-2207.",
+        "occurred_at": "2026-11-22T13:05:00Z",
+        "recorded_at": "2026-11-22T13:05:01Z",
+        "payload": {
+          "counted_units": 48,
+          "unit": "each"
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "sha256": "9b2e7c4a1f6d3b8e5c0a7f2d9b4e1c6a3f8d5b0e7c2a9f4d1b6e3c8a5f0d7b2e"
+          }
+        ],
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "aa41a4ef37778cc364ccdffe0cbca5f81d7ebbb144d60dfc01898b988c192024",
+        "hash": "c0642e4b2aeca42074222d2744e8324c9b005419755a14613518e852577f492b"
+      },
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0002",
+        "event_type": "count_gap.quarantine_proposed",
+        "kind": "proposal",
+        "actor": {
+          "type": "agent",
+          "role": "receiving-assistant",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "sku",
+            "id": "SKU-1001"
+          }
+        ],
+        "summary": "The count is 2 units short of the manifest: hold the delivery in quarantine until a recount.",
+        "occurred_at": "2026-11-22T13:05:02Z",
+        "recorded_at": "2026-11-22T13:05:02Z",
+        "payload": {
+          "counted_units": 48,
+          "expected_units": 50,
+          "difference_units": -2
+        },
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 2,
+        "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "payload_sha256": "42386fefd7995eea5d5d8292f79a8be07661137354b88704d519be1a42d6fb2d",
+        "hash": "d454e1ce3574e69d402f5febcf0aa9165b60321baff1226f1a048ba4c58e0440"
+      }
+    ]
+  },
+  {
+    "case": "two streams mixed",
+    "error": "belongs to example-dock/putaway",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "blind_count.recorded",
+        "kind": "record",
+        "actor": {
+          "type": "system",
+          "role": "rf-scanner",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "bin",
+            "id": "A-01-03"
+          }
+        ],
+        "summary": "Blind count of 48 units at bin A-01-03 for delivery DLV-2207.",
+        "occurred_at": "2026-11-22T13:05:00Z",
+        "recorded_at": "2026-11-22T13:05:01Z",
+        "payload": {
+          "counted_units": 48,
+          "unit": "each"
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "sha256": "9b2e7c4a1f6d3b8e5c0a7f2d9b4e1c6a3f8d5b0e7c2a9f4d1b6e3c8a5f0d7b2e"
+          }
+        ],
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "aa41a4ef37778cc364ccdffe0cbca5f81d7ebbb144d60dfc01898b988c192024",
+        "hash": "c0642e4b2aeca42074222d2744e8324c9b005419755a14613518e852577f492b"
+      },
+      {
+        "producer": "example-dock",
+        "stream": "putaway",
+        "event_id": "rcv-0002",
+        "event_type": "count_gap.quarantine_proposed",
+        "kind": "proposal",
+        "actor": {
+          "type": "agent",
+          "role": "receiving-assistant",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "sku",
+            "id": "SKU-1001"
+          }
+        ],
+        "summary": "The count is 2 units short of the manifest: hold the delivery in quarantine until a recount.",
+        "occurred_at": "2026-11-22T13:05:02Z",
+        "recorded_at": "2026-11-22T13:05:02Z",
+        "payload": {
+          "counted_units": 48,
+          "expected_units": 50,
+          "difference_units": -2
+        },
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 2,
+        "prev_hash": "c0642e4b2aeca42074222d2744e8324c9b005419755a14613518e852577f492b",
+        "payload_sha256": "42386fefd7995eea5d5d8292f79a8be07661137354b88704d519be1a42d6fb2d",
+        "hash": "159fe2532be1a7909247d22055c4ee8fba8d889b7c859330b3cb2fb548d4c041"
+      }
+    ]
+  },
+  {
+    "case": "stream that does not start at 1",
+    "error": "the stream starts at seq 2, not 1",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0002",
+        "event_type": "count_gap.quarantine_proposed",
+        "kind": "proposal",
+        "actor": {
+          "type": "agent",
+          "role": "receiving-assistant",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "sku",
+            "id": "SKU-1001"
+          }
+        ],
+        "summary": "The count is 2 units short of the manifest: hold the delivery in quarantine until a recount.",
+        "occurred_at": "2026-11-22T13:05:02Z",
+        "recorded_at": "2026-11-22T13:05:02Z",
+        "payload": {
+          "counted_units": 48,
+          "expected_units": 50,
+          "difference_units": -2
+        },
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 2,
+        "prev_hash": "c0642e4b2aeca42074222d2744e8324c9b005419755a14613518e852577f492b",
+        "payload_sha256": "42386fefd7995eea5d5d8292f79a8be07661137354b88704d519be1a42d6fb2d",
+        "hash": "e90ba847efcdba51acca16490413af27db1e531e9b796c9cb8b75b63c7bc2b61"
+      }
+    ]
+  },
+  {
+    "case": "event_id repeated",
+    "error": "event_id 'rcv-0001' repeats",
+    "stream": [
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "blind_count.recorded",
+        "kind": "record",
+        "actor": {
+          "type": "system",
+          "role": "rf-scanner",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "bin",
+            "id": "A-01-03"
+          }
+        ],
+        "summary": "Blind count of 48 units at bin A-01-03 for delivery DLV-2207.",
+        "occurred_at": "2026-11-22T13:05:00Z",
+        "recorded_at": "2026-11-22T13:05:01Z",
+        "payload": {
+          "counted_units": 48,
+          "unit": "each"
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "sha256": "9b2e7c4a1f6d3b8e5c0a7f2d9b4e1c6a3f8d5b0e7c2a9f4d1b6e3c8a5f0d7b2e"
+          }
+        ],
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 1,
+        "prev_hash": "GENESIS",
+        "payload_sha256": "aa41a4ef37778cc364ccdffe0cbca5f81d7ebbb144d60dfc01898b988c192024",
+        "hash": "c0642e4b2aeca42074222d2744e8324c9b005419755a14613518e852577f492b"
+      },
+      {
+        "producer": "example-dock",
+        "stream": "receiving",
+        "event_id": "rcv-0001",
+        "event_type": "count_gap.quarantine_proposed",
+        "kind": "proposal",
+        "actor": {
+          "type": "agent",
+          "role": "receiving-assistant",
+          "seal": null
+        },
+        "objects": [
+          {
+            "type": "delivery",
+            "id": "DLV-2207"
+          },
+          {
+            "type": "sku",
+            "id": "SKU-1001"
+          }
+        ],
+        "summary": "The count is 2 units short of the manifest: hold the delivery in quarantine until a recount.",
+        "occurred_at": "2026-11-22T13:05:02Z",
+        "recorded_at": "2026-11-22T13:05:02Z",
+        "payload": {
+          "counted_units": 48,
+          "expected_units": 50,
+          "difference_units": -2
+        },
+        "signature_ref": null,
+        "contract": "event-envelope/1",
+        "seq": 2,
+        "prev_hash": "c0642e4b2aeca42074222d2744e8324c9b005419755a14613518e852577f492b",
+        "payload_sha256": "42386fefd7995eea5d5d8292f79a8be07661137354b88704d519be1a42d6fb2d",
+        "hash": "4999aa7ca99437fde4aeaa6dfa1c40d108709550bdb53b23af4fdb6c9065ca40"
+      }
+    ]
+  }
+]
