@@ -7,6 +7,13 @@ only upon qualified external stimuli, contract violations, or operational risks.
 
 from __future__ import annotations
 
+from .envelope_bridge import (
+    decision_to_event,
+    seal_credential,
+    seal_stream,
+    verdict_to_event,
+    write_jsonl,
+)
 from .guards import IthildinGuard, RiskLevel, StagingAction, StagingVerdict
 from .probes import PassiveEventProbe, ProbeReport, STANDARD_5_COLUMNS
 from .triggers import ConditionalTrigger, IthildinTriggerRegistry, TriggerResult
@@ -22,4 +29,9 @@ __all__ = [
     "StagingAction",
     "StagingVerdict",
     "TriggerResult",
+    "decision_to_event",
+    "seal_credential",
+    "seal_stream",
+    "verdict_to_event",
+    "write_jsonl",
 ]
