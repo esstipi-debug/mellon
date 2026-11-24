@@ -68,7 +68,10 @@ def xmr_chart(values, limits: ControlLimits | None = None, lcl_floor: float | No
     df["center"] = lim.center
     df["ucl"] = lim.ucl
     df["lcl"] = lim.lcl
-    df["zone"] = np.floor(np.abs(x - lim.center) / lim.sigma).clip(0, 3)
+    if lim.sigma == 0:
+        df["zone"] = np.where(x == lim.center, 0.0, 3.0)
+    else:
+        df["zone"] = np.floor(np.abs(x - lim.center) / lim.sigma).clip(0, 3)
     df["side"] = np.sign(x - lim.center)
     return df
 
@@ -197,6 +200,9 @@ def degradation_alarm(
     """
     base = baseline_stability(baseline)
     m = np.asarray(monitoring, float)
+    m = m[~np.isnan(m)]
+    if len(m) == 0:
+        raise ValueError("monitoring no tiene puntos finitos")
     chequeo = {
         "baseline_stable": base["stable"],
         "baseline_fraction_flagged": base["fraction_flagged"],
@@ -223,7 +229,7 @@ def degradation_alarm(
         }
 
     lim = compute_limits(baseline, lcl_floor)
-    viol = nelson_rules(monitoring, lim)
+    viol = nelson_rules(m, lim)
 
     bad_side = 1 if direction == "higher_is_better" else -1
     # Un corrimiento "malo" es hacia arriba si menor es mejor.

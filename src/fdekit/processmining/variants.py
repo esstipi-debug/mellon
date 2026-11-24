@@ -117,7 +117,7 @@ def rework_summary(
     df = log.df
     if rework_activities is None:
         pat = r"REWORK|REPACK|REPICK|EXCEPTION|SHORT|FAIL|RETURN"
-        direct = [a for a in log.activities if pd.Series([a]).str.contains(pat).iloc[0]]
+        direct = [a for a in log.activities if pd.Series([a]).str.contains(pat, case=False).iloc[0]]
         consequences = _rework_consequences(df, direct, consequence_threshold)
     else:
         direct, consequences = list(rework_activities), []

@@ -187,14 +187,14 @@ class ValueCase:
         w: list[str] = []
         arch = self.archetype
 
-        attr_p50 = float(np.median([l.attribution.mode for l in self.levers])) if self.levers else 0
+        attr_p50 = float(np.median([lev.attribution.mode for lev in self.levers])) if self.levers else 0
         if attr_p50 > 0.6 and not self.has_control_group:
             w.append(
                 f"atribucion mediana {attr_p50:.0%} sin grupo de control: no es estimable, "
                 "es un deseo. Definir contrafactual (herramienta 6) antes de firmar."
             )
 
-        labor = [l for l in self.levers if l.unit == "h/ano"]
+        labor = [lev for lev in self.levers if lev.unit == "h/ano"]
 
         # Procedencia del flex. Es la variable mas importante del modelo, y un
         # prior sin validar no se puede llevar a una reunion de renovacion.
@@ -212,7 +212,7 @@ class ValueCase:
                 "estadistica — la institucion que manda es el contrato, no el pais."
             )
 
-        if labor and max(l.cash_share_mode for l in labor) > 0.5:
+        if labor and max(lev.cash_share_mode for lev in labor) > 0.5:
             w.append(
                 f"cash_share de horas > 50% (labor_flex_share={arch.labor_flex_share:.0%}): "
                 "solo cuenta como caja lo que se deja de pagar. El resto es capacidad."

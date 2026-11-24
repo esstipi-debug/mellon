@@ -353,7 +353,7 @@ def test_la_anotacion_en_minusculas_no_genera_un_evento(store):
     supersede(store, a.id, b.id, reason="racks", apply=True, today=HOY)
 
     hist = store.get(a.id).historial_statements
-    assert any(l.startswith(f"{HOY.isoformat()} statement al momento") for l in hist)
+    assert any(line.startswith(f"{HOY.isoformat()} statement al momento") for line in hist)
     assert set(build_event_log(store).df["activity"]) <= {"DECIDIDA", "SUPERADA"}
 
 

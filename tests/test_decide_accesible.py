@@ -87,7 +87,7 @@ def test_el_riesgo_no_se_senala_solo_con_color(store):
 def test_el_vencido_no_se_senala_solo_con_color(store):
     h = render_html(store, "pudahuel", today=HOY)
     # El texto tiene que estar en la fila, no solo en la clase CSS.
-    fila = next(l for l in h.splitlines() if "C-001" in l)
+    fila = next(line for line in h.splitlines() if "C-001" in line)
     assert "vencid" in fila.lower().replace('class="vencido"', "")
 
 

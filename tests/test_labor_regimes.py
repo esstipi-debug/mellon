@@ -7,7 +7,7 @@ alguien los sube sin traer fuente nueva, estos tests fallan.
 
 import pytest
 
-from fdekit.value import ARCHETYPES, ValueCase, build_archetype, cost_to_serve, levers_from_findings
+from fdekit.value import ARCHETYPES, build_archetype
 from fdekit.value.labor_regimes import (
     REGIMES,
     STAFFING_MODELS,

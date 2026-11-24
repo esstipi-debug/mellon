@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from ..gemba.transcribe import _redact
 from .schema import Anchor
-from .transcript import TranscriptStore, Utterance, mmss
+from .transcript import TranscriptStore, mmss
 
 MAX_CITA = 500
 

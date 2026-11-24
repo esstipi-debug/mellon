@@ -12,12 +12,22 @@ README); estos son los limites que hay que leer antes de llevarlo a una instalac
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
+from pydantic import ValidationError
 
-from core_event_contracts import YardGateEvent, compute_hmac_proof
+from core_event_contracts import (
+    BlindCycleCountEvent,
+    ReturnAuthorizationEvent,
+    ScrapDisposalEvent,
+    ScrapDispositionReason,
+    YardGateEvent,
+    compute_hmac_proof,
+    normalize_utc_timestamp,
+)
 from fdekit.ithildin.guards import IthildinGuard, RiskLevel, StagingAction
 from inbound_fsm_guardrail import (
     InboundDeliveryFSM,
@@ -146,3 +156,94 @@ def test_ithildin_idempotency_survives_a_new_instance():
     assert primera.evaluate_and_commit(accion, token).approved is True
     segunda = IthildinGuard(secret_key=SECRET)
     assert segunda.evaluate_and_commit(accion, token).approved is False
+
+
+# ---- limites adicionales detectados en auditoria forense ---------------------------------
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="BlindCycleCountEvent valida SHA-256 sin clave usando manifest_expected_units en claro: "
+    "un terminal offline puede inferir la cantidad esperada por fuerza bruta o forjar el token",
+)
+def test_blind_count_token_is_keyed_not_plaintext_sha256():
+    expected = 50
+    token_sin_clave = hashlib.sha256(f"A-01:SKU-1:{expected}".encode("utf-8")).hexdigest()
+    with pytest.raises(ValidationError):
+        BlindCycleCountEvent(
+            transaction_id="TX-LIMITES-BLIND-01",
+            delivery_id="DELIV-LIMITES-05",
+            bin_location="A-01",
+            sku_scanned="SKU-1",
+            counted_quantity=48,
+            manifest_expected_units=expected,
+            rf_device_id="RF-01",
+            scan_timestamp=datetime(2026, 1, 5, 2, 30, tzinfo=timezone.utc),
+            blind_token_hash=token_sin_clave,
+        )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="ScrapDisposalEvent no posee firma HMAC ni la verifica InboundDeliveryFSM en SCRAP_RECORDED",
+)
+def test_scrap_disposal_requires_hmac_signature():
+    ScrapDisposalEvent(
+        transaction_id="TX-LIMITES-SCRAP-01",
+        delivery_id="DELIV-LIMITES-06",
+        operator_badge_id="BADGE-01",
+        sku_id="SKU-1",
+        disposal_bin_id="BIN-01",
+        reason_code=ScrapDispositionReason.DAMAGED_IN_TRANSIT,
+        theoretical_unit_weight_kg=Decimal("2.0000"),
+        scale_measured_total_weight_kg=Decimal("4.0000"),
+        units_declared=2,
+        photo_verification_hash="0" * 64,
+        disposal_timestamp=datetime(2026, 1, 5, 2, 30, tzinfo=timezone.utc),
+    )
+    assert hasattr(ScrapDisposalEvent, "verify_hmac_signature")
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="ReturnAuthorizationEvent no posee firma HMAC ni la verifica InboundDeliveryFSM en RETURN_ISSUED",
+)
+def test_return_authorization_requires_hmac_signature():
+    ReturnAuthorizationEvent(
+        transaction_id="TX-LIMITES-RET-01",
+        delivery_id="DELIV-LIMITES-07",
+        reference_movement_code="124",
+        rejected_units=5,
+        inspector_badge_id="INSP-01",
+        carrier_acknowledgment_hash="0" * 64,
+        authorization_timestamp=datetime(2026, 1, 5, 2, 30, tzinfo=timezone.utc),
+    )
+    assert hasattr(ReturnAuthorizationEvent, "verify_hmac_signature")
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="normalize_utc_timestamp estampa UTC silenciosamente sobre datetimes sin tzinfo en vez de rechazarlos",
+)
+def test_naive_timestamp_is_rejected_fail_closed():
+    with pytest.raises(ValueError):
+        normalize_utc_timestamp(datetime(2026, 1, 5, 2, 30))
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="IthildinGuard acepta cualquier dict no vacio como rollback_plan en acciones IRREVERSIBLE",
+)
+def test_ithildin_rejects_placeholder_rollback_plan():
+    guardia = IthildinGuard(secret_key=SECRET)
+    accion = StagingAction(
+        action_id="A-LIMITES-RB-1",
+        risk_level=RiskLevel.IRREVERSIBLE,
+        target_system="erp",
+        payload={"sku": "SKU-1", "writeoff": 10},
+        idempotency_key="K-LIMITES-RB-1",
+        timestamp_utc=datetime.now(timezone.utc).isoformat(),
+        rollback_plan={"todo": "later"},
+    )
+    veredicto = guardia.evaluate_and_commit(accion, guardia.sign_action(accion))
+    assert veredicto.approved is False

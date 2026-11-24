@@ -238,7 +238,7 @@ def run_wild_cluster_bootstrap(
     }
 
 
-def rambachan_roth_sensitivity_analysis(event_study: dict, output_plot_path: str = "C:/fde/honest_did_sensitivity_plot.png") -> dict:
+def rambachan_roth_sensitivity_analysis(event_study: dict, output_plot_path: str = "honest_did_sensitivity_plot.png") -> dict:
     """
     Implements Rambachan & Roth (2023) HonestDiD sensitivity bounds under Delta^SD(M) restriction.
     Identifies the breakdown threshold M* where the 95% confidence set includes zero.
@@ -328,7 +328,7 @@ def execute_full_econometric_audit():
     print(f"    Wild Cluster Bootstrap p-val:  {boot_res['wild_bootstrap_p_value']:.6f} (Replications: {boot_res['replications']:,})")
 
     print("[*] Computing Rambachan & Roth (2023) Honest Parallel Trends Breakdown (M*)...")
-    rr_res = rambachan_roth_sensitivity_analysis(event_study, "C:/fde/honest_did_sensitivity_plot.png")
+    rr_res = rambachan_roth_sensitivity_analysis(event_study, "honest_did_sensitivity_plot.png")
     print(f"    Pre-trend Max Deviation:       {rr_res['pre_trend_max_divergence']:.3f}")
     print(f"    Breakdown Threshold M*:        {rr_res['breakdown_threshold_M_star']:.3f}")
     print(f"    Robustness Conclusion:         Treatment effect remains negative and statistically significant")

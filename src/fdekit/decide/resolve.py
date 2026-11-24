@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
@@ -141,7 +141,7 @@ class AliasStore:
             )
         issues = alias.validate()
         if issues:
-            raise ValueError(f"alias invalido:\n  - " + "\n  - ".join(issues))
+            raise ValueError("alias invalido:\n  - " + "\n  - ".join(issues))
         aliases = self.load()
         aliases.append(alias)
         self._save_all(aliases)

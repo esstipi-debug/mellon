@@ -22,7 +22,7 @@ def test_distancia_entre_pasillos_supera_la_euclidiana():
     y todo el caso de reslotting se caeria."""
     lay = Layout()
     a, b = "01-025-1", "12-025-1"
-    (ax, ay), (bx, by) = lay.xy(a), lay.xy(b)
+    (ax, _), (bx, _) = lay.xy(a), lay.xy(b)
     euclid = abs(ax - bx)
     assert lay.distance(a, b) > euclid
 

@@ -94,7 +94,7 @@ def cargar_aserciones(path: Path) -> dict[int, str]:
             raise ValueError(f"ASSERTION {numero} aparece dos veces")
         sentencias[numero] = texto
         buf, numero = [], None
-    resto = [l for l in "".join(buf).splitlines() if l.strip() and not l.strip().startswith("--")]
+    resto = [line for line in "".join(buf).splitlines() if line.strip() and not line.strip().startswith("--")]
     if resto:
         raise ValueError(f"el archivo termina con una sentencia sin cerrar: {resto[:3]}")
     return sentencias

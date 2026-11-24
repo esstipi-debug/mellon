@@ -61,10 +61,10 @@ class Layout:
 
     def all_locations(self) -> list[str]:
         return [
-            self.location_code(a, b, l)
+            self.location_code(a, b, lvl)
             for a in range(1, self.aisles + 1)
             for b in range(1, self.bays + 1)
-            for l in range(1, self.levels + 1)
+            for lvl in range(1, self.levels + 1)
         ]
 
     # --------------------------------------------------------------- distancia
@@ -110,8 +110,8 @@ class Layout:
         detecta y esa sola observacion suele pagar el despliegue."""
         max_bay = max(1, int(self.bays * fraction))
         return {
-            self.location_code(a, b, l)
+            self.location_code(a, b, lvl)
             for a in range(1, self.aisles + 1)
             for b in range(1, max_bay + 1)
-            for l in (1, 2)
+            for lvl in (1, 2)
         }

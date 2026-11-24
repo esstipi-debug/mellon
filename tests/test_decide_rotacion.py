@@ -16,7 +16,7 @@ decision, no estuvo en ninguna reunion y no lee correo durante el turno. El
 output del sistema es markdown en git: el canal de entrega es un hueco total.
 """
 
-from datetime import date, timedelta
+from datetime import date
 
 import pytest
 
@@ -27,7 +27,6 @@ from fdekit.decide import (
     DecideStore,
     Decision,
     Meeting,
-    OpenQuestion,
 )
 from fdekit.decide.eventlog import build_event_log
 from fdekit.decide.rotacion import (

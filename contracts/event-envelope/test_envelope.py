@@ -136,3 +136,19 @@ def test_the_command_line(tmp_path, capsys):
     assert env.main(["verify", str(broken)]) == 1
     assert "there is a gap" in capsys.readouterr().out
     assert env.main([]) == 2
+
+
+def test_impossible_calendar_date_is_rejected():
+    bad = env.seal(_event(occurred_at="2026-02-30T12:00:00Z"))
+    errors = env.validate(bad)
+    assert any("calendar" in err for err in errors), errors
+
+
+def test_verify_stream_fails_closed_at_first_broken_link():
+    first = env.seal(_event(event_id="e-1"))
+    second = env.seal(_event(event_id="e-2"), first)
+    broken_second = {**second, "seq": 9}
+    third_after_break = env.seal(_event(event_id="e-3"), second)
+    errors = env.verify_stream([first, broken_second, third_after_break])
+    assert len(errors) >= 1
+    assert all("envelope 2:" in err for err in errors), errors

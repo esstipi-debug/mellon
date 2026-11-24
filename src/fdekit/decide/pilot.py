@@ -254,7 +254,7 @@ def score_tally(path: str | Path) -> dict:
     falta siempre es `porque`, la frase se esta diciendo a medias; si es
     `dueno`, hay un problema politico y no de proceso.
     """
-    df = pd.read_csv(path).fillna("")
+    df = pd.read_csv(path, dtype=str).fillna("")
     if "punto_agenda" not in df.columns:
         raise ValueError("la planilla no tiene la columna punto_agenda: es el denominador")
 

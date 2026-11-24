@@ -87,7 +87,18 @@ def sin_fanout(clave: Sequence[str]) -> Guardia:
     clave = tuple(clave)
 
     def predicado(filas: Filas) -> bool:
-        conteo = Counter(tuple(f[c] for c in clave) for f in filas)
+        if not filas:
+            raise ValueError("sin_fanout recibio 0 filas: no hubo nada que medir")
+        tuplas = []
+        for f in filas:
+            valores_clave = []
+            for c in clave:
+                valor = f[c]
+                if valor is None or (isinstance(valor, str) and not valor.strip()):
+                    raise ValueError(f"campo de clave {c!r} vacio o nulo")
+                valores_clave.append(valor)
+            tuplas.append(tuple(valores_clave))
+        conteo = Counter(tuplas)
         return all(n == 1 for n in conteo.values())
 
     return Guardia(
@@ -133,9 +144,15 @@ def conservacion_de_masa(
         for f in filas:
             tipo = _codigo(f[movimiento])
             if tipo in entran:
-                saldo[tuple(f[c] for c in clave)] += _numero(f, cantidad)
+                qty = _numero(f, cantidad)
+                if qty < 0:
+                    raise ValueError(f"{cantidad}={qty} es negativo en cadena {cadena}")
+                saldo[tuple(f[c] for c in clave)] += qty
             elif tipo in salen:
-                saldo[tuple(f[c] for c in clave)] -= _numero(f, cantidad)
+                qty = _numero(f, cantidad)
+                if qty < 0:
+                    raise ValueError(f"{cantidad}={qty} es negativo en cadena {cadena}")
+                saldo[tuple(f[c] for c in clave)] -= qty
         if len(filas) and not saldo:
             raise ValueError(f"ninguna fila es de la cadena {cadena}: no hubo nada que medir")
         return all(s >= -_TOLERANCIA for s in saldo.values())
@@ -194,6 +211,7 @@ def _claves(obj: object) -> Iterator[str]:
 
 def una_sola_anualizacion() -> Guardia:
     """Ningun hallazgo llega anualizado: la unica anualizacion es la de value/levers."""
+    tokens = ("annual", "anual", "per_year", "por_ano")
     return Guardia(
         nombre="una_sola_anualizacion",
         motivo=(
@@ -203,11 +221,13 @@ def una_sola_anualizacion() -> Guardia:
         ),
         hallazgo=Hallazgo(
             regla="ningun hallazgo trae una clave anualizada antes de value/levers",
-            evidencia="una clave con 'annual' llego anualizada a value/levers",
+            evidencia="una clave anualizada llego antes de value/levers",
             procedencia=_ANUALIZACION,
             familia="anualizacion",
         ),
-        predicado=lambda hallazgos: not any("annual" in k.lower() for k in _claves(hallazgos)),
+        predicado=lambda hallazgos: not any(
+            any(tok in k.lower() for tok in tokens) for k in _claves(hallazgos)
+        ),
     )
 
 

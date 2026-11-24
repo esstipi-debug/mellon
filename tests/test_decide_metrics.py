@@ -22,7 +22,6 @@ from fdekit.decide import (
     PromotionBudgetExceeded,
 )
 from fdekit.decide.eventlog import (
-    REWORK_ACTIVITIES,
     touches_excluidas,
     build_event_log,
     lifecycle_rework,
@@ -32,9 +31,7 @@ from fdekit.decide.export import to_graphify, to_mermaid, write_graphify
 from fdekit.decide.schema import PROFILES
 from fdekit.decide.metrics import (
     capture_state,
-    capture_summary,
     freeze_baseline,
-    MIN_DECISIONS,
     QueryLog,
     circular_minutes,
     decider_executor_presence,
@@ -48,7 +45,7 @@ from fdekit.decide.metrics import (
 )
 from fdekit.decide.resolve import AliasStore, confirm
 from fdekit.decide.store import ValidationError
-from fdekit.processmining import rework_summary, variants
+from fdekit.processmining import variants
 from fdekit.stats import risk_ratio_2x2
 
 HOY = date(2026, 8, 1)

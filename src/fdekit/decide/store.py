@@ -20,7 +20,6 @@ import json
 import subprocess
 from dataclasses import dataclass
 from dataclasses import fields as dc_fields
-from datetime import date
 from pathlib import Path
 
 from .frontmatter import dumps, loads

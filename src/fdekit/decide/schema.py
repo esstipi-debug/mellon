@@ -15,6 +15,8 @@ import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
+from ..gemba import normalize as _norm
+
 # EN_CONFLICTO: una decision de fuera de la sala contradice a una VIGENTE.
 # **Es suspension, no muerte**, y por eso NO entra a `DEAD_DECISION_STATUS`: sus
 # compromisos no son zombis. Un zombi es gente ejecutando algo ya revertido; aca
@@ -265,8 +267,7 @@ def _has_number(text: str) -> bool:
 
 # La normalizacion es una sola en todo el kit. Definirla aca otra vez —sin
 # quitar acentos— hacia que `HEDGES` y `VERIFIABLE_PREDICATES`, que estan
-# escritos sin tildes, fallaran contra el espanol real.
-from ..gemba import normalize as _norm
+# escritos sin tildes, fallaran contra el espanol real. (Importado al inicio.)
 
 
 # ------------------------------------------------------------------ soporte

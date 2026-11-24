@@ -570,7 +570,7 @@ def test_el_indice_dice_cual_campo_de_procedencia_falta(tmp_path):
     que es donde alguien va a leer que le falta."""
     faltan_dos = 'LECCION = {"regla": "r", "familia": "f"}\n\n\ndef test_x():\n    assert True\n'
     md = indice(_guards(tmp_path, test_mocho=faltan_dos))
-    renglon = next(l for l in md.splitlines() if "test_mocho" in l)
+    renglon = next(line for line in md.splitlines() if "test_mocho" in line)
     assert "le falta" in renglon
     assert "commit" in renglon
     assert "fecha" in renglon

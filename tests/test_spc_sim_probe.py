@@ -175,6 +175,25 @@ def test_cli_spc_con_linea_base_estable_dibuja_el_grafico(tmp_path, capsys):
     assert '"baseline_stable": true' in capsys.readouterr().out
 
 
+def test_degradation_alarm_ignora_nan_y_detecta_degradacion():
+    rng = np.random.default_rng(11)
+    base = rng.normal(100, 5, 30)
+    mon = [125.0, float("nan"), 126.0, 127.0, float("nan")] + [126.0] * 10
+    res = degradation_alarm(base, mon, direction="lower_is_better")
+    assert res["verdict"].startswith("DEGRADACION")
+    assert np.isfinite(res["monitoring_mean"])
+    with pytest.raises(ValueError, match="puntos finitos"):
+        degradation_alarm(base, [float("nan"), float("nan")])
+
+
+def test_xmr_chart_con_sigma_cero_no_divide_por_cero():
+    from fdekit.spc.xmr import xmr_chart
+
+    df = xmr_chart([50.0] * 10)
+    assert np.all(df["zone"] == 0.0)
+    assert not df["zone"].isna().any()
+
+
 # ------------------------------------------------------------------- SIM
 
 

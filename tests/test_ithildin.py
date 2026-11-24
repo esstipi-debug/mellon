@@ -1,6 +1,5 @@
 """Unit tests for fdekit.ithildin (guards, probes, triggers)."""
 
-from datetime import datetime, timezone
 import pytest
 
 from fdekit.ithildin import (
@@ -8,11 +7,8 @@ from fdekit.ithildin import (
     IthildinGuard,
     IthildinTriggerRegistry,
     PassiveEventProbe,
-    ProbeReport,
     RiskLevel,
     StagingAction,
-    StagingVerdict,
-    TriggerResult,
 )
 
 
@@ -244,3 +240,17 @@ def test_trigger_registry():
 
     assert len(illuminated) == 1
     assert illuminated[0].trigger_name == "t1"
+
+
+def test_guard_rejects_nan_in_canonical_bytes():
+    guard = IthildinGuard(b"super-secure-secret-key-2026-entropy")
+    action = StagingAction(
+        action_id="act-nan-1",
+        risk_level=RiskLevel.REVERSIBLE,
+        target_system="ERP_SAP",
+        payload={"qty": float("nan")},
+        idempotency_key="idemp-nan-1",
+        timestamp_utc="2026-10-20T12:00:00Z",
+    )
+    with pytest.raises(ValueError):
+        guard.sign_action(action)

@@ -24,7 +24,9 @@ from fdekit.guard import (
     evaluar,
     medir_catalogo,
     no_negativo,
+    sin_fanout,
     sonda_guardia,
+    una_sola_anualizacion,
 )
 
 
@@ -333,3 +335,26 @@ def test_fdekit_guard_solo_importa_stdlib():
     salida = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True,
                             check=True, env=entorno)
     assert salida.stdout.strip() == "[]"
+
+
+def test_conservacion_de_masa_rechaza_cantidad_negativa():
+    g = _cadena_103_105()
+    filas = [
+        {"ebeln": "45", "bwart": "103", "menge": 50.0},
+        {"ebeln": "45", "bwart": "105", "menge": -100.0},
+    ]
+    hallazgos = evaluar([g], filas)
+    assert len(hallazgos) == 1
+    assert "reviento" in hallazgos[0].evidencia
+
+
+def test_sin_fanout_rechaza_vacio_y_clave_nula():
+    g = sin_fanout(("mandt", "ebeln"))
+    assert "reviento" in evaluar([g], [])[0].evidencia
+    assert "reviento" in evaluar([g], [{"mandt": "100", "ebeln": None}])[0].evidencia
+
+
+def test_una_sola_anualizacion_atrapa_variantes_espanol_e_ingles():
+    g = una_sola_anualizacion()
+    assert evaluar([g], {"travel": [{"hours_per_year": 12.0}]}) == [g.hallazgo]
+    assert evaluar([g], {"travel": [{"horas_anuales": 12.0}]}) == [g.hallazgo]

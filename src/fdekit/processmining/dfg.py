@@ -55,7 +55,7 @@ def bottlenecks(log: EventLog, top: int = 8) -> pd.DataFrame:
     dfg = directly_follows(log)
     total = dfg["total_wait_h"].sum()
     dfg = dfg.copy()
-    dfg["pct_of_total_wait"] = (dfg["total_wait_h"] / total * 100).round(1)
+    dfg["pct_of_total_wait"] = (dfg["total_wait_h"] / total * 100).round(1) if total > 0 else 0.0
     dfg["transition"] = dfg["source"] + " -> " + dfg["target"]
     cols = [
         "transition",

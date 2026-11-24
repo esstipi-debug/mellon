@@ -575,8 +575,8 @@ def dwell_events(
             # completo en `_tramos_consecutivos`, no sobre este grupo. Si es
             # cierto, ningun grupo abierto -- de ninguna ubicacion -- puede
             # asumir que se mantuvo durante el tiempo no observado.
-            for l in list(abiertos):
-                _cerrar(l)
+            for loc_abierta in list(abiertos):
+                _cerrar(loc_abierta)
 
         loc_efectiva = loc
         if loc is not None:
@@ -592,9 +592,9 @@ def dwell_events(
                 # propio span y su propia parada, en vez de una sola.
                 vecino = next(
                     (
-                        l
-                        for l in abiertos
-                        if _distancia_ubicaciones(layout, loc, l) < noise_radius_m
+                        loc_abierta
+                        for loc_abierta in abiertos
+                        if _distancia_ubicaciones(layout, loc, loc_abierta) < noise_radius_m
                     ),
                     None,
                 )
@@ -613,7 +613,7 @@ def dwell_events(
         # real que corta la fusion. Se compara contra `loc_efectiva`, no
         # `loc`: si este tramo ya se fusiono en un grupo vecino, ese grupo no
         # se corta a si mismo.
-        for otra_loc in [l for l in abiertos if l != loc_efectiva]:
+        for otra_loc in [loc_abierta for loc_abierta in abiertos if loc_abierta != loc_efectiva]:
             cerca_espacialmente = (
                 loc is not None
                 and _distancia_ubicaciones(layout, loc, otra_loc) < noise_radius_m

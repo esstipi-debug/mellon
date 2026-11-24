@@ -17,6 +17,8 @@ import re
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 # CRITERIO DE EXCEPCION: Se exceptua un archivo cuando el acento es DATO BAJO
 # PRUEBA o materia del modulo, NUNCA cuando es prosa descuidada. Los acentos en
@@ -151,7 +153,7 @@ def test_guardia_cubre_todos_los_archivos():
             if line.strip() and (line.startswith("src/fdekit/") or line.startswith("tests/"))
         ]
     except (subprocess.CalledProcessError, FileNotFoundError):
-        todos = []
+        pytest.skip("requiere repositorio git (clon, no export ZIP)")
 
     # Contar los que el guardia revisa.
     py_files = _get_py_files_to_check()

@@ -59,7 +59,9 @@ class StagingAction:
             "timestamp_utc": self.timestamp_utc,
             "rollback_plan": self.rollback_plan,
         }
-        return json.dumps(normalized, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+        return json.dumps(
+            normalized, sort_keys=True, separators=(",", ":"), allow_nan=False, default=str
+        ).encode("utf-8")
 
 
 @dataclass(frozen=True)

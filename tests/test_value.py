@@ -5,7 +5,6 @@ import pytest
 
 from fdekit.value import (
     ARCHETYPES,
-    SCALES,
     Range,
     ValueCase,
     build_archetype,
@@ -147,14 +146,14 @@ def test_sin_grupo_de_control_la_atribucion_se_castiga():
 def test_las_palancas_declaran_su_fuente(findings):
     levers = levers_from_findings(findings, build_archetype("3PL"), has_control_group=True)
     assert levers
-    assert all(l.source for l in levers), "una palanca sin herramienta que la mida no entra"
+    assert all(lev.source for lev in levers), "una palanca sin herramienta que la mida no entra"
 
 
 def test_arquetipo_sin_inventario_no_genera_palanca_de_capital(findings):
     lev3pl = levers_from_findings(findings, build_archetype("3PL"))
-    assert "L5_capital" not in {l.key for l in lev3pl}  # el stock no es del 3PL
+    assert "L5_capital" not in {lev.key for lev in lev3pl}  # el stock no es del 3PL
     lev_may = levers_from_findings(findings, build_archetype("MAYORISTA"))
-    assert "L5_capital" in {l.key for l in lev_may}
+    assert "L5_capital" in {lev.key for lev in lev_may}
 
 
 def test_rodilla_de_la_curva_de_dimensionamiento():
@@ -375,13 +374,13 @@ def test_gemba_aporta_a_l1_solo_lo_que_el_log_no_ve(findings):
     bajo otro nombre."""
     arch = build_archetype("RETAIL_OMNI", "grande")
     base = levers_from_findings(findings, arch, has_control_group=True)
-    l1_base = next(l for l in base if l.key == "L1_productividad").annual_units.mode
+    l1_base = next(lev for lev in base if lev.key == "L1_productividad").annual_units.mode
 
     # Se duplican las horas de gemba fuera del log: L1 tiene que moverse.
     f = json.loads(json.dumps(findings))
     f["gemba"]["value_input"]["hours_per_shift"] *= 2
     doble = levers_from_findings(f, arch, has_control_group=True)
-    l1_doble = next(l for l in doble if l.key == "L1_productividad").annual_units.mode
+    l1_doble = next(lev for lev in doble if lev.key == "L1_productividad").annual_units.mode
     assert l1_doble > l1_base
 
     # El delta es exactamente las horas extra anualizadas por turnos, no por
@@ -416,3 +415,23 @@ def test_los_turnos_por_dia_reusan_los_dias_de_operacion():
     operacion entran una sola vez, en el arquetipo."""
     arch = build_archetype("RETAIL_OMNI", "grande")
     assert arch.annual_shifts == arch.shifts_per_day * arch.operating_days
+
+
+def test_rework_calendario_multidia_no_se_monetiza_en_l2():
+    arch = build_archetype("RETAIL_OMNI", "grande")
+    bpi_like = {
+        "cycle_times": {"n_cases": 251734},
+        "rework": [
+            {
+                "activity": "Cancel Invoice Receipt",
+                "direct_cost_s": 1_881_690.0,
+                "hours_lost_in_window": 3_709_020.0,
+                "cases_in_window": 251734,
+            }
+        ],
+        "defects_to_rework": {"population_attributable_fraction_pct": 10.0},
+    }
+    with pytest.raises(ValueError, match="espera calendario"):
+        levers_from_findings(bpi_like, arch)
+    levs = levers_from_findings(bpi_like, arch, max_rework_event_s=None)
+    assert any(lev.key == "L2_reproceso" for lev in levs)

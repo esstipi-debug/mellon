@@ -339,7 +339,7 @@ def _findings(orders: int, walk_h: float, sw_h: float, slot_cut_pct: float = 10.
 
 def _l1(findings: dict, arch) -> float:
     levers = levers_from_findings(findings, arch, has_control_group=True)
-    return next(l for l in levers if l.key == "L1_productividad").annual_units.mode
+    return next(lev for lev in levers if lev.key == "L1_productividad").annual_units.mode
 
 
 def test_l1_anual_no_depende_del_largo_de_la_ventana_observada():
@@ -426,7 +426,7 @@ def test_hallazgos_con_el_formato_viejo_fallan_ruidosamente():
 def test_findings_vacio_no_inventa_una_palanca():
     arch = build_archetype("RETAIL_OMNI", "grande")
     levers = levers_from_findings({}, arch, has_control_group=True)
-    assert not [l for l in levers if l.key == "L1_productividad"]
+    assert not [lev for lev in levers if lev.key == "L1_productividad"]
 
 
 def test_l1_es_cero_si_no_hay_pedidos_observados():
@@ -434,7 +434,7 @@ def test_l1_es_cero_si_no_hay_pedidos_observados():
     # inventada es peor que una palanca ausente.
     arch = build_archetype("RETAIL_OMNI", "grande")
     f = _findings(orders=0, walk_h=20.0, sw_h=6.0)
-    assert not [l for l in levers_from_findings(f, arch) if l.key == "L1_productividad"]
+    assert not [lev for lev in levers_from_findings(f, arch) if lev.key == "L1_productividad"]
 
 
 def test_hallazgos_json_es_json_estricto(tmp_path):

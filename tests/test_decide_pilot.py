@@ -13,7 +13,6 @@ import pytest
 
 from fdekit.decide.pilot import (
     SEMANAS_HASTA_VEREDICTO,
-    TASA_MINIMA,
     UMBRAL_MUERTE,
     baseline_from_calendar,
     evaluate_pilot,
@@ -283,7 +282,7 @@ def test_la_hoja_de_sala_prohibe_el_software():
 
 
 def test_la_encuesta_tiene_tres_preguntas():
-    cab = [l for l in survey_template().splitlines() if not l.startswith("#")][0]
+    cab = [line for line in survey_template().splitlines() if not line.startswith("#")][0]
     assert cab.count(",") == 5  # fecha, persona, grupo + 3 preguntas
 
 

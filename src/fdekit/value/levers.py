@@ -14,7 +14,7 @@ modelo de una planilla de vendor.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -206,6 +206,7 @@ def levers_from_findings(
     arch,
     has_control_group: bool = False,
     realization: Range | float = 0.7,
+    max_rework_event_s: float | None = 28_800.0,
 ) -> list[Lever]:
     """Arma las palancas desde el `hallazgos.json` que produce `fdekit demo`.
 
@@ -278,6 +279,16 @@ def levers_from_findings(
         )
 
     # --- L2: reproceso, acotado por la fraccion atribuible a datos maestros
+    if max_rework_event_s is not None:
+        for row in findings.get("rework", []):
+            dur_s = float(row.get("direct_cost_s", 0.0) or 0.0)
+            if dur_s > max_rework_event_s:
+                act = row.get("activity", "?")
+                raise ValueError(
+                    f"rework[{act!r}].direct_cost_s={dur_s:.1f}s excede max_rework_event_s="
+                    f"{max_rework_event_s:.1f}s: refleja espera calendario multi-dia (como logs "
+                    "ERP/P2P), no esfuerzo operativo monetizable como horas-hombre."
+                )
     rework_h = sum(
         _annualize(
             r.get("hours_lost_in_window", 0.0),

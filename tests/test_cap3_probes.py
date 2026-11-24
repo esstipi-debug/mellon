@@ -112,3 +112,13 @@ def test_saturation_frontier_handles_all_floats_including_subnormals(docks, mu, 
     c = classify(lam=0.5 * f["lambda_governing"], docks=docks, service_rate_per_h=mu, buffer_positions=buf, resolution_h=res_h, retention_rate=ret)
     assert c["state"] == "OPERATIONAL"
     assert quarantine_load(10.0, 0.2, 4.0) == pytest.approx(8.0)
+
+
+def test_quarantine_capacity_rejects_negative_inputs_and_propagates_burstiness():
+    with pytest.raises(ValueError, match="lam"):
+        classify(-1.0, 2, 3.0, 10.0, 2.0, 0.2)
+    with pytest.raises(ValueError, match="buffer_positions"):
+        classify(1.0, 2, 3.0, -5.0, 2.0, 0.2)
+    base = classify(4.0, 2, 3.0, 50.0, 2.0, 0.2, ca2=1.0, cs2=1.0)
+    bursty = classify(4.0, 2, 3.0, 50.0, 2.0, 0.2, ca2=4.0, cs2=1.0)
+    assert bursty["wq_h"] > base["wq_h"]

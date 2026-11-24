@@ -18,10 +18,14 @@ import math
 
 
 def _erlang_c_wait(lam: float, mu: float, c: int, ca2: float = 1.0, cs2: float = 1.0) -> dict:
+    if lam < 0:
+        raise ValueError("lam cannot be negative")
     if c < 1:
         raise ValueError("c must be >= 1")
     if mu <= 0:
         raise ValueError("mu must be > 0")
+    if ca2 < 0 or cs2 < 0:
+        raise ValueError("ca2 and cs2 cannot be negative")
     rho = lam / (c * mu)
     if rho >= 1.0:
         return {"rho": rho, "stable": False, "wq_h": math.inf, "lq": math.inf}
@@ -38,6 +42,8 @@ def _erlang_c_wait(lam: float, mu: float, c: int, ca2: float = 1.0, cs2: float =
 
 def quarantine_load(lam: float, retention_rate: float, resolution_h: float) -> float:
     """Steady-state quarantined load on the floor: L = lam * r * R."""
+    if lam < 0:
+        raise ValueError("lam cannot be negative")
     if not 0.0 <= retention_rate <= 1.0:
         raise ValueError("retention_rate must be in [0, 1]")
     if resolution_h < 0:
@@ -47,6 +53,10 @@ def quarantine_load(lam: float, retention_rate: float, resolution_h: float) -> f
 
 def dock_saturation(docks: int, service_rate_per_h: float, utilization_target: float = 0.85) -> float:
     """Maximum arrival rate within target dock utilization u in (0, 1)."""
+    if docks < 1:
+        raise ValueError("docks must be >= 1")
+    if service_rate_per_h <= 0:
+        raise ValueError("service_rate_per_h must be > 0")
     if not 0.0 < utilization_target < 1.0:
         raise ValueError("utilization_target must be in (0, 1)")
     return docks * service_rate_per_h * utilization_target
@@ -54,6 +64,8 @@ def dock_saturation(docks: int, service_rate_per_h: float, utilization_target: f
 
 def floor_saturation(buffer_positions: float, retention_rate: float, resolution_h: float) -> float:
     """Maximum arrival rate absorbed by V quarantine positions without overflow: V / (r * R)."""
+    if buffer_positions < 0:
+        raise ValueError("buffer_positions cannot be negative")
     if not 0.0 <= retention_rate <= 1.0:
         raise ValueError("retention_rate must be in [0, 1]")
     if resolution_h <= 0:
@@ -73,6 +85,8 @@ def saturation_frontier(
     utilization_target: float = 0.85,
 ) -> dict:
     """Compute dock ceiling, quarantine bay ceiling, binding constraint, and crossover r*."""
+    if buffer_positions < 0:
+        raise ValueError("buffer_positions cannot be negative")
     lam_dock = dock_saturation(docks, service_rate_per_h, utilization_target)
     lam_floor = floor_saturation(buffer_positions, retention_rate, resolution_h)
     governing = "DOCK" if lam_dock <= lam_floor else "FLOOR"
@@ -102,9 +116,11 @@ def classify(
     resolution_h: float,
     retention_rate: float,
     utilization_target: float = 0.85,
+    ca2: float = 1.0,
+    cs2: float = 1.0,
 ) -> dict:
     """Deterministic classification of yard/dock/quarantine regime for observed lambda."""
-    q = _erlang_c_wait(lam, service_rate_per_h, docks)
+    q = _erlang_c_wait(lam, service_rate_per_h, docks, ca2=ca2, cs2=cs2)
     load = quarantine_load(lam, retention_rate, resolution_h)
     f = saturation_frontier(
         docks, service_rate_per_h, buffer_positions, resolution_h, retention_rate, utilization_target

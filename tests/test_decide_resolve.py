@@ -478,7 +478,6 @@ def test_el_reloj_de_retencion_es_la_reunion_y_no_el_mtime(env):
     conversacion ocurrio hace un ano y medio."""
     st, ts = env
     import os
-    from datetime import datetime
     assert date.fromtimestamp(os.stat(ts.path).st_mtime) >= date(2026, 1, 1)
     assert ts.purge(date(2026, 8, 1), retention_days=90, desde=date(2025, 1, 10)) is True
 

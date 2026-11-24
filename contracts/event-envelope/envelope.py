@@ -17,6 +17,7 @@ import json
 import re
 import sys
 from collections.abc import Iterable, Mapping, Sequence
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -197,10 +198,16 @@ def _check_identity(envelope: Mapping[str, Any]) -> list[str]:
     if envelope["kind"] not in KINDS:
         errors.append(f"kind {envelope['kind']!r} must be one of: {', '.join(KINDS)}")
     for field in ("occurred_at", "recorded_at"):
-        if not isinstance(envelope[field], str) or not _UTC.match(envelope[field]):
+        value = envelope[field]
+        if not isinstance(value, str) or not _UTC.match(value):
             errors.append(
-                f"{field} {envelope[field]!r} must be UTC in RFC 3339, like 2026-11-22T13:05:00Z"
+                f"{field} {value!r} must be UTC in RFC 3339, like 2026-11-22T13:05:00Z"
             )
+            continue
+        try:
+            datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            errors.append(f"{field} {value!r} is not a valid UTC calendar date/time")
     return errors
 
 
@@ -317,15 +324,17 @@ def verify_stream(envelopes: Sequence[Any]) -> list[str]:
         if first is None:
             first = envelope
             if envelope["seq"] != 1:
-                errors.append(
+                return errors + [
                     f"envelope {index}: the stream starts at seq {envelope['seq']}, not 1"
-                )
+                ]
         else:
-            errors += _check_link(index, first, previous, envelope)
+            link_errors = _check_link(index, first, previous, envelope)
+            if link_errors:
+                return errors + link_errors
         if envelope["event_id"] in seen:
-            errors.append(
+            return errors + [
                 f"envelope {index}: event_id {envelope['event_id']!r} repeats"
-            )
+            ]
         seen.add(envelope["event_id"])
         previous = envelope
     return errors
