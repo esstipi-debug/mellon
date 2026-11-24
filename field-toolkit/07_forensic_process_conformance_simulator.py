@@ -10,6 +10,10 @@ en el propio script; no lee datos reales. Las fuentes que imita:
 2. Syslog de Roaming Wi-Fi 802.11k/r/v (Ubicación física real de terminales RF)
 3. Telemetría CAN-bus J1939 (Odometría, velocidad e impactos de grúas)
 
+Non-Surveillance Covenant (Adler & Borys, 1996): toda la telemetría de este
+simulador agrega por cohorte de turno (`shift_cohort`) y pool de terminales compartidas
+(`RF_POOL_*`), nunca como seguimiento ni evaluación disciplinaria individual.
+
 Framework: FDE Field Toolkit / Industrial Forensic Operations
 ========================================================================================
 """
@@ -42,7 +46,7 @@ class RawWmsEvent:
     timestamp: datetime
     case_id: str
     activity: str
-    operator_id: str
+    shift_cohort: str
     bin_location: str
     coords_xyz: Tuple[float, float, float]
     quantity: int
@@ -117,11 +121,11 @@ def generate_forensic_test_scenarios() -> Tuple[List[RawWmsEvent], List[RawWifiS
         ("GATE_OUT", t0 + timedelta(hours=2, minutes=55), "GATE_02", (0.0, 80.0, 0.0)),
     ]
     for act, ts, loc, xyz in c1_steps:
-        wms_events.append(RawWmsEvent(ts, "CASE_001_GOLDEN", act, "OP_CORRECT", loc, xyz, 50))
+        wms_events.append(RawWmsEvent(ts, "CASE_001_GOLDEN", act, "SHIFT_A", loc, xyz, 50))
 
-    # Telemetría Wi-Fi coherente para Caso 1 (el operario se desplaza por los APs)
-    wifi_events.append(RawWifiSyslog(t0 + timedelta(hours=2), "MAC_OP_01", "BSSID_AISLE_12", "AISLE_12", "ROAM", -65))
-    wifi_events.append(RawWifiSyslog(t0 + timedelta(hours=2, minutes=25), "MAC_OP_01", "BSSID_PACK_02", "PACKING", "ROAM", -58))
+    # Telemetría Wi-Fi coherente para Caso 1 (pool de terminales del turno se desplaza por los APs)
+    wifi_events.append(RawWifiSyslog(t0 + timedelta(hours=2), "RF_POOL_01", "BSSID_AISLE_12", "AISLE_12", "ROAM", -65))
+    wifi_events.append(RawWifiSyslog(t0 + timedelta(hours=2, minutes=25), "RF_POOL_01", "BSSID_PACK_02", "PACKING", "ROAM", -58))
 
     # Odometría CAN-bus normal para Caso 1: 180 metros recorridos
     can_events.append(RawCanBusTelemetry(t0 + timedelta(minutes=55), "FORK_01", 1.8, 180.0, 45.0, 0.12))
@@ -129,8 +133,8 @@ def generate_forensic_test_scenarios() -> Tuple[List[RawWmsEvent], List[RawWifiS
     # ----------------------------------------------------------------------------------
     # CASO 2: Arbitraje de Incentivos (Batch Scanning Clotting / Shadow IT)
     # ----------------------------------------------------------------------------------
-    # El operario hizo picking en papel y confirma 4 picks en ráfaga (intervalos de 2 a 3 segundos)
-    # abarcando 45 metros de pasillo, mientras el Wi-Fi muestra que estaba en la sala de café.
+    # El picking se hizo en papel y se confirman 4 picks en ráfaga (intervalos de 2 a 3 segundos)
+    # abarcando 45 metros de pasillo, mientras el Wi-Fi muestra la terminal compartida en el escritorio de staging.
     t_clot = t0 + timedelta(hours=3)
     clot_picks = [
         ("PICK_CONFIRM", t_clot, "RACK_02_01", (10.0, 10.0, 0.0)),
@@ -139,11 +143,11 @@ def generate_forensic_test_scenarios() -> Tuple[List[RawWmsEvent], List[RawWifiS
         ("PICK_CONFIRM", t_clot + timedelta(seconds=7), "RACK_03_22", (55.0, 20.0, 0.0)),
     ]
     for act, ts, loc, xyz in clot_picks:
-        wms_events.append(RawWmsEvent(ts, "CASE_002_BATCH_CONFIRM", act, "OP_02", loc, xyz, 10))
+        wms_events.append(RawWmsEvent(ts, "CASE_002_BATCH_CONFIRM", act, "SHIFT_B", loc, xyz, 10))
 
-    # Wi-Fi desmiente el movimiento: terminal estático en el AP de la cafetería/lockers
-    wifi_events.append(RawWifiSyslog(t_clot - timedelta(minutes=5), "MAC_OP_02", "BSSID_BREAKROOM", "BREAKROOM", "ASSOCIATE", -52))
-    wifi_events.append(RawWifiSyslog(t_clot + timedelta(seconds=10), "MAC_OP_02", "BSSID_BREAKROOM", "BREAKROOM", "STATIONARY", -51))
+    # Wi-Fi desmiente el movimiento: terminal compartida estática en el AP del escritorio de staging
+    wifi_events.append(RawWifiSyslog(t_clot - timedelta(minutes=5), "RF_POOL_02", "BSSID_STAGING_DESK", "STAGING_DESK", "ASSOCIATE", -52))
+    wifi_events.append(RawWifiSyslog(t_clot + timedelta(seconds=10), "RF_POOL_02", "BSSID_STAGING_DESK", "STAGING_DESK", "STATIONARY", -51))
 
     # ----------------------------------------------------------------------------------
     # CASO 3: Congestión Crítica y Doble Manipulación en Staging (Re-handling Loop)
@@ -162,7 +166,7 @@ def generate_forensic_test_scenarios() -> Tuple[List[RawWmsEvent], List[RawWifiS
         ("PUTAWAY_EXEC", t_cong + timedelta(minutes=260), "RACK_08_02", (60.0, 40.0, 3.0)),
     ]
     for act, ts, loc, xyz in cong_steps:
-        wms_events.append(RawWmsEvent(ts, "CASE_003_STAGING_COLLAPSE", act, "OP_STAGED", loc, xyz, 80))
+        wms_events.append(RawWmsEvent(ts, "CASE_003_STAGING_COLLAPSE", act, "SHIFT_C", loc, xyz, 80))
 
     # CAN-bus registra 1,420 metros recorridos, más de 10 veces la distancia Manhattan teórica
     # que suman los tramos del caso (supuesto del caso: pasillos tapados por pallets en piso)
@@ -309,12 +313,12 @@ class ForensicOperationalAuditor:
         # ------------------------------------------------------------------------------
         # INVARIANTE 3: Telemetría Wi-Fi vs. Declaración WMS (Caso 2)
         # ------------------------------------------------------------------------------
-        gamer_wifi = [w for w in self.wifi if w.client_mac == "MAC_OP_02"]
+        pool_wifi = [w for w in self.wifi if w.client_mac == "RF_POOL_02"]
         results["wifi_rf_audit"] = {
-            "operator_mac": "MAC_OP_02",
-            "connected_ap_zone": gamer_wifi[0].ap_zone if gamer_wifi else "UNKNOWN",
-            "physical_rssi_dbm": gamer_wifi[0].rssi_dbm if gamer_wifi else 0,
-            "verdict": "DISCREPANCIA DE REGISTRO: el WMS ubica las confirmaciones en los pasillos RACK_02 y RACK_03, pero la terminal estuvo asociada a BSSID_BREAKROOM durante toda la ventana. Indica confirmación en lote fuera del pasillo (por ejemplo, picking en papel por cortes de Wi-Fi); se revisa con el turno como problema de proceso, no como falta individual."
+            "terminal_pool_id": "RF_POOL_02",
+            "connected_ap_zone": pool_wifi[0].ap_zone if pool_wifi else "UNKNOWN",
+            "physical_rssi_dbm": pool_wifi[0].rssi_dbm if pool_wifi else 0,
+            "verdict": "DISCREPANCIA DE REGISTRO: el WMS ubica las confirmaciones en los pasillos RACK_02 y RACK_03, pero la terminal compartida estuvo asociada a BSSID_STAGING_DESK durante toda la ventana. Indica confirmación en lote fuera del pasillo (por ejemplo, picking en papel por cortes de Wi-Fi); se revisa con el turno como problema de proceso y red RF, no como falta individual."
         }
 
         return results
@@ -382,7 +386,7 @@ def main():
     # Invariante 3: Correlación Wi-Fi
     wf = invariants["wifi_rf_audit"]
     print("3. CONTRASTE DE VERDAD FÍSICA: ITINERANCIA WI-FI (BSSID vs. WMS)")
-    print(f"   • Dispositivo: {wf['operator_mac']}")
+    print(f"   • Dispositivo (pool): {wf['terminal_pool_id']}")
     print(f"   • Zona de AP Real: {wf['connected_ap_zone']} (Señal: {wf['physical_rssi_dbm']} dBm)")
     print(f"   • Veredicto Forense: {wf['verdict']}\n")
 

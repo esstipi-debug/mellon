@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -e ".[dev,contracts]" ruff
+
+      - name: Run main test suite
+        run: pytest -q
+
+      - name: Run Gemba invariants harness
+        run: pytest -q test_gemba_invariants.py
+
+      - name: Run 3D automaton probes
+        run: pytest -q probes
+
+      - name: Run event-envelope contract suite
+        run: pytest -q contracts/event-envelope
+
+      - name: Verify sample event-envelope stream
+        run: python contracts/event-envelope/envelope.py verify contracts/event-envelope/examples/valid-stream.jsonl
+
+      - name: Lint with ruff
+        run: ruff check src/ tests/ probes/ contracts/
+
+      - name: Build Knowledge Graph & FDE Field Dojo
+        run: |
+          cd knowledge-graph
+          python build.py

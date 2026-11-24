@@ -1,6 +1,6 @@
 # FDE Knowledge Graph + 🥋 FDE Field Dojo
 
-A single, offline-first knowledge platform for **Forward Deployed Engineers (FDEs) and Deployment Strategists**: a validated 8-book knowledge graph, a tactical dossier per book, an interactive graph viewer, an Obsidian vault, a Neo4j import script, and a gamified training simulator — the **FDE Field Dojo** with 42 field scenarios (covering **100% of all 173 trainable nodes** across `Concept`, `Principle`, `Framework`, `Technique`, `Pitfall`, `FDEPractice`, and `CrossInsight`), 6 real Palantir deployment cases, 2 `fdekit` CD Pudahuel bridge cases, two 5-day AIP Bootcamp campaigns, 7 Artifact Forge missions, a 20-question 90% CI calibrator with Fermi decomposition scratchpad, and voice-enabled sparring.
+A single, offline-first knowledge platform for **Forward Deployed Engineers (FDEs) and Deployment Strategists**: a validated 8-book knowledge graph, a tactical dossier per book, an interactive graph viewer, an Obsidian vault, a Neo4j import script, and a gamified training simulator — the **FDE Field Dojo** with 43 field scenarios (covering **100% of all 182 trainable nodes** across `Concept`, `Principle`, `Framework`, `Technique`, `Pitfall`, `FDEPractice`, and `CrossInsight`), 6 real Palantir deployment cases, `fdekit` CD Pudahuel bridge cases, two 5-day AIP Bootcamp campaigns, 7 Artifact Forge missions, a 20-question 90% CI calibrator with Fermi decomposition scratchpad, and voice-enabled sparring.
 
 The graph is the source of truth. `build.py` compiles every surface from it, validates all references, and fails closed if data is broken.
 
@@ -8,7 +8,7 @@ The graph is the source of truth. `build.py` compiles every surface from it, val
 
 ## 1. What is in the box
 
-### Books & layers (`193 nodes · 488 edges · 20 external resources`)
+### Books & layers (`202 nodes · 507 edges · 20 external resources`)
 
 | Key | Book / layer | Authors | Nodes | Focus in the FDE lifecycle |
 |---|---|---|---:|---|
@@ -44,7 +44,7 @@ These six cases are **training syntheses inspired by publicly reported deploymen
 | `graph.json` | **Single source of truth** — nodes, canonical edges, external resources |
 | `research/<book>.md` | 8 tactical dossiers: chapter map, step-by-step toolkits, official resources, field playbook and word-for-word scripts |
 | `research/<book>.graph-additions.json` | Research deltas merged with `research/merge_research.py` |
-| `scenarios.json` | Dojo bank: **42 field scenarios** (6 Palantir + 2 `fdekit` CD Pudahuel), **2 Bootcamps / 10 stages**, **7 Forge missions**, **20 calibration questions**, **8 sparring contexts**, 5-dimension rubric |
+| `scenarios.json` | Dojo bank: **43 field scenarios** (6 Palantir + `fdekit` CD Pudahuel), **2 Bootcamps / 10 stages**, **7 Forge missions**, **20 calibration questions**, **8 sparring contexts**, 5-dimension rubric |
 | `template.html` | Graph viewer template (vis-network, dark theme, resources, playbook modal, Dojo CTA) |
 | `dojo_template.html` | FDE Field Dojo SPA template (5 training modes, localStorage state, no runtime dependencies) |
 | `vendor/vis-network.min.js` | Vendored vis-network 9.1.9 so the viewer works offline |
@@ -62,22 +62,22 @@ These six cases are **training syntheses inspired by publicly reported deploymen
 Requires only **Python 3.10+** (standard library, no dependencies).
 
 ```bash
-cd C:\fde\repo-mytra-fde\knowledge-graph
+cd knowledge-graph
 python build.py
 ```
 
 Output:
 
 ```text
-OK graph: 193 nodes, 488 edges, 20 resources, 9 layers
-OK dojo bank: 42 scenarios (6 Palantir), 20 calibration questions, 8 contexts, 2 bootcamps / 10 stages, 7 forge missions, 173/173 trainable nodes covered (100%)
+OK graph: 202 nodes, 507 edges, 20 resources, 9 layers
+OK dojo bank: 43 scenarios (6 Palantir), 20 calibration questions, 8 contexts, 2 bootcamps / 10 stages, 7 forge missions, 182/182 trainable nodes covered (100%)
 OK vendor: vendor/vis-network.min.js (688,911 bytes, offline viewer)
-OK build: 193 nodes, 488 edges, 20 resources, 8 dossiers, 42 scenarios, 20 calibration questions, 2 bootcamps / 10 stages
+OK build: 202 nodes, 507 edges, 20 resources, 8 dossiers, 43 scenarios, 20 calibration questions, 2 bootcamps / 10 stages
   - out/index.html
   - out/dojo.html
   - out/graph.json
   - out/neo4j.cypher
-  - out/obsidian/  (193 notes + 00 Index.md)
+  - out/obsidian/  (202 notes + 00 Index.md)
 ```
 
 `out/` is rebuilt from scratch on every run: never edit generated files.
@@ -85,7 +85,7 @@ OK build: 193 nodes, 488 edges, 20 resources, 8 dossiers, 42 scenarios, 20 calib
 Optional: rebuild the graph after editing research dossiers:
 
 ```bash
-cd C:\fde\repo-mytra-fde\knowledge-graph
+cd knowledge-graph
 python research/merge_research.py
 python build.py
 ```
@@ -99,7 +99,7 @@ python build.py
 - Orphan nodes (no incoming or outgoing edge).
 - Book nodes without `FROM_BOOK`/`AUTHORED` wiring; labels colliding inside an Obsidian folder.
 - Invalid resources (unknown `node_id`, non-HTTP URL, missing title/kind).
-- Scenario bank: at least 33 scenarios (currently 42), at least 3-per-book coverage, duplicate ids, unknown node ids, wrong node types, missing/duplicate correct options, bad metric keys or deltas, at least 15 calibration questions (currently 20), non-numeric answers, invalid sparring contexts/rubric, at least 6 forge missions (currently 7), and **100% coverage of all 173 non-Book/non-Author nodes**.
+- Scenario bank: at least 33 scenarios (currently 43), at least 3-per-book coverage, duplicate ids, unknown node ids, wrong node types, missing/duplicate correct options, bad metric keys or deltas, at least 15 calibration questions (currently 20), non-numeric answers, invalid sparring contexts/rubric, at least 6 forge missions (currently 7), and **100% coverage of all 182 non-Book/non-Author nodes**.
 - **Palantir cases:** at least 6 cases with `case_study: "palantir"`, `case_org`, and `difficulty: "boss"`; the six canonical ids `scen_28_palantir_airbus` … `scen_33_palantir_cleveland` are required.
 - **Bootcamps:** 2 campaigns (`camp_skywise_supply`, `camp_retail_nosilo`), 5 ordered stages each, canonical day themes, `start_metrics` at 55, loss threshold 30, win threshold 65 / average 75, at least 3 options per stage with exactly one best option, and valid graph nodes on every stage.
 - **Anti-gaming:** diagnosis texts, action labels and scripts are checked for named books/frameworks/techniques; diagnosis texts and labels must be length-balanced (max/min ≤ 1.25). Leaking `MECE`, `Rule of Five`, `Confirmation Bias`, etc. into option content aborts the build. Scripts are additionally hidden by the UI until the user selects an option, so their length cannot be used as a tell.
@@ -109,7 +109,7 @@ python build.py
 
 ## 3. FDE Field Dojo (`out/dojo.html`)
 
-A gamified, offline-first trainer for field conversations. The Dojo embeds a compact copy of the graph, all 42 scenarios, both Bootcamp campaigns, all 7 Artifact Forge missions, the 20-question calibration bank and the dossiers, so it runs from `file://` or any static server with no API.
+A gamified, offline-first trainer for field conversations. The Dojo embeds a compact copy of the graph, all 43 scenarios, both Bootcamp campaigns, all 7 Artifact Forge missions, the 20-question calibration bank and the dossiers, so it runs from `file://` or any static server with no API.
 
 ### 3.1 HUD and persistence
 
@@ -126,7 +126,7 @@ Also persisted: XP, daily streak, per-scenario accuracy, **spaced repetition que
 
 ### 3.2 Mode 1 · Tactical Reflex Dojo
 
-- **42 high-fidelity scenarios**: 30 book cases + 4 FDE synthesis + **6 Palantir field cases** (Airbus, Tyson Foods, NHS England, PG&E, Jacobs, Cleveland Clinic) + **2 `fdekit` CD Pudahuel bridge cases** (`scen_41_fdekit_gemba_dq`, `scen_42_fdekit_value_spc`), achieving **100% coverage** across all **173 trainable nodes** (`Concept` 25/25, `Principle` 15/15, `Pitfall` 15/15, `FDEPractice` 14/14, `Technique` 59/59, `Framework` 12/12, and `CrossInsight` 18/18, plus 15 additional conceptual nodes).
+- **43 high-fidelity scenarios**: book cases + FDE synthesis + **6 Palantir field cases** (Airbus, Tyson Foods, NHS England, PG&E, Jacobs, Cleveland Clinic) + **`fdekit` CD Pudahuel bridge cases**, achieving **100% coverage** across all **182 trainable nodes** (`Concept` 33/33, `Principle` 23/23, `Pitfall` 15/15, `FDEPractice` 16/16, `Technique` 59/59, `Framework` 12/12, and `CrossInsight` 24/24).
 - **Anti-gaming by design:** options are shuffled per session with a seeded Fisher-Yates (the correct answer is never pinned to the first card); pre-answer labels/texts carry no framework names and are length-balanced; the exact scripts stay hidden until you choose, so you cannot pick the longest or most jargon-heavy option.
 - Two steps: **diagnosis first**, then the **exact verbal action/script**.
 - Every option carries deltas for TQ/SIG/EVI/ADP, detailed feedback and the best-action script to compare against.
@@ -260,20 +260,20 @@ Useful queries are included at the end of the file (cross-book synthesis, shorte
 ## 7. Verification checklist
 
 ```bash
-cd C:\fde\repo-mytra-fde\knowledge-graph
+cd knowledge-graph
 python build.py
 ```
 
 Then:
 
-1. `out/index.html` opens the graph; the sidebar shows `193 nodes · 488 edges · 20 external resources · 8 embedded field playbooks`.
+1. `out/index.html` opens the graph; the sidebar shows `202 nodes · 507 edges · 20 external resources · 8 embedded field playbooks`.
 2. The prominent **🥋 Ir al FDE Field Dojo** button opens `out/dojo.html`; the Dojo's **🕸 Grafo** link returns to `out/index.html`.
 3. In the Dojo, complete a scenario: the HUD moves, feedback and node pills appear, and failing marks the scenario as `needs review`. Confirm the correct answer is not always the first card and that option scripts stay hidden until you choose.
 4. Click **🏛️ Solo Casos Palantir (6)** and verify exactly six boss cases, including Airbus, Tyson, NHS, PG&E, Jacobs and Cleveland.
 5. In calibration, submit a range, use the wheel/widen flow, lock it, and confirm the real value and cumulative chart.
 6. In sparring, generate a mission, copy the prompt, confirm it contains the hidden state rules and JSON audit schema, and verify the **🎙️ Hablar (Push-to-Talk)** button degrades gracefully if SpeechRecognition is unavailable.
 7. Open **🏛️ 5-Day Bootcamp**, start a campaign, verify all HUD bars reset to 55, play five days, and confirm either `Production Contract Signed` or `Account Lost / Pilot Cancelled` with a post-mortem.
-8. `out/obsidian/` contains 193 notes + `00 Index.md`; Book notes end with `## Tactical Field Dossier` and node notes with resources show `## External Resources`.
+8. `out/obsidian/` contains 202 notes + `00 Index.md`; Book notes end with `## Tactical Field Dossier` and node notes with resources show `## External Resources`.
 9. `out/neo4j.cypher` contains only the 12 canonical predicates.
 
 To confirm the fail-closed validation, temporarily point a scenario at a fake node id (or duplicate a node id) and run `python build.py`: it must exit with `BUILD FAILED — scenarios.json: ... references unknown node id ...` and not produce a partial `out/`.

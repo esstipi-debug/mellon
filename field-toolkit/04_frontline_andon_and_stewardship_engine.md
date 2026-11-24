@@ -1,10 +1,11 @@
 # NARYA 💍🔥 — FRONTLINE TACTICAL GUIDE:
 ## Multimodal Frontline Andon & Operator Stewardship Engine
 
-> **Document Type:** Field Operational Protocol & Edge Architecture Specification  
+> **Document Type:** Field Operational Protocol & Edge Architecture Specification (`MS-SPEC` — 0 lines of implemented product code; not production software)  
 > **Canonical Path:** `field-toolkit/04_frontline_andon_and_stewardship_engine.md`  
-> **System Architecture:** Mellon (Frontline Adoption), Ithildin (Deterministic Safe-Staging) & Narya (Operator Stewardship)  
-> **Core Purpose:** Transform frontline anomaly reporting from a bureaucratic penalty into a frictionless 10-second multimodal workflow (audio, image, text), disburdening middle management from clerical data entry and establishing an immutable Operator Stewardship Ledger.
+> **System Architecture:** Mellon (Frontline Adoption / Forensic Kit), Ithildin (Deterministic Safe-Staging & `event-envelope/1` bridge) & Narya (Operator Stewardship `MS-SPEC`)  
+> **Physics & Feasibility Boundary (`RESULTADO_V`):** Field viability depends on the blocking/interruption index `B` and operational zone radius: feasible only at `B <= 0.2` (1 floor supervisor) or `B <= 0.4` (2 supervisors) within a `<= 60 m` physical zone under a 60s arrival-only SLA clock (`0` offline fabrication assumed).  
+> **Core Purpose:** Transform frontline anomaly reporting from a bureaucratic penalty into a frictionless multimodal capture workflow (voice memo, photo, text), disburdening middle management from clerical data entry and establishing an immutable Operator Stewardship Ledger.
 
 ---
 
@@ -69,7 +70,7 @@ sequenceDiagram
     Guardrail-->>Engine: Quarantine Bay Q-04 Assigned | Staging Ticket Created
 
     par Immediate Floor Feedback (<3.0 Seconds)
-        Engine-->>Operator: Audio/Haptic confirmation: "Bay Q-04 allocated. Time-credit +8 min applied."
+        Engine-->>Operator: Audio/Haptic confirmation: "Bay Q-04 allocated. Shift reporting time logged."
         Engine->>Ledger: Mint immutable Stewardship Record (+1 Defect Intercepted)
     and Automated Management Routing
         Engine->>Supervisor: Consolidated Exception Card (1-Click Disposition: Scrap / Vendor Return)
@@ -92,7 +93,7 @@ Operators never interact with complex UI forms while wearing cut-resistant work 
 ### 3.2. Frontline Ownership, Psychological Safety & Anti-Credit-Theft Protection
 To neutralize Campbell's Law and dismantle learned helplessness, the engine re-engineers floor sociology: from coercive surveillance to **empowering, verifiable frontline ownership** (*Adler & Borys, 1996*):
 
-1. **The Time-Credit Guarantee (Directive M1):** Any time dedicated to identifying, documenting, and physically isolating an anomaly automatically issues a certified *Time-Credit Token*. This credit bridges directly into the facility's Labor Management System (LMS), neutralizing any pick-rate speed penalty. The worker is never economically penalized for protecting the business.
+1. **Non-Penalized Reporting Time (Directive M1):** Reporting and isolating an anomaly logs shift reporting time against the cohort capacity model so that surfacing defects does not penalize the operator's pick-rate denominator. The worker is never economically penalized for protecting the business.
 2. **Immutable Contribution Attribution (Anti-Credit-Theft):** Every incident is cryptographically sealed with the operator's digital badge ID (`operator_badge_id`) at the exact millisecond of ingestion. Shift supervisors and department leads **cannot delete, edit, or retroactively claim credit** for an operator's discovery. The contribution is permanently and visibly recorded in the enterprise ledger. **Attribution rule:** each closure is sealed to the operator's credential so that no one can appropriate it, and every report aggregates by shift, asset and cohort; the system produces no individual ranking and no individual record is used for discipline.
 3. **Psychological Safety & Feeling Valued:** Frontline workers routinely feel treated as disposable labor whose opinions are discarded. Narya gives the workforce an institutional voice that cannot be muted by hierarchy:
    * **Direct Executive Visibility:** Plant managers, VPs of Operations, and Quality Directors see the unvarnished feed of frontline saves, linking cost avoidance to the shift, asset and cohort where it was caught (aggregated, per the attribution rule above). The name stays with the operator, who decides where to show it.
@@ -150,7 +151,7 @@ class FrontlineIncidentPayload(BaseModel):
     shift_code: str = Field(..., pattern=r"^(MORNING|AFTERNOON|GRAVEYARD)$")
     timestamp_utc: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     location_tag: str = Field(..., description="Physical aisle, dock door, or rack coordinate, e.g. AISLE-14-RACK-B")
-    raw_audio_url: Optional[str] = None
+    audio_ephemeral_sha256: Optional[str] = None  # Volatile memory only; TTL = 0 on disk
     raw_image_url: Optional[str] = None
     raw_text_transcript: Optional[str] = None
 

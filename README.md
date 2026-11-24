@@ -60,7 +60,7 @@ In enterprise technology deployments, systems fail at the boundary where digital
 * **ITHILDIN 🌌 (Deterministic Guardrails & Safe-Staging):** Passive, mathematically verifiable infrastructure. Just as Celebrimbor’s *ithildin* script remained dormant until illuminated by starlight, Ithildin operates as a passive safety fabric: zero direct mutations against production ERP/WMS databases (`MSEG`, `MKPF`, `EKET`), read-only telemetry probes across 5 canonical event dimensions, cryptographically signed changesets (HMAC-SHA256), and bit-for-bit idempotent rollback ledgers. The 900-second Time-To-Live is specified, not implemented: `IthildinGuard` does not expire a signed action, its token proves integrity and not who approved, and its idempotency keys live in memory. Those limits, and the ones of the receiving automaton, are pinned by strict `xfail` tests in [`tests/test_limites_conocidos_kit.py`](tests/test_limites_conocidos_kit.py).
 * **NARYA 💍 (Frontline Andon & Operator Stewardship Engine):** Specification only; not implemented. It describes a defect-reporting loop for the floor: an operator reports a damaged, leaking or mislabeled unit by voice, photo or text; the report becomes a structured event, a quarantine location is assigned, and the shift lead gets a pre-filled card to decide scrap, rework or vendor return. Any ERP/WMS change is staged through Ithildin, never written directly to production tables. Time spent reporting is credited, so a report does not count against pick-rate targets. One attribution rule: each closure is sealed to the operator's credential so that no one can appropriate it, and every report aggregates by shift, asset and cohort; the system produces no individual ranking and no individual record is used for discipline. Figures in the spec are design targets or examples, not measurements ([`field-toolkit/04_frontline_andon_and_stewardship_engine.md`](field-toolkit/04_frontline_andon_and_stewardship_engine.md)).
 * **VILYA 💍💨 (Asynchronous Executive Synthesis & Essential Council):** Concept only; this repository has no specification or code for it. It proposes replacing long written status reports with two-minute visual briefs sent asynchronously, and calling a synchronous meeting (an *Essential Council*, limited to the people who must decide) only when the asynchronous exchange leaves a trade-off unresolved.
-* **KERN ⚙️ (Production Execution & Capability-Gated Engine):** The hardened 60-tool Model Context Protocol (MCP) execution engine. Provides deterministic tool invocation, local vector indexing (`fastembed`), and graph-based capability attenuation with BFS policy vetoes.
+* **KERN ⚙️ (Production Execution & Capability-Gated Engine):** The hardened 60-capability deterministic engine (39-tool Anthropic MCP server). Provides deterministic tool invocation, local vector indexing (`fastembed`), and graph-based capability attenuation with BFS policy vetoes.
 
 ---
 
@@ -140,7 +140,7 @@ In addition to the open architectural specifications versioned here, this framew
 * **Level 1 — Safe-staging Decision Cockpit (Kern).** A planner or buyer approves a replenishment plan from the office. The approval is signed with HMAC-SHA256 under a server-side secret, the write goes only to the session's working copy and can be rolled back, and without the secret Kern refuses every approval-gated write (an explicit opt-out exists for local development and tests). Offline demo: [`docs/cockpit.html`](docs/cockpit.html). Download it and open it in a browser: it replays a real run frozen on Kern `b5c17a9` (2026-11-10) over three sample spreadsheets, two approved and rolled back, one with the approval refused. The hosted path `linchpin.fly.dev/cockpit` is not deployed (checked 2026-11-14).
 * **Level 2 — Gemba protocol under a signed master services agreement (MSA).** The 30-day protocol below, on the floor, only once a contract covers it.
 
-Engineered to integrate seamlessly with 90-day transformation sprints (such as WON.ai Rapid Redesign cycles; full playbook in [`field-toolkit/FIELD-PROTOCOL-30-DAYS.md`](field-toolkit/FIELD-PROTOCOL-30-DAYS.md) and [`field-toolkit/The-First-30-Days-Marcos-Stipicich.pdf`](field-toolkit/The-First-30-Days-Marcos-Stipicich.pdf)).
+Engineered to integrate seamlessly with 90-day transformation sprints (full playbook in [`field-toolkit/FIELD-PROTOCOL-30-DAYS.md`](field-toolkit/FIELD-PROTOCOL-30-DAYS.md) and [`field-toolkit/The-First-30-Days-Marcos-Stipicich.pdf`](field-toolkit/The-First-30-Days-Marcos-Stipicich.pdf)).
 
 In physical supply chains, manufacturing, and distribution, enterprise AI deployments routinely collapse when planned exclusively from boardroom slides. Frontline operators do not reject software out of irrational "resistance to change" (*Dent & Goldberg, 1999*); they reject tools that slow down pick rates, trigger punitive surveillance, or fail under harsh dock conditions. The Mellon deployment protocol embeds directly into the physical Gemba alongside the workforce from Day 1.
 
@@ -209,17 +209,28 @@ All mathematical, validation, CLI, and finite-state machine invariants (`1,075+`
 git clone https://github.com/esstipi-debug/mellon.git
 cd mellon
 python --version
-pip install -e ".[dev]"
+pip install -e ".[dev,contracts]"
 ```
 
 ### Running the Full Repository Test Suite, 3D Automaton Probes & 50,000-Cycle Fuzzing Campaign
 ```bash
 pytest -q
 pytest probes -q
+pytest contracts/event-envelope -q
+python contracts/event-envelope/envelope.py verify contracts/event-envelope/examples/valid-stream.jsonl
 pytest tests/test_cap3_probes.py test_gemba_invariants.py -v
 python test_gemba_invariants.py
 ```
-*Verifies the 3-coordinate `103/105/124` decoupled receipt automaton (`12/64` reachable legal states, zero uncounted release, dock non-blocking, and Little's Law `OVERFLOW_IMPUTED` capacity frontier with 35 formal property tests in green) alongside `50,000 / 50,000` deterministically accounted adversarial transitions (`seed=20261024`, zero bypasses across fail-closed HMAC-SHA256 verification, UTC normalization, single-use nonce anti-replay, scale bounds, and master-catalog weight parity).*
+*Verifies the 3-coordinate `103/105/124` decoupled receipt automaton (`12/64` reachable legal states, zero uncounted release, dock non-blocking, and Little's Law `OVERFLOW_IMPUTED` capacity frontier with 35 formal property tests in green), the portable `event-envelope/1` contract and native Ithildin producer ([`contracts/event-envelope/README.md`](contracts/event-envelope/README.md), [`src/fdekit/ithildin/envelope_bridge.py`](src/fdekit/ithildin/envelope_bridge.py)), and `50,000 / 50,000` deterministically accounted adversarial transitions (`seed=20261024`, zero bypasses across fail-closed HMAC-SHA256 verification, UTC normalization, single-use nonce anti-replay, scale bounds, and master-catalog weight parity).*
+
+### Subcomponent Boundaries (`IMPL` vs. `MS-SPEC`)
+| Subcomponent | Path | Status | Verification Scope |
+|---|---|---|---|
+| **Field Diagnostic Kit & Ithildin Bridge** | [`src/fdekit/`](src/fdekit/), [`src/fdekit/ithildin/envelope_bridge.py`](src/fdekit/ithildin/envelope_bridge.py) | `IMPL` | `pytest -q` (main suite; emits hash-chained `event-envelope/1` streams) |
+| **3D Decoupled Receipt Probes** | [`probes/`](probes/) | `IMPL` | `pytest probes -q` (`35` property/state-machine tests; `12/64` legal states) |
+| **Event-Envelope Contract** | [`contracts/event-envelope/README.md`](contracts/event-envelope/README.md) | `IMPL` | `pytest contracts/event-envelope -q` & `envelope.py verify` |
+| **Core Contracts, FSM & Gemba Fuzzing** | [`core_event_contracts.py`](core_event_contracts.py), [`inbound_fsm_guardrail.py`](inbound_fsm_guardrail.py), [`test_gemba_invariants.py`](test_gemba_invariants.py) | `IMPL` | `pytest -q test_gemba_invariants.py` (`50,000` transitions + `P1-P6`) |
+| **Narya Frontline Andon Protocol** | [`field-toolkit/04_frontline_andon_and_stewardship_engine.md`](field-toolkit/04_frontline_andon_and_stewardship_engine.md) | `MS-SPEC` (`0` LOC) | Architecture spec only (`B <= 0.2/0.4`, `<= 60 m` physics boundary) |
 
 ### Executing the `fdekit` Field Diagnostics & Decision Ledger CLI
 ```bash
@@ -269,7 +280,7 @@ The repository is architected across modular epistemological layers—from found
 | **CODE** | **ENG** | **Poka-Yoke Inbound State Machine** | [`inbound_fsm_guardrail.py`](inbound_fsm_guardrail.py) | Lead Software Architects | Non-bypassable state machine enforcing sensor proofs, single-use nonces, and `124`/`122` return parity. |
 | **CODE** | **ENG** | **Gemba Invariant Testing Harness** | [`test_gemba_invariants.py`](test_gemba_invariants.py) | QA / Reliability Engineers | Deterministic `50,000`-cycle adversarial fuzzing suite (`seed=20261024`) + `P1–P6` provenance regression tests. |
 | **CODE** | **ENG** | **Reference SQL Audit Assertions** | [`audit_assertions_sap.sql`](audit_assertions_sap.sql) | SAP / Database Administrators | Reference ANSI SQL assertions modeled on SAP S/4HANA (`MSEG`, `MKPF`, `EKPO`, `ACDOCA`, `103/105/124` parity). |
-| **DOJO** | **UI** | **Interactive Simulation & Sensitivity Dojo** | [GitHub Pages Deployment](https://esstipi-debug.github.io/mellon/) | Executive & Technical Teams | Online browser simulation running live Monte Carlo inventory absorption and sensitivity curves. |
+| **DOJO** | **UI** | **Knowledge Graph & FDE Field Dojo** | [GitHub Pages Deployment](https://esstipi-debug.github.io/mellon/) | Executive & Technical Teams | Offline 8-book FDE Knowledge Graph (`202` nodes, `507` edges) and FDE Field Dojo (`43` scenarios, `2` bootcamps, `7` forge missions). |
 
 ---
 
@@ -287,7 +298,7 @@ Systems break at the boundaries between disconnected silos. Across 13 years at t
 
 * **13 Years of Frontline Operations (Chile, Argentina, Australia):** Led enterprise operations across manufacturing, retail, and heavy distribution. Owned consolidated P&Ls up to $30M (scaling multi-channel e-commerce 300% YoY while releasing ~$5M in working capital), managed multi-site operating budgets ($15M across ~100 personnel), directed end-to-end forecasting and replenishment for 200+ retail locations with 15 planners, and analyzed $100M inventory portfolios.
 * **Gemba Discovery & Incentive Alignment:** Veteran of repeated shop-floor turnarounds where standard operating procedures diverged from reality. Identified and dismantled perverse incentives (such as bonus-linked picking volume quotas that actively manufactured mixed and damaged shipments) and replaced them with binary quality gates and floor-adopted standard work. Directed tier-1 WMS cutovers (including AGCO Melbourne across 50,000 SKUs) by running hypercare directly on the floor alongside operators until manual workarounds disappeared.
-* **Full-Stack SaaS & Biometric Domain Modeling (`Holy Oly`):** Architected and deployed **Holy Oly**, a multi-tenant Olympic weightlifting SaaS and athlete readiness platform on Render (~1,332 test cases, Fastify, Prisma, PostgreSQL, React).
+* **Full-Stack SaaS & Biometric Domain Modeling (`Holy Oly`):** Architected **Holy Oly**, a multi-tenant Olympic weightlifting SaaS and athlete readiness platform (~1,332 test cases, Fastify, Prisma, PostgreSQL, React; currently offline — source code and test suite archived in repo, no live Render instance).
   * *Full Coach Editorial Agency:* Built on a two-level architecture (`catalog ↔ plan`) where the platform assists rather than restricts: the coach retains 100% editorial authority to override, fine-tune, or reconstruct every load, session, volume, or rep scheme.
   * *10 Methodological Weightlifting Schools:* Codified distinct periodization templates reflecting 10 international traditions (Soviet/Prilepin volume tables and waviness, Bulgarian daily max singles ≥90%, Chinese technique×strength with closing metabolic blocks, Cuban velocity complexes, Colombian leg-volume/peaking taper, etc.).
   * *Non-Standard Repetition & Complex Parser:* Engineered a deterministic notation engine to parse, count, and decompose non-standard Olympic complexes (ordered multi-movement links in one set with one bar, e.g., `(2 Snatch + 1 Overhead Squat) @ 80%`). Automatically enforces weakest-link percentage grounding (computing target weight against the weakest component's 1RM to prevent catastrophic failure) and decomposes fatigue across 4 orthogonal dimensions (neural/SNC, technical complexity 1..12, structural/axial load, and metabolic demand), with strict invariants guaranteeing missing telemetry never defaults to a false green.
