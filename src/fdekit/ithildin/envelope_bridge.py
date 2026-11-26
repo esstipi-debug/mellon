@@ -212,6 +212,62 @@ def decision_to_event(
     }
 
 
+def boundary_rejection_to_event(
+    code: str,
+    detail: str,
+    *,
+    target_system: str,
+    action_id: str,
+    taint: str,
+    occurred_at: str | datetime | date,
+    stream: str = "ithildin-boundary",
+    actor_role: str = "boundary-fence",
+    actor_type: str = "system",
+    actor_credential: str | None = None,
+    seal_key: bytes | None = None,
+    paths: Sequence[str] = (),
+) -> dict[str, Any]:
+    """Convert an UntrustedPayloadFence/mode rejection into an event-envelope/1 alert."""
+    occurred = _normalize_utc_z(occurred_at)
+    recorded = _normalize_utc_z(datetime.now(timezone.utc))
+    payload = _sanitize_no_floats(
+        {
+            "action_id": str(action_id),
+            "code": str(code),
+            "detail": str(detail),
+            "paths": [str(p) for p in paths],
+            "taint": str(taint),
+            "target_system": str(target_system),
+        },
+        "$.payload",
+    )
+    payload_sha = _payload_hash(payload)
+    event_id = f"{action_id}:boundary:{payload_sha[:12]}"[:128]
+    summary = f"Boundary {code} on {target_system} ({action_id}): {detail}"[:280]
+    return {
+        "producer": PRODUCER,
+        "stream": _slug(stream, "ithildin-boundary"),
+        "event_id": event_id,
+        "event_type": "ithildin.boundary.rejected",
+        "kind": "alert",
+        "actor": {
+            "type": actor_type,
+            "role": _slug(actor_role, "boundary-fence"),
+            "seal": seal_credential(actor_credential, seal_key),
+        },
+        "objects": [
+            {"type": "target-system", "id": str(target_system)},
+            {"type": "action", "id": str(action_id)},
+        ],
+        "summary": summary,
+        "occurred_at": occurred,
+        "recorded_at": recorded,
+        "payload": payload,
+        "payload_sha256": payload_sha,
+        "signature_ref": None,
+    }
+
+
 def seal_stream(events: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     """Number, chain, and SHA-256 seal a sequence of unchained events."""
     sealed: list[dict[str, Any]] = []
