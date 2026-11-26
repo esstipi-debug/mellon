@@ -101,7 +101,7 @@ class Layout:
         if not stops:
             return 0.0
         path = [DOCK, *stops, DOCK]
-        return sum(self.distance(p, q) for p, q in zip(path, path[1:]))
+        return sum(self.distance(p, q) for p, q in zip(path, path[1:], strict=False))
 
     def golden_zone(self, fraction: float = 0.2) -> set[str]:
         """Ubicaciones cerca del dock y a nivel ergonomico (1-2).

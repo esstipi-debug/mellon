@@ -7,6 +7,7 @@ pone rojo, el contrato cambio y las dos capas hay que mirarlas.
 import os
 import subprocess
 import sys
+from dataclasses import FrozenInstanceError
 from datetime import date
 from pathlib import Path
 
@@ -54,7 +55,7 @@ def test_un_hallazgo_sin_regla_no_se_construye():
 
 def test_un_hallazgo_completo_es_inmutable():
     h = Hallazgo(regla="no anualizar dos veces", evidencia="L1 20% baja", procedencia=_proc())
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         h.regla = "otra"
 
 

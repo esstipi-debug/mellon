@@ -21,9 +21,9 @@ Scope note:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from enum import Enum
-from typing import Callable
 
 
 class S(str, Enum):

@@ -20,7 +20,6 @@ from fdekit.value.chile import (
     parametros_sin_verificar,
 )
 
-
 # --------------------------------------------------------------- la jornada
 
 

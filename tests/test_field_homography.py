@@ -22,7 +22,7 @@ def test_recupera_una_escala_pura():
 
 def test_clava_las_esquinas_que_se_le_dieron():
     h = FloorHomography.from_points(PX, M)
-    for (xp, yp), (xm, ym) in zip(PX, M):
+    for (xp, yp), (xm, ym) in zip(PX, M, strict=True):
         assert h.to_meters(xp, yp) == pytest.approx((xm, ym), abs=1e-6)
 
 
@@ -101,7 +101,7 @@ def test_acepta_camara_real_con_ejes_opuestos():
     metros = [(0.0, 0.0), (30.0, 0.0), (30.0, 20.0), (0.0, 20.0)]
     h = FloorHomography.from_points(px, metros)
     # Debe proyectar correctamente las esquinas de calibracion.
-    for (xp, yp), (xm, ym) in zip(px, metros):
+    for (xp, yp), (xm, ym) in zip(px, metros, strict=True):
         actual = h.to_meters(xp, yp)
         assert actual[0] == pytest.approx(xm, abs=1e-4)
         assert actual[1] == pytest.approx(ym, abs=1e-4)

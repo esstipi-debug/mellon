@@ -10,7 +10,8 @@ import itertools
 import unittest
 from collections import deque
 
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 try:
     from probes import cap3_delta_projection as m

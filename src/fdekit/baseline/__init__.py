@@ -4,8 +4,8 @@ La fase que todos se saltan por presion comercial. Peleala: es la que define si
 a los 90 dias tenes caso de renovacion o una discusion de opinion contra opinion.
 """
 
+from .analysis import bootstrap_ci, diff_in_diff, parallel_trends_check, pre_post
 from .design import BaselineSpec, icc_from_log, mde, required_days, sd_from_log
-from .analysis import pre_post, diff_in_diff, bootstrap_ci, parallel_trends_check
 
 # `parallel_trends_check` faltaba aca, y esa omision es la razon practica por la
 # que el supuesto que sostiene TODO el estimador DiD nunca se verificaba en una

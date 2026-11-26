@@ -8,11 +8,11 @@ cubicaje, ruteo o robotica de picking.
 """
 
 from .master_audit import (
-    sampling_plan,
-    stratified_sample,
     audit_master,
     audit_summary,
     link_defects_to_rework,
+    sampling_plan,
+    stratified_sample,
 )
 
 __all__ = [

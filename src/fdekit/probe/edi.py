@@ -101,7 +101,7 @@ def validate_transaction(msg: X12Message) -> list[Finding]:
     if ge and len(ge[0]) > 1 and int(ge[0][1] or 0) != len(st):
         f.append(Finding("ERROR", "ENV006", f"GE01 dice {ge[0][1]} transacciones, hay {len(st)}"))
 
-    for s, e in zip(st, se):
+    for s, e in zip(st, se, strict=False):
         if len(s) > 2 and len(e) > 2 and s[2].strip() != e[2].strip():
             f.append(Finding("ERROR", "TRX001", f"ST02 ({s[2]}) != SE02 ({e[2]})"))
 

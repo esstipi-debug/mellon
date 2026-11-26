@@ -9,6 +9,7 @@
     fdekit spc --values v.csv --baseline 30
     fdekit probe --edi carpeta/
     fdekit templates --out docs/ plantillas A3, TWI, runbook, spec
+    fdekit verify-boundary examples/bpi2019_sample.csv --out out/bpi_stream.jsonl
 """
 
 from __future__ import annotations
@@ -555,6 +556,23 @@ def cmd_templates(a):
     return 0
 
 
+def cmd_verify_boundary(a):
+    import importlib
+
+    argv = [str(a.csv_path)]
+    if a.out is not None:
+        argv.extend(["--out", str(a.out)])
+    argv.extend(["--activity", a.activity])
+    argv.extend(["--case-col", a.case_col])
+    argv.extend(["--value-col", a.value_col])
+    argv.extend(["--ref-col", a.ref_col])
+    if a.as_of_utc is not None:
+        argv.extend(["--as-of-utc", a.as_of_utc])
+    if a.json:
+        argv.append("--json")
+    return importlib.import_module("fdekit.ithildin.__main__").main(argv)
+
+
 # -------------------------------------------------------------------- parser
 
 
@@ -706,6 +724,20 @@ def build_parser() -> argparse.ArgumentParser:
     z = sub.add_parser("templates", help="escribe las plantillas en blanco")
     z.add_argument("--out", default="docs")
     z.set_defaults(func=cmd_templates)
+
+    vb = sub.add_parser(
+        "verify-boundary",
+        help="verifica semantica de columnas y guardrails Ithildin (stdlib-only)",
+    )
+    vb.add_argument("csv_path", type=Path, help="Ruta al CSV P2P estilo BPI")
+    vb.add_argument("--out", type=Path, default=None, help="Ruta opcional para el JSONL sellado")
+    vb.add_argument("--activity", default="Record Goods Receipt", help="Actividad a evaluar")
+    vb.add_argument("--case-col", default="caso", help="Columna de caso")
+    vb.add_argument("--value-col", default="Cumulative net worth (EUR)", help="Columna numerica")
+    vb.add_argument("--ref-col", default="po_item_value_eur", help="Columna de valor de referencia")
+    vb.add_argument("--as-of-utc", default=None, help="Timestamp UTC ISO determinista")
+    vb.add_argument("--json", action="store_true", help="Salida JSON")
+    vb.set_defaults(func=cmd_verify_boundary)
 
     return p
 

@@ -90,8 +90,8 @@ def slotting_opportunity(
     """
     lay = layout or Layout()
     freq = location_frequency(log)
-    loc2sku = dict(zip(master["home_location"], master["sku_id"]))
-    cls = dict(zip(master["sku_id"], master["abc_class"]))
+    loc2sku = dict(zip(master["home_location"], master["sku_id"], strict=True))
+    cls = dict(zip(master["sku_id"], master["abc_class"], strict=True))
 
     freq = freq.copy()
     freq["sku_id"] = freq["location"].map(loc2sku)
@@ -144,7 +144,7 @@ def plot_spaghetti(log: EventLog, layout: Layout | None = None, n_orders: int = 
 
     for _, stops in sample:
         pts = [lay.xy(DOCK), *[lay.xy(s) for s in stops], lay.xy(DOCK)]
-        xs, ys = zip(*pts)
+        xs, ys = zip(*pts, strict=True)
         ax.plot(xs, ys, lw=0.9, alpha=0.55)
 
     dx, dy = lay.xy(DOCK)
@@ -170,7 +170,7 @@ def plot_heatmap(log: EventLog, layout: Layout | None = None, path: str | None =
     lay = layout or Layout()
     freq = location_frequency(log)
     grid = np.zeros((lay.bays + 1, lay.aisles + 1))
-    for loc, v in zip(freq["location"], freq["visits"]):
+    for loc, v in zip(freq["location"], freq["visits"], strict=True):
         a, b, _ = lay.parse(loc)
         grid[b, a] += v
 

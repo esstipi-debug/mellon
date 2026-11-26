@@ -105,7 +105,7 @@ def test_los_encabezados_no_saltan_niveles(store):
 
     niveles = [int(m) for m in re.findall(r"<h([1-6])", render_html(store, "pudahuel", today=HOY))]
     assert niveles[0] == 1
-    for antes, despues in zip(niveles, niveles[1:]):
+    for antes, despues in zip(niveles, niveles[1:], strict=False):
         assert despues <= antes + 1
 
 

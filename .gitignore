@@ -40,6 +40,7 @@ OFERTA-SERVICIOS-Y-CANALES.md
 PROMPT-*.md
 prompt-*.md
 _*.py
+!__*.py
 *postulacion*
 *postulaciones*
 *sueldo*

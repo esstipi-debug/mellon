@@ -11,7 +11,6 @@ from fdekit.ithildin import (
     StagingAction,
 )
 
-
 # --- Tests for IthildinGuard ---
 
 

@@ -20,6 +20,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Verify BPI 2019 boundary demo (stdlib-only)
+        run: |
+          PYTHONPATH=src python -m fdekit.ithildin examples/bpi2019_sample.csv --out /tmp/bpi_stream_1.jsonl
+          PYTHONPATH=src python -m fdekit.ithildin examples/bpi2019_sample.csv --out /tmp/bpi_stream_2.jsonl
+          cmp -s /tmp/bpi_stream_1.jsonl /tmp/bpi_stream_2.jsonl
+          python contracts/event-envelope/envelope.py verify /tmp/bpi_stream_1.jsonl
+
       - name: Install dependencies
         run: python -m pip install --upgrade pip && pip install -e ".[dev,contracts]" ruff
 

@@ -41,7 +41,7 @@ def test_dfg_no_cruza_casos():
         ]
     )
     dfg = directly_follows(lg)
-    pares = set(zip(dfg["source"], dfg["target"]))
+    pares = set(zip(dfg["source"], dfg["target"], strict=True))
     assert pares == {("A", "B"), ("C", "D")}
     assert ("B", "C") not in pares
 

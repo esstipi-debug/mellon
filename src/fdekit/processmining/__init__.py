@@ -4,8 +4,8 @@ El VSM que dibujaste en el gemba es el flujo *declarado*. Esto es el flujo
 *real*. La distancia entre los dos es el diagnostico.
 """
 
-from .log import EventLog
 from .dfg import activity_durations, bottlenecks, directly_follows, to_mermaid
+from .log import EventLog
 from .variants import conformance, pareto_coverage, rework_summary, variants
 
 __all__ = [

@@ -18,7 +18,6 @@ from fdekit.gemba import (
 )
 from fdekit.gemba.transcribe import parse_operators, split_utterances, strip_accents
 
-
 # ------------------------------------------------------------- normalizacion
 
 

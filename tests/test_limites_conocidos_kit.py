@@ -168,7 +168,7 @@ def test_ithildin_idempotency_survives_a_new_instance():
 )
 def test_blind_count_token_is_keyed_not_plaintext_sha256():
     expected = 50
-    token_sin_clave = hashlib.sha256(f"A-01:SKU-1:{expected}".encode("utf-8")).hexdigest()
+    token_sin_clave = hashlib.sha256(f"A-01:SKU-1:{expected}".encode()).hexdigest()
     with pytest.raises(ValidationError):
         BlindCycleCountEvent(
             transaction_id="TX-LIMITES-BLIND-01",

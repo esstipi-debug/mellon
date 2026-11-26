@@ -28,7 +28,7 @@ class Range:
     high: float
 
     @staticmethod
-    def of(value, spread: float = 0.0) -> "Range":
+    def of(value, spread: float = 0.0) -> Range:
         if isinstance(value, Range):
             return value
         v = float(value)
@@ -415,7 +415,7 @@ def _knee_savings(sweep: list[dict]) -> float:
         return 0.0
     rows = sorted(sweep, key=lambda r: r["n_pickers"])
     knee = rows[0]["n_pickers"]
-    for a, b in zip(rows, rows[1:]):
+    for a, b in zip(rows, rows[1:], strict=False):
         gain = (a["mean_cycle_min"] - b["mean_cycle_min"]) / max(a["mean_cycle_min"], 1e-9)
         if gain > 0.05:
             knee = b["n_pickers"]

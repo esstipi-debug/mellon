@@ -199,7 +199,7 @@ def _build_orders(
     skus = truth["sku_id"].to_numpy()
 
     rows = []
-    for oid, k in zip(orders["order_id"], n_lines):
+    for oid, k in zip(orders["order_id"], n_lines, strict=True):
         chosen = rng.choice(skus, size=int(k), replace=False, p=p)
         for sku in chosen:
             rows.append((oid, sku, int(rng.integers(1, 4))))
@@ -222,8 +222,8 @@ def _simulate(
     lay = cfg.layout
     t0 = pd.Timestamp(cfg.shift_start)
 
-    m_loc = dict(zip(master["sku_id"], master["home_location"]))
-    t_loc = dict(zip(truth["sku_id"], truth["home_location"]))
+    m_loc = dict(zip(master["sku_id"], master["home_location"], strict=True))
+    t_loc = dict(zip(truth["sku_id"], truth["home_location"], strict=True))
     bad_dims = set(defects.loc[defects["dim_error"], "sku_id"])
     bad_loc = set(defects.loc[defects["location_error"], "sku_id"])
 
@@ -243,7 +243,7 @@ def _simulate(
     def emit(case, act, t, res, loc):
         ev.append((case, act, t, res, loc))
 
-    for oid, rel_ts in zip(orders["order_id"], orders["released_at"]):
+    for oid, rel_ts in zip(orders["order_id"], orders["released_at"], strict=True):
         rel = (rel_ts - t0).total_seconds()
         emit(oid, "ORDER_RELEASED", rel, "WMS", DOCK)
 

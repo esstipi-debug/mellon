@@ -226,10 +226,15 @@ def boundary_rejection_to_event(
     actor_credential: str | None = None,
     seal_key: bytes | None = None,
     paths: Sequence[str] = (),
+    recorded_at: str | datetime | date | None = None,
 ) -> dict[str, Any]:
     """Convert an UntrustedPayloadFence/mode rejection into an event-envelope/1 alert."""
     occurred = _normalize_utc_z(occurred_at)
-    recorded = _normalize_utc_z(datetime.now(timezone.utc))
+    recorded = (
+        _normalize_utc_z(recorded_at)
+        if recorded_at is not None
+        else _normalize_utc_z(datetime.now(timezone.utc))
+    )
     payload = _sanitize_no_floats(
         {
             "action_id": str(action_id),

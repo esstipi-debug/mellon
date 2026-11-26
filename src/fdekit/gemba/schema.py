@@ -7,7 +7,7 @@ permite que 40 observaciones sueltas se conviertan en un Pareto el viernes.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 
 # Los siete desperdicios + el octavo (talento), en el vocabulario del CD.

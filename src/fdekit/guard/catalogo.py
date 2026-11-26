@@ -18,9 +18,9 @@ from __future__ import annotations
 
 import math
 from collections import Counter, defaultdict
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
-from typing import Callable, Iterable, Iterator, Mapping, Sequence
 
 from .cobertura import CoberturaGuardia
 from .guardia import Guardia

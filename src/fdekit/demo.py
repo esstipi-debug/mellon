@@ -14,8 +14,15 @@ import numpy as np
 import pandas as pd
 
 from .a3 import build_a3_from_findings
-from .baseline import BaselineSpec, diff_in_diff, parallel_trends_check, pre_post
-from .baseline import icc_from_log, required_days, sd_from_log
+from .baseline import (
+    BaselineSpec,
+    diff_in_diff,
+    icc_from_log,
+    parallel_trends_check,
+    pre_post,
+    required_days,
+    sd_from_log,
+)
 from .dataquality import audit_master, audit_summary, link_defects_to_rework, sampling_plan, stratified_sample
 from .gemba import GembaSession, Observation
 from .layout import Layout

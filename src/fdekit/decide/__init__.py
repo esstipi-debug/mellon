@@ -34,20 +34,11 @@ interfaz de la promesa de Serena sin heredar la garantia —y callarlo— es el
 error mas grave que puede cometer este diseno.
 """
 
-from .schema import (
-    ASSUMPTION_STATUS,
-    COMMITMENT_STATUS,
-    DECISION_STATUS,
-    QUESTION_STATUS,
-    Anchor,
-    Assumption,
-    Commitment,
-    Consent,
-    Decision,
-    Meeting,
-    OpenQuestion,
-    parse_date,
-)
+# `register` es como `decide` se enchufa al CLI del kit. Es plomeria, no
+# dominio, pero es lo que `fdekit.cli` necesita del paquete — y la regla de
+# `tests/test_api_publica.py` no admite excepciones a proposito: un guardia
+# con una lista de perdonados deja de ser un guardia.
+from .cli import register
 from .draft import (
     EXPIRA_EN_HORAS,
     DecisionDraft,
@@ -67,12 +58,6 @@ from .parse import (
     parse_due_date,
     resolve_owner,
 )
-# `register` es como `decide` se enchufa al CLI del kit. Es plomeria, no
-# dominio, pero es lo que `fdekit.cli` necesita del paquete — y la regla de
-# `tests/test_api_publica.py` no admite excepciones a proposito: un guardia
-# con una lista de perdonados deja de ser un guardia.
-from .cli import register
-from .store import MAX_PROMOTIONS_PER_MEETING, DecideStore, PromotionBudgetExceeded
 from .query import (
     Agenda,
     Coverage,
@@ -85,6 +70,21 @@ from .query import (
     tick,
     why,
 )
+from .schema import (
+    ASSUMPTION_STATUS,
+    COMMITMENT_STATUS,
+    DECISION_STATUS,
+    QUESTION_STATUS,
+    Anchor,
+    Assumption,
+    Commitment,
+    Consent,
+    Decision,
+    Meeting,
+    OpenQuestion,
+    parse_date,
+)
+from .store import MAX_PROMOTIONS_PER_MEETING, DecideStore, PromotionBudgetExceeded
 
 __all__ = [
     "Anchor",

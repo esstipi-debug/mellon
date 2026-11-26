@@ -25,9 +25,10 @@ import csv
 import dataclasses
 import itertools
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Iterable, NamedTuple
+from typing import IO, NamedTuple
 
 import pandas as pd
 
@@ -252,7 +253,7 @@ def track_distance_m(points: list[TrackPoint]) -> float:
     return float(
         sum(
             math.dist((a.x_m, a.y_m), (b.x_m, b.y_m))
-            for a, b in zip(points, points[1:])
+            for a, b in zip(points, points[1:], strict=False)
         )
     )
 
@@ -336,7 +337,7 @@ def _tramos_consecutivos(
     loc_actual = asignaciones[0]
     t_ini = t_fin = points[0].t_s
     hueco_antes = False  # el primer tramo no tiene "antes"
-    for p, loc in zip(points[1:], asignaciones[1:]):
+    for p, loc in zip(points[1:], asignaciones[1:], strict=True):
         gap = p.t_s - t_fin
         if loc == loc_actual and gap <= max_gap_s:
             t_fin = p.t_s

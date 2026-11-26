@@ -1,18 +1,20 @@
 """Property and model-checking tests for Chapter 3 decoupled FSM and saturation frontier."""
 
 import math
-from hypothesis import given, settings, strategies as st
+
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from fdekit.sim.littles_law import mm_c_wait
 from probes.cap3_delta_projection import (
+    MOVEMENTS,
+    REACHABLE_STATES,
     A,
     Config,
     D,
     E,
-    MOVEMENTS,
     QuarantineBuffer,
-    REACHABLE_STATES,
     Rejected,
     S,
     check_all,

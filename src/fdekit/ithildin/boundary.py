@@ -208,8 +208,13 @@ class ScopedIthildinGuard:
         taint: DataTaint = DataTaint.UNTRUSTED_AI,
         initiator_id: str = "",
         human_verifier: str = "",
+        evaluated_at_utc: str | None = None,
     ) -> StagingVerdict:
-        now_utc = datetime.now(timezone.utc).isoformat()
+        now_utc = (
+            evaluated_at_utc
+            if evaluated_at_utc is not None
+            else datetime.now(timezone.utc).isoformat()
+        )
         audit_hash = hashlib.sha256(action.canonical_bytes()).hexdigest()
 
         if self.mode in (

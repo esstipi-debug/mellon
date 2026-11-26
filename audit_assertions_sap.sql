@@ -9,10 +9,10 @@
 --   staging tables (fde_*). They have been executed only against an in-memory SQLite
 --   database with synthetic rows (tests/test_sql_guardrails_metamorphic.py): each assertion
 --   returns 0 rows on clean data and flags an injected defect with its exact violation code.
---   Five known gaps stay recorded there as strict expected failures, all of them an
---   unknown value read as compliant: a NULL signature check or a NULL scale divergence
---   passes Assertion 1; a NULL counter badge or a NULL "stock revealed" flag passes
---   Assertion 2; a PO line with no demand baseline is never evaluated by Assertion 3.
+--   All five previously documented NULL fail-open gaps are closed fail-closed:
+--   missing signature verification or scale divergence fails Assertion 1; missing
+--   counter badge or RF blind-flag fails Assertion 2; missing/zero demand baseline
+--   emits NOT_EVALUABLE_MISSING_FORECAST in Assertion 3.
 --   They have NOT been executed against a live client SAP instance.
 --   Dates are compared as ISO-8601 text or DATE values. Raw SAP DATS values ('20261101')
 --   must be converted first: compared as text against an ISO date, every raw date of the
@@ -80,7 +80,9 @@ LEFT JOIN fde_telemetry_scrap_events tel
    AND adj.mjahr = tel.sap_mjahr_reference
    AND adj.zeile = tel.sap_zeile_reference
 WHERE tel.transaction_id IS NULL
+   OR tel.is_cryptographically_verified IS NULL
    OR tel.is_cryptographically_verified = FALSE
+   OR tel.scale_weight_divergence_pct IS NULL
    OR tel.scale_weight_divergence_pct > 0.0300;
 -- EXPECTED RESULT: 0 rows.
 
@@ -131,13 +133,17 @@ SELECT
     CASE 
         WHEN posting_user = counter_user_badge THEN 'SEGREGATION_OF_DUTIES_VIOLATION: Poster equals Counter'
         WHEN blind_token_hash IS NULL THEN 'INTEGRITY_BREACH: Missing blind verification token'
+        WHEN counter_user_badge IS NULL THEN 'SEGREGATION_OF_DUTIES_VIOLATION: Unidentified counter badge'
         WHEN is_system_stock_revealed_on_rf = TRUE THEN 'GOODHART_VIOLATION: System stock was displayed to picker'
+        WHEN is_system_stock_revealed_on_rf IS NULL THEN 'GOODHART_VIOLATION: Unknown whether system stock was displayed to picker'
         ELSE 'UNKNOWN_ANOMALY'
     END AS audit_violation_reason
 FROM cycle_count_postings
 WHERE posting_user = counter_user_badge
+   OR counter_user_badge IS NULL
    OR blind_token_hash IS NULL
-   OR is_system_stock_revealed_on_rf = TRUE;
+   OR is_system_stock_revealed_on_rf = TRUE
+   OR is_system_stock_revealed_on_rf IS NULL;
 -- EXPECTED RESULT: 0 rows.
 
 
@@ -202,19 +208,26 @@ SELECT
     ord.schedule_line_count,
     ord.calculated_coverage_days,
     ord.net_working_capital_destruction_usd,
-    'GOVERNANCE_BYPASS: Unapproved PO with coverage > 90 days and positive cash destruction' AS audit_violation_reason
+    CASE
+        WHEN ord.calculated_coverage_days IS NULL
+            THEN 'NOT_EVALUABLE_MISSING_FORECAST: PO coverage cannot be evaluated without demand baseline'
+        ELSE 'GOVERNANCE_BYPASS: Unapproved PO with coverage > 90 days and positive cash destruction'
+    END AS audit_violation_reason
 FROM moq_order_eval ord
-WHERE ord.calculated_coverage_days > 90.0
-  AND ord.net_working_capital_destruction_usd > 50000.00
-  AND NOT EXISTS (
-      SELECT 1
-      FROM fde_governance_approvals gov
-      WHERE gov.mandt_ref = ord.mandt
-        AND gov.ebeln_ref = ord.purchase_order
-        AND gov.ebelp_ref = ord.po_item_num
-        AND gov.approval_level = 'CFO_EXECUTIVE_RED_LANE'
-        AND gov.digital_signature_verified = TRUE
-  );
+WHERE ord.calculated_coverage_days IS NULL
+   OR (
+       ord.calculated_coverage_days > 90.0
+       AND ord.net_working_capital_destruction_usd > 50000.00
+       AND NOT EXISTS (
+           SELECT 1
+           FROM fde_governance_approvals gov
+           WHERE gov.mandt_ref = ord.mandt
+             AND gov.ebeln_ref = ord.purchase_order
+             AND gov.ebelp_ref = ord.po_item_num
+             AND gov.approval_level = 'CFO_EXECUTIVE_RED_LANE'
+             AND gov.digital_signature_verified = TRUE
+       )
+   );
 -- EXPECTED RESULT: 0 rows.
 
 

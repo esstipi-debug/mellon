@@ -14,9 +14,8 @@ vea el estado sin parsear 300 archivos.
 
 from __future__ import annotations
 
-import re
-
 import json
+import re
 import subprocess
 from dataclasses import dataclass
 from dataclasses import fields as dc_fields
@@ -24,6 +23,7 @@ from pathlib import Path
 
 from .frontmatter import dumps, loads
 from .schema import (
+    PROFILES,
     Anchor,
     Assumption,
     Commitment,
@@ -31,7 +31,6 @@ from .schema import (
     Decision,
     Meeting,
     OpenQuestion,
-    PROFILES,
     parse_date,
     profile_of,
 )

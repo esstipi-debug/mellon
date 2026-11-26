@@ -7,9 +7,9 @@ memoria del proyecto ya mintio una vez por escribirse a mano.
 
 from pathlib import Path
 
-from tools.harness.indice import indice
 from tools.harness.cosecha import cosechar
 from tools.harness.episodio import Episodio, agregar, leer, marcar
+from tools.harness.indice import indice
 from tools.harness.roles import viola_frontera
 
 _GUARDIA = '''"""Guardia de ejemplo."""

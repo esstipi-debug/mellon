@@ -86,7 +86,7 @@ class DecisionDraft:
         return d
 
     @staticmethod
-    def from_dict(d: dict) -> "DecisionDraft":
+    def from_dict(d: dict) -> DecisionDraft:
         d = {k: v for k, v in d.items() if k != "ready"}
         d["missing"] = tuple(d.get("missing", ()))
         d["notes"] = tuple(d.get("notes", ()))

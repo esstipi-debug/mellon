@@ -86,7 +86,7 @@ def test_k_1_es_legitimo_y_el_mensaje_lo_dice():
 
 def test_ningun_campo_de_identidad_sobrevive_el_borde():
     ok = {"subject": "sub-a1b2c3d4e5f6", "distance_m": 41.2}
-    assert_no_identity(ok) is None
+    assert assert_no_identity(ok) is None
 
     for campo in IDENTITY_FIELDS:
         with pytest.raises(AnonymityError, match=campo):
@@ -104,7 +104,7 @@ def test_no_cuelga_en_estructura_ciclica():
     # Una estructura con ciclos no debe causar recursion infinita.
     d = {"key": "value"}
     d["self"] = d  # Crear ciclo
-    assert_no_identity(d) is None  # Debe terminar sin error
+    assert assert_no_identity(d) is None  # Debe terminar sin error
 
 
 def test_rechaza_resource_con_entero():

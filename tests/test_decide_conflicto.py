@@ -109,8 +109,8 @@ def test_el_conflicto_NO_mata_los_compromisos_los_enumera(par):
 def test_una_decision_en_conflicto_no_es_un_padre_muerto(par):
     """No entra a DEAD_DECISION_STATUS: sus compromisos NO son zombis. Un zombi
     es gente ejecutando algo ya revertido; aca nadie revirtio nada."""
-    from fdekit.decide.schema import DEAD_DECISION_STATUS, es_zombi
     from fdekit.decide import Commitment
+    from fdekit.decide.schema import DEAD_DECISION_STATUS, es_zombi
 
     st, sala, chat = par
     declare_conflict(st, chat.id, sala.id, reason="x", today=HOY, apply=True)

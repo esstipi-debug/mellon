@@ -8,7 +8,7 @@ conversacion del dia 90 de "¿funciono?" a "¿cuanto dio?".
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 import numpy as np
 from scipy import stats
@@ -184,7 +184,7 @@ def icc_from_log(values, groups, strata=None, confidence: float = 0.95) -> dict:
     grand = v.mean()
     means = np.array([v[g == lab].mean() for lab in labels])
     ssb = float((counts * (means - grand) ** 2).sum())
-    ssw = float(sum(((v[g == lab] - mu) ** 2).sum() for lab, mu in zip(labels, means)))
+    ssw = float(sum(((v[g == lab] - mu) ** 2).sum() for lab, mu in zip(labels, means, strict=True)))
     df_b, df_w = m - 1, n - m
     msb, msw = ssb / df_b, ssw / df_w
 

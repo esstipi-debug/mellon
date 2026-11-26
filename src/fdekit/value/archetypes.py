@@ -21,7 +21,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-
 # Lineas procesadas por hora de FTE directo. Un picker mueve 60-80 lineas/hora
 # incluyendo caminata; el resto de la dotacion directa (packing, recepcion,
 # reposicion, control) suma ~2.5x la dotacion de picking, asi que la tasa

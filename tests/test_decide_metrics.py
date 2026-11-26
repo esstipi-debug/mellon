@@ -22,19 +22,18 @@ from fdekit.decide import (
     PromotionBudgetExceeded,
 )
 from fdekit.decide.eventlog import (
-    touches_excluidas,
     build_event_log,
     lifecycle_rework,
+    touches_excluidas,
     touches_to_decide,
 )
 from fdekit.decide.export import to_graphify, to_mermaid, write_graphify
-from fdekit.decide.schema import PROFILES
 from fdekit.decide.metrics import (
-    capture_state,
-    freeze_baseline,
     QueryLog,
+    capture_state,
     circular_minutes,
     decider_executor_presence,
+    freeze_baseline,
     index_quality,
     orphans_and_zombies,
     read_metrics,
@@ -44,6 +43,7 @@ from fdekit.decide.metrics import (
     volume_gate,
 )
 from fdekit.decide.resolve import AliasStore, confirm
+from fdekit.decide.schema import PROFILES
 from fdekit.decide.store import ValidationError
 from fdekit.processmining import variants
 from fdekit.stats import risk_ratio_2x2

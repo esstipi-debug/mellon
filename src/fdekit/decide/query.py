@@ -12,17 +12,19 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 
+from ..gemba import normalize as _norm_txt
 from .schema import (
     CONFLICT_RESOLUTIONS,
     LIVE_COMMITMENT_STATUS,
-    MAX_SLIPS as MAX_SLIPS,
     Commitment,
     OpenQuestion,
     es_zombi,
     hist_line,
     profile_of,
 )
-from ..gemba import normalize as _norm_txt
+from .schema import (
+    MAX_SLIPS as MAX_SLIPS,
+)
 from .store import DecideStore, ValidationError
 
 # --------------------------------------------------------------- cobertura

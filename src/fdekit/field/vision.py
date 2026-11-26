@@ -87,7 +87,7 @@ def detect_markers(
                 break
             corners, ids, _ = detector.detectMarkers(frame)
             if ids is not None:
-                for esquinas, marker_id in zip(corners, ids.flatten()):
+                for esquinas, marker_id in zip(corners, ids.flatten(), strict=True):
                     centro = esquinas.reshape(4, 2).mean(axis=0)
                     detecciones.append(
                         Detection(

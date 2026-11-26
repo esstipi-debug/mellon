@@ -17,6 +17,7 @@ import pytest
 
 from fdekit.decide import Consent, DecideStore, Decision, Meeting
 from fdekit.decide.anchor import MAX_CITA, cite, find_utterance, freeze, verify
+from fdekit.decide.query import tick, why
 from fdekit.decide.resolve import (
     AliasStore,
     confirm,
@@ -25,7 +26,6 @@ from fdekit.decide.resolve import (
     slot_coherence,
     unalias,
 )
-from fdekit.decide.query import tick, why
 from fdekit.decide.schema import Alias
 from fdekit.decide.transcript import TranscriptStore, Utterance, mmss
 

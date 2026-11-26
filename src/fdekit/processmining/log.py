@@ -72,5 +72,5 @@ class EventLog:
         out["role"] = out["resource"].astype(str).str.split("-").str[0]
         return out.sort_values(["role", "events"], ascending=[True, False]).reset_index(drop=True)
 
-    def filter_activities(self, keep: list[str]) -> "EventLog":
+    def filter_activities(self, keep: list[str]) -> EventLog:
         return EventLog(self.df[self.df["activity"].isin(keep)])

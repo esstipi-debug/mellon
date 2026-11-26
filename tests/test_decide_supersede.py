@@ -32,8 +32,8 @@ from fdekit.decide import (
     why,
 )
 from fdekit.decide.eventlog import build_event_log
-from fdekit.decide.parse import extract_slots
 from fdekit.decide.metrics import orphans_and_zombies
+from fdekit.decide.parse import extract_slots
 from fdekit.decide.resolve import AliasStore, confirm
 from fdekit.decide.schema import hist_line
 from fdekit.decide.store import ValidationError

@@ -21,8 +21,8 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import pytest
 
@@ -197,24 +197,18 @@ def test_a1_una_baja_sin_prueba_del_sensor_se_reporta(defecto):
     assert codigos(mutado) == ["SECURITY_ALERT"]
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "pendiente: con is_cryptographically_verified en NULL, `= FALSE` da NULL y la "
-    "baja pasa como verificada"
-))
 def test_a1_una_firma_sin_verificar_no_cuenta_como_verificada():
-    _, mutado = dos_corridas(1, a1_sano, sql(
+    sano, mutado = dos_corridas(1, a1_sano, sql(
         "UPDATE fde_telemetry_scrap_events SET is_cryptographically_verified = NULL"))
-    assert len(mutado) >= 1
+    assert sano == []
+    assert codigos(mutado) == ["SECURITY_ALERT"]
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "pendiente: con scale_weight_divergence_pct en NULL, `> 0.03` da NULL y la baja "
-    "pasa como dentro del 3 por ciento"
-))
 def test_a1_una_divergencia_desconocida_no_cuenta_como_dentro_del_umbral():
-    _, mutado = dos_corridas(1, a1_sano, sql(
+    sano, mutado = dos_corridas(1, a1_sano, sql(
         "UPDATE fde_telemetry_scrap_events SET scale_weight_divergence_pct = NULL"))
-    assert len(mutado) >= 1
+    assert sano == []
+    assert codigos(mutado) == ["SECURITY_ALERT"]
 
 
 # ------------------------------------------ asercion 2: conteo a ciegas
@@ -246,24 +240,18 @@ def test_a2_un_ajuste_sin_conteo_a_ciegas_se_reporta(defecto, esperado):
     assert codigos(mutado) == [esperado]
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "pendiente: con counter_user_badge en NULL, `posting_user = counter_user_badge` "
-    "da NULL: no saber quien conto pasa como que conto otra persona"
-))
 def test_a2_un_contador_sin_identificar_no_cuenta_como_otra_persona():
-    _, mutado = dos_corridas(2, a2_sano, sql(
+    sano, mutado = dos_corridas(2, a2_sano, sql(
         "UPDATE fde_blind_cycle_counts SET counter_user_badge = NULL"))
-    assert len(mutado) >= 1
+    assert sano == []
+    assert codigos(mutado) == ["SEGREGATION_OF_DUTIES_VIOLATION"]
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "pendiente: con is_system_stock_revealed_on_rf en NULL, `= TRUE` da NULL: no "
-    "saber si se mostro el stock pasa como conteo a ciegas"
-))
 def test_a2_no_saber_si_se_mostro_el_stock_no_cuenta_como_conteo_a_ciegas():
-    _, mutado = dos_corridas(2, a2_sano, sql(
+    sano, mutado = dos_corridas(2, a2_sano, sql(
         "UPDATE fde_blind_cycle_counts SET is_system_stock_revealed_on_rf = NULL"))
-    assert len(mutado) >= 1
+    assert sano == []
+    assert codigos(mutado) == ["GOODHART_VIOLATION"]
 
 
 # ------------------------------- asercion 3: compra por MOQ sin aprobacion
@@ -319,16 +307,13 @@ def test_a3_la_aprobacion_de_otro_mandante_no_tapa_la_oc():
     assert codigos(mutado) == ["GOVERNANCE_BYPASS"]
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "pendiente: sin pronostico de demanda la cobertura da NULL, `> 90` da NULL y "
-    "la OC no sale: no poder evaluarla se lee como que cumple"
-))
 def test_a3_una_oc_sin_pronostico_no_se_da_por_buena():
-    _, mutado = dos_corridas(3, a3_oc(repartos=1), lambda con: (
+    sano, mutado = dos_corridas(3, a3_oc(repartos=1), lambda con: (
         con.execute("DELETE FROM fde_governance_approvals"),
         con.execute("DELETE FROM fde_demand_forecast_baselines"),
     ))
-    assert len(mutado) >= 1
+    assert sano == []
+    assert codigos(mutado) == ["NOT_EVALUABLE_MISSING_FORECAST"]
 
 
 # --------------------------------- asercion 4: MM contra FI, documento a documento

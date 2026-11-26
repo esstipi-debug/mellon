@@ -19,7 +19,6 @@ from pathlib import Path
 
 import pytest
 
-
 # CRITERIO DE EXCEPCION: Se exceptua un archivo cuando el acento es DATO BAJO
 # PRUEBA o materia del modulo, NUNCA cuando es prosa descuidada. Los acentos en
 # datos de prueba son obligatorios cuando lo que se prueba es justamente el
@@ -110,7 +109,7 @@ def test_no_tildes_ni_enes_en_codigo_python():
             continue
 
         try:
-            with open(py_file, "r", encoding="utf-8") as f:
+            with open(py_file, encoding="utf-8") as f:
                 for lineno, linea in enumerate(f, start=1):
                     if patron_acentos.search(linea):
                         # Extraer el caracter ofensor para que sea obvio.
@@ -119,7 +118,7 @@ def test_no_tildes_ni_enes_en_codigo_python():
                         violaciones.append(
                             f"{py_file}:{lineno}: {ofensores}\n    {linea.rstrip()}"
                         )
-        except (UnicodeDecodeError, IOError):
+        except (OSError, UnicodeDecodeError):
             # Ignorar archivos no UTF-8 o no legibles.
             pass
 

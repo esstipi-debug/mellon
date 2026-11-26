@@ -13,13 +13,13 @@ from pathlib import Path
 
 from .query import agenda, referencing, safe_close, tick, why
 from .schema import (
+    DECISION_ORIGIN,
+    MEETING_CHANNEL,
+    MEETING_CLASS,
     Assumption,
     Commitment,
     Consent,
-    DECISION_ORIGIN,
     Decision,
-    MEETING_CHANNEL,
-    MEETING_CLASS,
     Meeting,
     OpenQuestion,
     parse_date,

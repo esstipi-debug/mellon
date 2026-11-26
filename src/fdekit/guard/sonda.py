@@ -16,9 +16,9 @@ Stdlib pura (regla 2).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable
 
 from .guardia import Guardia, evaluar
 from .hallazgo import Hallazgo

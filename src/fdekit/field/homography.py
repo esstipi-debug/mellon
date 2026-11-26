@@ -71,7 +71,7 @@ class FloorHomography:
         meters: list[tuple[float, float]],
         verify: tuple[tuple[float, float], tuple[float, float]] | None = None,
         tolerance_m: float = 0.10,
-    ) -> "FloorHomography":
+    ) -> FloorHomography:
         """Construye una homografia a partir de cuatro pares de puntos correspondientes.
 
         Mapea cada pixel (x_px, y_px) a coordenadas del piso (x_m, y_m) usando una
@@ -125,7 +125,7 @@ class FloorHomography:
         _validate_quadrilateral(meters, "metros")
 
         a, b = [], []
-        for (x, y), (bigx, bigy) in zip(px, meters):
+        for (x, y), (bigx, bigy) in zip(px, meters, strict=True):
             a.append([x, y, 1, 0, 0, 0, -bigx * x, -bigx * y])
             b.append(bigx)
             a.append([0, 0, 0, x, y, 1, -bigy * x, -bigy * y])

@@ -31,7 +31,7 @@ from .envelope_bridge import (
     write_jsonl,
 )
 from .guards import IthildinGuard, RiskLevel, StagingAction, StagingVerdict
-from .probes import PassiveEventProbe, ProbeReport, STANDARD_5_COLUMNS
+from .probes import STANDARD_5_COLUMNS, PassiveEventProbe, ProbeReport
 from .triggers import ConditionalTrigger, IthildinTriggerRegistry, TriggerResult
 
 __all__ = [
