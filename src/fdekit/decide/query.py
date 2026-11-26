@@ -15,6 +15,7 @@ from datetime import date
 from .schema import (
     CONFLICT_RESOLUTIONS,
     LIVE_COMMITMENT_STATUS,
+    MAX_SLIPS as MAX_SLIPS,
     Commitment,
     OpenQuestion,
     es_zombi,
