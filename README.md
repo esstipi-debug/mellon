@@ -36,7 +36,7 @@ python contracts/event-envelope/envelope.py verify out/bpi_stream.jsonl
 
 ## 1. Technical Verification & Local Replication
 
-All mathematical, validation, CLI, SQL, and finite-state machine invariants (`1,196` automated tests in the main suite: `1,196 passed, 2 skipped, 1 deselected, 0 xfailed`, plus `35` in `probes/`, `25` in `contracts/event-envelope`, and `6` in `test_gemba_invariants.py`) are reproducible locally:
+All mathematical, validation, CLI, SQL, and finite-state machine invariants (`1,197` automated tests in the main suite: `1,197 passed, 1 skipped, 1 deselected, 0 xfailed` in GitHub Actions CI, plus `35` in `probes/`, `25` in `contracts/event-envelope`, and `6` in `test_gemba_invariants.py`) are reproducible locally:
 
 ### Environment Setup & Full Test Suite
 ```bash
