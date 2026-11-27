@@ -47,7 +47,11 @@ def test_ithildin_verdicts_emit_valid_event_envelope_stream(tmp_path):
         idempotency_key="idemp-stage-01",
         timestamp_utc="2026-11-24T09:00:00-03:00",
     )
-    v_staged = guard.evaluate_and_commit(staged_action, guard.sign_action(staged_action))
+    v_staged = guard.evaluate_and_commit(
+        staged_action,
+        guard.sign_action(staged_action),
+        now_utc="2026-11-24T12:01:00Z",
+    )
 
     rejected_action = StagingAction(
         action_id="act-bad-02",
@@ -58,7 +62,11 @@ def test_ithildin_verdicts_emit_valid_event_envelope_stream(tmp_path):
         timestamp_utc="2026-11-24T12:05:00Z",
         rollback_plan=None,
     )
-    v_rejected = guard.evaluate_and_commit(rejected_action, guard.sign_action(rejected_action))
+    v_rejected = guard.evaluate_and_commit(
+        rejected_action,
+        guard.sign_action(rejected_action),
+        now_utc="2026-11-24T12:06:00Z",
+    )
 
     exec_action = StagingAction(
         action_id="act-exec-03",
@@ -69,7 +77,11 @@ def test_ithildin_verdicts_emit_valid_event_envelope_stream(tmp_path):
         timestamp_utc="2026-11-24T12:10:00Z",
         rollback_plan={"restore_snapshot": "snap-1"},
     )
-    v_exec = guard.evaluate_and_commit(exec_action, guard.sign_action(exec_action))
+    v_exec = guard.evaluate_and_commit(
+        exec_action,
+        guard.sign_action(exec_action),
+        now_utc="2026-11-24T12:11:00Z",
+    )
 
     events = [
         verdict_to_event(staged_action, v_staged, actor_credential="planner-01", seal_key=seal_key),
@@ -140,7 +152,11 @@ def test_envelope_bridge_rejects_floats_and_short_seal_key():
         idempotency_key="idemp-float-01",
         timestamp_utc="2026-11-24T12:00:00Z",
     )
-    verdict = guard.evaluate_and_commit(action, guard.sign_action(action))
+    verdict = guard.evaluate_and_commit(
+        action,
+        guard.sign_action(action),
+        now_utc="2026-11-24T12:01:00Z",
+    )
     with pytest.raises(ValueError, match="floating-point"):
         verdict_to_event(action, verdict)
 

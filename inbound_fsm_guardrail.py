@@ -2,32 +2,37 @@
 inbound_fsm_guardrail.py
 ========================
 Finite State Machine enforcing physical telemetry proofs before ERP ledger mutations.
-Standard: Deterministic Poka-Yoke, Fail-Closed HMAC Authentication, Total UTC Monotonicity,
-Single-Use Nonce Consumption, Master Catalog Weight Parity, and Governed Return Custody.
+Standard: Deterministic Poka-Yoke, Fail-Closed HMAC Authentication (with SoD Approver Key),
+Total UTC Monotonicity, Event Freshness TTL, Persistent Single-Use Nonce Consumption,
+Master Catalog Weight Parity, and Governed Return Custody.
 """
 
-from datetime import datetime
+import hmac
+import sqlite3
+from collections.abc import Callable
+from contextlib import closing
+from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Dict, Optional, Set, Union
+from pathlib import Path
 
 from core_event_contracts import (
-    BlindCycleCountEvent,
-    ErpLedgerPostEvent,
     MAX_WEIGHBRIDGE_KG,
     MIN_WEIGHBRIDGE_KG,
+    BlindCycleCountEvent,
+    ErpLedgerPostEvent,
     ReturnAuthorizationEvent,
     ScrapDisposalEvent,
     YardGateEvent,
     normalize_utc_timestamp,
 )
 
-ProofContract = Union[
-    YardGateEvent,
-    ScrapDisposalEvent,
-    BlindCycleCountEvent,
-    ReturnAuthorizationEvent,
-    ErpLedgerPostEvent,
-]
+ProofContract = (
+    YardGateEvent
+    | ScrapDisposalEvent
+    | BlindCycleCountEvent
+    | ReturnAuthorizationEvent
+    | ErpLedgerPostEvent
+)
 
 
 class InvalidStateTransitionError(Exception):
@@ -39,7 +44,7 @@ class PhysicalProofMissingError(Exception):
 
 
 class ReplayAttackDetectedError(Exception):
-    """Raised when an event timestamp is non-monotonic or a transaction_id is reused."""
+    """Raised when an event timestamp is non-monotonic/stale or a transaction_id is reused."""
 
 
 class InboundDeliveryFSM:
@@ -59,19 +64,77 @@ class InboundDeliveryFSM:
     def __init__(
         self,
         delivery_id: str,
-        hmac_secret: Optional[bytes] = None,
-        catalog_unit_weights: Optional[Dict[str, Decimal]] = None,
+        hmac_secret: bytes | None = None,
+        catalog_unit_weights: dict[str, Decimal] | None = None,
+        *,
+        approver_secret: bytes | None = None,
+        max_event_age_seconds: float = 900.0,
+        nonce_store_path: str | Path | None = None,
+        clock: Callable[[], datetime] | None = None,
     ):
         if not delivery_id or len(delivery_id.strip()) < 8:
             raise ValueError("delivery_id must be at least 8 alphanumeric characters.")
+        if (
+            approver_secret is not None
+            and hmac_secret is not None
+            and hmac.compare_digest(bytes(approver_secret), bytes(hmac_secret))
+        ):
+            raise ValueError("FAIL_CLOSED: approver_secret must be distinct from gateway hmac_secret.")
+        if max_event_age_seconds < 0:
+            raise ValueError("FAIL_CLOSED: max_event_age_seconds cannot be negative.")
+
         self.delivery_id = delivery_id.strip()
         self.hmac_secret = hmac_secret
+        self.approver_secret = approver_secret
+        self.max_event_age_seconds = float(max_event_age_seconds)
+        self.nonce_store_path = Path(nonce_store_path) if nonce_store_path is not None else None
+        self._clock = clock or (lambda: datetime.now(timezone.utc))
         self.catalog_unit_weights = dict(catalog_unit_weights) if catalog_unit_weights is not None else None
         self.current_state = "ANNOUNCED"
         self.history: list[dict] = []
-        self.telemetry_proofs: Dict[str, ProofContract] = {}
-        self.consumed_transaction_ids: Set[str] = set()
-        self.last_event_timestamp: Optional[datetime] = None
+        self.telemetry_proofs: dict[str, ProofContract] = {}
+        self.consumed_transaction_ids: set[str] = set()
+        self.last_event_timestamp: datetime | None = None
+
+        if self.nonce_store_path is not None:
+            self._init_nonce_store()
+
+    def _init_nonce_store(self) -> None:
+        assert self.nonce_store_path is not None
+        self.nonce_store_path.parent.mkdir(parents=True, exist_ok=True)
+        with closing(sqlite3.connect(self.nonce_store_path)) as conn:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS consumed_nonces ("
+                "transaction_id TEXT PRIMARY KEY, "
+                "delivery_id TEXT NOT NULL, "
+                "consumed_at_utc TEXT NOT NULL)"
+            )
+            conn.commit()
+
+    def _is_nonce_consumed_in_store(self, transaction_id: str) -> bool:
+        if self.nonce_store_path is None:
+            return False
+        with closing(sqlite3.connect(self.nonce_store_path)) as conn:
+            row = conn.execute(
+                "SELECT 1 FROM consumed_nonces WHERE transaction_id = ?",
+                (transaction_id,),
+            ).fetchone()
+            return row is not None
+
+    def _record_nonce_in_store(self, transaction_id: str, consumed_at_utc: datetime) -> None:
+        if self.nonce_store_path is None:
+            return
+        with closing(sqlite3.connect(self.nonce_store_path)) as conn:
+            try:
+                conn.execute(
+                    "INSERT INTO consumed_nonces (transaction_id, delivery_id, consumed_at_utc) VALUES (?, ?, ?)",
+                    (transaction_id, self.delivery_id, consumed_at_utc.isoformat()),
+                )
+                conn.commit()
+            except sqlite3.IntegrityError as exc:
+                raise ReplayAttackDetectedError(
+                    f"REPLAY_BLOCKED: transaction_id '{transaction_id}' was already consumed."
+                ) from exc
 
     def get_current_state(self) -> str:
         return self.current_state
@@ -82,6 +145,19 @@ class InboundDeliveryFSM:
                 "FAIL_CLOSED: Gateway HMAC secret missing or shorter than 16 bytes."
             )
         return bytes(self.hmac_secret)
+
+    def _require_approver_secret(self) -> bytes:
+        if not isinstance(self.approver_secret, (bytes, bytearray)) or len(self.approver_secret) < 16:
+            raise PhysicalProofMissingError(
+                "FAIL_CLOSED: Approver HMAC secret missing or shorter than 16 bytes."
+            )
+        if self.hmac_secret is not None and hmac.compare_digest(
+            bytes(self.approver_secret), bytes(self.hmac_secret)
+        ):
+            raise PhysicalProofMissingError(
+                "FAIL_CLOSED: approver_secret must be distinct from gateway hmac_secret."
+            )
+        return bytes(self.approver_secret)
 
     @staticmethod
     def _extract_utc_timestamp(proof_payload: ProofContract) -> datetime:
@@ -134,13 +210,22 @@ class InboundDeliveryFSM:
             )
 
         # 4. Single-consumption anti-replay check (blocks recycling the same physical event)
-        if proof_payload.transaction_id in self.consumed_transaction_ids:
+        if (
+            proof_payload.transaction_id in self.consumed_transaction_ids
+            or self._is_nonce_consumed_in_store(proof_payload.transaction_id)
+        ):
             raise ReplayAttackDetectedError(
                 f"REPLAY_BLOCKED: transaction_id '{proof_payload.transaction_id}' was already consumed."
             )
 
-        # 5. Strict UTC timestamp monotonicity (<= blocks identical-timestamp replay)
+        # 5. Event freshness TTL and strict UTC timestamp monotonicity
         event_ts = self._extract_utc_timestamp(proof_payload)
+        now_utc = normalize_utc_timestamp(self._clock())
+        if (now_utc - event_ts).total_seconds() > self.max_event_age_seconds:
+            raise ReplayAttackDetectedError(
+                f"STALE_EVENT_REJECTED: Event timestamp {event_ts.isoformat()} exceeds "
+                f"max_event_age_seconds={self.max_event_age_seconds} relative to {now_utc.isoformat()}."
+            )
         if self.last_event_timestamp is not None and event_ts <= self.last_event_timestamp:
             raise ReplayAttackDetectedError(
                 f"TIMESTAMP_MONOTONICITY_VIOLATION: Event timestamp {event_ts.isoformat()} is not "
@@ -184,6 +269,11 @@ class InboundDeliveryFSM:
         elif target_state == "DISCREPANCY_HOLD":
             if not isinstance(proof_payload, BlindCycleCountEvent):
                 raise PhysicalProofMissingError("DISCREPANCY_HOLD requires a BlindCycleCountEvent.")
+            secret = self._require_hmac_secret()
+            if not proof_payload.verify_blind_token(secret):
+                raise PhysicalProofMissingError(
+                    "HMAC_VERIFICATION_FAILED: Invalid keyed blind cycle count token on DISCREPANCY_HOLD."
+                )
             if proof_payload.counted_quantity == proof_payload.manifest_expected_units:
                 raise InvalidStateTransitionError(
                     "LOGICAL_CONFLICT: Counted units match manifest; proceed to CLEARED_COMPLETE."
@@ -193,6 +283,11 @@ class InboundDeliveryFSM:
             if not isinstance(proof_payload, BlindCycleCountEvent):
                 raise PhysicalProofMissingError(
                     "CLEARED_COMPLETE requires a verified BlindCycleCountEvent."
+                )
+            secret = self._require_hmac_secret()
+            if not proof_payload.verify_blind_token(secret):
+                raise PhysicalProofMissingError(
+                    "HMAC_VERIFICATION_FAILED: Invalid keyed blind cycle count token on CLEARED_COMPLETE."
                 )
             if self.current_state == "UNLOADING_ACTIVE":
                 if proof_payload.counted_quantity != proof_payload.manifest_expected_units:
@@ -211,6 +306,11 @@ class InboundDeliveryFSM:
         elif target_state == "SCRAP_RECORDED":
             if not isinstance(proof_payload, ScrapDisposalEvent):
                 raise PhysicalProofMissingError("SCRAP_RECORDED requires a ScrapDisposalEvent.")
+            secret = self._require_hmac_secret()
+            if not proof_payload.verify_hmac_signature(secret):
+                raise PhysicalProofMissingError(
+                    "HMAC_VERIFICATION_FAILED: Forged or unauthenticated scrap disposal signature."
+                )
             if self.catalog_unit_weights is None:
                 raise PhysicalProofMissingError(
                     "FAIL_CLOSED: Master catalog unit weights required to verify scrap parity."
@@ -230,6 +330,11 @@ class InboundDeliveryFSM:
             if not isinstance(proof_payload, ReturnAuthorizationEvent):
                 raise PhysicalProofMissingError(
                     "RETURN_ISSUED requires a dedicated ReturnAuthorizationEvent (reference 124/122)."
+                )
+            secret = self._require_hmac_secret()
+            if not proof_payload.verify_hmac_signature(secret):
+                raise PhysicalProofMissingError(
+                    "HMAC_VERIFICATION_FAILED: Forged or unauthenticated return authorization signature."
                 )
             # Prior to unrestricted release (105), origin rejection must use reference movement 124 (not 122)
             if proof_payload.reference_movement_code != "124":
@@ -254,8 +359,8 @@ class InboundDeliveryFSM:
                 raise PhysicalProofMissingError(
                     "POSTED_TO_ERP requires a cryptographically signed ErpLedgerPostEvent (103/105)."
                 )
-            secret = self._require_hmac_secret()
-            if not proof_payload.verify_hmac_signature(secret):
+            approver_secret = self._require_approver_secret()
+            if not proof_payload.verify_hmac_signature(approver_secret):
                 raise PhysicalProofMissingError(
                     "HMAC_VERIFICATION_FAILED: Invalid approver HMAC on ErpLedgerPostEvent."
                 )
@@ -269,7 +374,8 @@ class InboundDeliveryFSM:
                     "QUANTITY_MISMATCH: Posted ERP units must equal verified cleared count."
                 )
 
-        # 7. Persist to immutable execution ledger
+        # 7. Persist to immutable execution ledger (SQLite first so IntegrityError aborts atomically)
+        self._record_nonce_in_store(proof_payload.transaction_id, now_utc)
         self.consumed_transaction_ids.add(proof_payload.transaction_id)
         self.telemetry_proofs[target_state] = proof_payload
         self.last_event_timestamp = event_ts

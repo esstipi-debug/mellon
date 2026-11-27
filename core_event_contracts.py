@@ -6,14 +6,14 @@ Standard: Pydantic V2, Strict Runtime Validation, Fixed-Point Decimal Arithmetic
 Total UTC Normalization, Weighbridge Physical Bounds, and Fail-Closed HMAC-SHA256.
 """
 
-from datetime import datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP
-from enum import Enum
 import hashlib
 import hmac
+from datetime import datetime, timezone
+from decimal import ROUND_HALF_UP, Decimal
+from enum import Enum
 from typing import Annotated, Literal
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 # Physical weighbridge bounds (light commercial tare floor -> legal bridge ceiling)
 MIN_WEIGHBRIDGE_KG = Decimal("1500.00")
@@ -21,9 +21,9 @@ MAX_WEIGHBRIDGE_KG = Decimal("80000.00")
 
 
 def normalize_utc_timestamp(dt: datetime) -> datetime:
-    """Total normalization to timezone-aware UTC datetime (eliminates naive/aware TypeError)."""
+    """Fail-closed normalization to timezone-aware UTC datetime (rejects naive datetimes)."""
     if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
-        return dt.replace(tzinfo=timezone.utc)
+        raise ValueError("FAIL_CLOSED: Naive datetime without timezone info rejected.")
     return dt.astimezone(timezone.utc)
 
 
@@ -31,7 +31,7 @@ def compute_hmac_proof(secret_key: bytes, message: str) -> str:
     """Compute deterministic SHA-256 HMAC for sensor and event authentication (fail-closed)."""
     if not isinstance(secret_key, (bytes, bytearray)) or len(secret_key) < 16:
         raise ValueError("FAIL_CLOSED: HMAC secret_key must be bytes of length >= 16.")
-    return hmac.new(bytes(secret_key), message.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.new(bytes(secret_key), message.encode(), hashlib.sha256).hexdigest()
 
 
 class GateState(str, Enum):
@@ -87,7 +87,8 @@ class YardGateEvent(BaseModel):
         weight_norm = self.scale_weight_kg.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         return (
             f"{self.transaction_id}|{self.delivery_id}|{self.truck_license_plate}|"
-            f"{weight_norm}|{self.telemetry_timestamp.isoformat()}"
+            f"{weight_norm}|{self.telemetry_timestamp.isoformat()}|"
+            f"{int(self.is_transponder_active)}|{int(self.optical_plate_scan_match)}"
         )
 
     def verify_hmac_signature(self, secret_key: bytes) -> bool:
@@ -110,6 +111,7 @@ class ScrapDisposalEvent(BaseModel):
     units_declared: int = Field(..., gt=0)
     photo_verification_hash: Annotated[str, StringConstraints(pattern=r"^[a-fA-F0-9]{64}$")]
     disposal_timestamp: datetime
+    cryptographic_signature: Annotated[str, StringConstraints(pattern=r"^[a-fA-F0-9]{64}$")]
 
     @field_validator("disposal_timestamp", mode="after")
     @classmethod
@@ -131,6 +133,19 @@ class ScrapDisposalEvent(BaseModel):
                 f"Tolerance is +/-3.00%. Compactor mechanical lock engaged."
             )
         return self
+
+    def canonical_signing_payload(self) -> str:
+        weight_norm = self.scale_measured_total_weight_kg.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+        return (
+            f"{self.transaction_id}|{self.delivery_id}|{self.operator_badge_id}|"
+            f"{self.sku_id}|{self.disposal_bin_id}|{self.reason_code.value}|"
+            f"{self.units_declared}|{weight_norm}|{self.photo_verification_hash}|"
+            f"{self.disposal_timestamp.isoformat()}"
+        )
+
+    def verify_hmac_signature(self, secret_key: bytes) -> bool:
+        expected = compute_hmac_proof(secret_key, self.canonical_signing_payload())
+        return hmac.compare_digest(expected.lower(), self.cryptographic_signature.lower())
 
 
 # 3. Countermeasure: Ghost Inventory & Blind Recount Evasion
@@ -154,15 +169,21 @@ class BlindCycleCountEvent(BaseModel):
 
     @model_validator(mode="after")
     def verify_blind_count(self) -> "BlindCycleCountEvent":
-        expected_blind_hash = hashlib.sha256(
-            f"{self.bin_location}:{self.sku_scanned}:{self.manifest_expected_units}".encode("utf-8")
+        unkeyed_sha256 = hashlib.sha256(
+            f"{self.bin_location}:{self.sku_scanned}:{self.manifest_expected_units}".encode()
         ).hexdigest()
-        if not hmac.compare_digest(self.blind_token_hash.lower(), expected_blind_hash.lower()):
+        if hmac.compare_digest(self.blind_token_hash.lower(), unkeyed_sha256.lower()):
             raise ValueError(
-                "INTEGRITY_VIOLATION: Invalid blind recount token. "
-                "Possible tampering with offline handheld terminal."
+                "INTEGRITY_VIOLATION: Unkeyed plaintext SHA-256 blind token rejected; keyed HMAC required."
             )
         return self
+
+    def canonical_blind_payload(self) -> str:
+        return f"{self.bin_location}|{self.sku_scanned}|{self.manifest_expected_units}"
+
+    def verify_blind_token(self, secret_key: bytes) -> bool:
+        expected = compute_hmac_proof(secret_key, self.canonical_blind_payload())
+        return hmac.compare_digest(expected.lower(), self.blind_token_hash.lower())
 
 
 # 4. Countermeasure: Governed Vendor Return Custody (Reference BWART 124 vs 122)
@@ -176,11 +197,23 @@ class ReturnAuthorizationEvent(BaseModel):
     inspector_badge_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=4, max_length=32)]
     carrier_acknowledgment_hash: Annotated[str, StringConstraints(pattern=r"^[a-fA-F0-9]{64}$")]
     authorization_timestamp: datetime
+    cryptographic_signature: Annotated[str, StringConstraints(pattern=r"^[a-fA-F0-9]{64}$")]
 
     @field_validator("authorization_timestamp", mode="after")
     @classmethod
     def _ensure_utc(cls, v: datetime) -> datetime:
         return normalize_utc_timestamp(v)
+
+    def canonical_signing_payload(self) -> str:
+        return (
+            f"{self.transaction_id}|{self.delivery_id}|{self.reference_movement_code}|"
+            f"{self.rejected_units}|{self.inspector_badge_id}|"
+            f"{self.carrier_acknowledgment_hash}|{self.authorization_timestamp.isoformat()}"
+        )
+
+    def verify_hmac_signature(self, secret_key: bytes) -> bool:
+        expected = compute_hmac_proof(secret_key, self.canonical_signing_payload())
+        return hmac.compare_digest(expected.lower(), self.cryptographic_signature.lower())
 
 
 # 5. Countermeasure: Cryptographically Bound ERP Ledger Posting (Reference BWART 103 / 105)

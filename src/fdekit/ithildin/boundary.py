@@ -257,8 +257,19 @@ class ScopedIthildinGuard:
                     audit_hash=audit_hash,
                     evaluated_at_utc=now_utc,
                 )
+            if action.approved_by is not None and action.approved_by.strip() != ver_clean:
+                return StagingVerdict(
+                    approved=False,
+                    code="REJECTED_UNTRUSTED_AI_SOD",
+                    reason=(
+                        "Action approved_by does not match human_verifier "
+                        "(fail-closed SoD)."
+                    ),
+                    audit_hash=audit_hash,
+                    evaluated_at_utc=now_utc,
+                )
 
-        return self._guard.evaluate_and_commit(action, token)
+        return self._guard.evaluate_and_commit(action, token, now_utc=now_utc)
 
 
 @dataclass(frozen=True)

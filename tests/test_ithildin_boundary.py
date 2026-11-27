@@ -80,10 +80,12 @@ def test_scoped_guard_enforces_mode_and_untrusted_ai_sod():
         idempotency_key="k-ro-1",
         timestamp_utc="2026-11-26T12:00:00Z",
     )
+    eval_ts = "2026-11-26T12:05:00Z"
     v_ro = ro.evaluate_scoped(
         write_action,
         guard.sign_action(write_action),
         taint=DataTaint.VERIFIED_STRUCTURED,
+        evaluated_at_utc=eval_ts,
     )
     assert v_ro.approved is False
     assert v_ro.code == "REJECTED_MODE_FORBIDS_MUTATION"
@@ -96,6 +98,7 @@ def test_scoped_guard_enforces_mode_and_untrusted_ai_sod():
         taint=DataTaint.UNTRUSTED_AI,
         initiator_id="agent-1",
         human_verifier="",
+        evaluated_at_utc=eval_ts,
     )
     assert v_sod_missing.approved is False
     assert v_sod_missing.code == "REJECTED_UNTRUSTED_AI_SOD"
@@ -106,6 +109,7 @@ def test_scoped_guard_enforces_mode_and_untrusted_ai_sod():
         taint=DataTaint.UNTRUSTED_AI,
         initiator_id="user-1",
         human_verifier="user-1",
+        evaluated_at_utc=eval_ts,
     )
     assert v_sod_same.approved is False
     assert v_sod_same.code == "REJECTED_UNTRUSTED_AI_SOD"
@@ -116,6 +120,63 @@ def test_scoped_guard_enforces_mode_and_untrusted_ai_sod():
         taint=DataTaint.UNTRUSTED_AI,
         initiator_id="agent-1",
         human_verifier="planner-maria",
+        evaluated_at_utc=eval_ts,
+    )
+    assert v_ok.approved is True
+    assert v_ok.code == "APPROVED_FOR_WRITEBACK"
+
+
+def test_scoped_guard_enforces_approved_by_sod_and_ttl():
+    guard = IthildinGuard(b"ithildin-scoped-secret-key-2026!!")
+    review = ScopedIthildinGuard(guard, mode=ExecutionMode.STAGING_REVIEW)
+
+    mismatched = StagingAction(
+        action_id="act-sod-mismatch",
+        risk_level=RiskLevel.REVERSIBLE,
+        target_system="erp-odoo",
+        payload={"sku": "SKU-1", "qty": 5},
+        idempotency_key="k-sod-mismatch",
+        timestamp_utc="2026-11-26T12:00:00Z",
+        approved_by="someone-else",
+    )
+    v_mismatch = review.evaluate_scoped(
+        mismatched,
+        guard.sign_action(mismatched),
+        taint=DataTaint.UNTRUSTED_AI,
+        initiator_id="agent-1",
+        human_verifier="planner-maria",
+        evaluated_at_utc="2026-11-26T12:05:00Z",
+    )
+    assert v_mismatch.approved is False
+    assert v_mismatch.code == "REJECTED_UNTRUSTED_AI_SOD"
+
+    aligned = StagingAction(
+        action_id="act-sod-aligned",
+        risk_level=RiskLevel.REVERSIBLE,
+        target_system="erp-odoo",
+        payload={"sku": "SKU-1", "qty": 5},
+        idempotency_key="k-sod-aligned",
+        timestamp_utc="2026-11-26T12:00:00Z",
+        approved_by="planner-maria",
+    )
+    v_expired = review.evaluate_scoped(
+        aligned,
+        guard.sign_action(aligned),
+        taint=DataTaint.UNTRUSTED_AI,
+        initiator_id="agent-1",
+        human_verifier="planner-maria",
+        evaluated_at_utc="2026-11-26T12:20:00Z",
+    )
+    assert v_expired.approved is False
+    assert v_expired.code == "REJECTED_EXPIRED_ACTION"
+
+    v_ok = review.evaluate_scoped(
+        aligned,
+        guard.sign_action(aligned),
+        taint=DataTaint.UNTRUSTED_AI,
+        initiator_id="agent-1",
+        human_verifier="planner-maria",
+        evaluated_at_utc="2026-11-26T12:05:00Z",
     )
     assert v_ok.approved is True
     assert v_ok.code == "APPROVED_FOR_WRITEBACK"

@@ -12,11 +12,81 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
+import sqlite3
 from collections.abc import Mapping
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
 from typing import Any
+
+_COMMITTED_KEYS_DDL = (
+    "CREATE TABLE IF NOT EXISTS committed_keys ("
+    "idempotency_key TEXT PRIMARY KEY, "
+    "audit_hash TEXT NOT NULL, "
+    "committed_at_utc TEXT NOT NULL)"
+)
+
+_PLACEHOLDER_ROLLBACK_KEYS: frozenset[str] = frozenset(
+    {"todo", "tbd", "fixme", "placeholder", "dummy", "none"}
+)
+_EXECUTABLE_ROLLBACK_KEYS: frozenset[str] = frozenset(
+    {
+        "strategy",
+        "compensating_action",
+        "restore_snapshot",
+        "restore_snapshot_id",
+        "reversal_movement",
+        "runbook_ref",
+        "steps",
+    }
+)
+_PLACEHOLDER_ROLLBACK_VALUES: frozenset[str] = frozenset(
+    {"todo", "tbd", "later", "fixme", "placeholder", "none", "n/a", "pending", ""}
+)
+
+
+def _parse_utc_timestamp(raw: str | datetime) -> datetime:
+    if isinstance(raw, datetime):
+        if raw.tzinfo is None or raw.tzinfo.utcoffset(raw) is None:
+            raise ValueError("naive datetime rejected: timezone required")
+        return raw.astimezone(timezone.utc)
+    if isinstance(raw, str):
+        text = raw.strip()
+        if not text:
+            raise ValueError("timestamp string cannot be empty")
+        normalized = text[:-1] + "+00:00" if text.endswith(("Z", "z")) else text
+        dt = datetime.fromisoformat(normalized)
+        if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+            raise ValueError(f"naive timestamp {raw!r} rejected: timezone required")
+        return dt.astimezone(timezone.utc)
+    raise TypeError(f"unsupported timestamp type: {type(raw).__name__}")
+
+
+def _is_placeholder_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in _PLACEHOLDER_ROLLBACK_VALUES
+    if isinstance(value, Mapping):
+        return len(value) == 0 or all(_is_placeholder_value(v) for v in value.values())
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return len(value) == 0 or all(_is_placeholder_value(v) for v in value)
+    return False
+
+
+def _has_valid_rollback_plan(plan: Mapping[str, Any]) -> bool:
+    if not isinstance(plan, Mapping) or not plan:
+        return False
+    norm_items = [(str(k).strip().lower(), v) for k, v in plan.items()]
+    if any(k in _PLACEHOLDER_ROLLBACK_KEYS for k, _ in norm_items):
+        return False
+    exec_values = [v for k, v in norm_items if k in _EXECUTABLE_ROLLBACK_KEYS]
+    if not exec_values:
+        return False
+    return not all(_is_placeholder_value(v) for v in exec_values)
 
 
 class RiskLevel(str, Enum):
@@ -38,6 +108,7 @@ class StagingAction:
     idempotency_key: str
     timestamp_utc: str
     rollback_plan: Mapping[str, Any] | None = None
+    approved_by: str | None = None
 
     def __post_init__(self) -> None:
         if not self.action_id:
@@ -48,6 +119,8 @@ class StagingAction:
             raise ValueError("idempotency_key cannot be empty: all actions must be idempotent")
         if not self.timestamp_utc:
             raise ValueError("timestamp_utc cannot be empty: strict temporal audit required")
+        if self.approved_by is not None and not self.approved_by.strip():
+            raise ValueError("approved_by cannot be blank")
 
     def canonical_bytes(self) -> bytes:
         """Deterministic canonical serialization for signature verification."""
@@ -59,6 +132,7 @@ class StagingAction:
             "idempotency_key": self.idempotency_key,
             "timestamp_utc": self.timestamp_utc,
             "rollback_plan": self.rollback_plan,
+            "approved_by": self.approved_by,
         }
         return json.dumps(
             normalized, sort_keys=True, separators=(",", ":"), allow_nan=False, default=str
@@ -79,11 +153,26 @@ class StagingVerdict:
 class IthildinGuard:
     """Deterministic validation and signing engine for agents and integrations."""
 
-    def __init__(self, secret_key: bytes) -> None:
+    def __init__(
+        self,
+        secret_key: bytes,
+        *,
+        ttl_seconds: float = 900.0,
+        store_path: str | Path | None = None,
+    ) -> None:
         if not secret_key or len(secret_key) < 16:
             raise ValueError("secret_key must have at least 16 bytes of entropy for HMAC-SHA256")
+        if not math.isfinite(ttl_seconds) or ttl_seconds <= 0:
+            raise ValueError("ttl_seconds must be a finite positive number")
         self._secret = secret_key
+        self._ttl_seconds = float(ttl_seconds)
+        self._store_path: Path | None = Path(store_path) if store_path is not None else None
         self._committed_keys: set[str] = set()
+        if self._store_path is not None:
+            self._store_path.parent.mkdir(parents=True, exist_ok=True)
+            with closing(sqlite3.connect(self._store_path)) as conn:
+                with conn:
+                    conn.execute(_COMMITTED_KEYS_DDL)
         self._audit_ledger: list[StagingVerdict] = []
 
     def sign_action(self, action: StagingAction) -> str:
@@ -99,62 +188,148 @@ class IthildinGuard:
         expected_token = self.sign_action(action)
         return hmac.compare_digest(token, expected_token)
 
-    def evaluate_and_commit(self, action: StagingAction, token: str) -> StagingVerdict:
+    def _record(
+        self,
+        approved: bool,
+        code: str,
+        reason: str,
+        audit_hash: str,
+        evaluated_at_utc: str,
+    ) -> StagingVerdict:
+        verdict = StagingVerdict(
+            approved=approved,
+            code=code,
+            reason=reason,
+            audit_hash=audit_hash,
+            evaluated_at_utc=evaluated_at_utc,
+        )
+        self._audit_ledger.append(verdict)
+        return verdict
+
+    def _is_key_committed(self, key: str) -> bool:
+        if self._store_path is None:
+            return key in self._committed_keys
+        with closing(sqlite3.connect(self._store_path)) as conn:
+            row = conn.execute(
+                "SELECT 1 FROM committed_keys WHERE idempotency_key = ?",
+                (key,),
+            ).fetchone()
+            return row is not None
+
+    def _commit_key(self, key: str, audit_hash: str, committed_at_utc: str) -> bool:
+        if self._store_path is None:
+            if key in self._committed_keys:
+                return False
+            self._committed_keys.add(key)
+            return True
+        with closing(sqlite3.connect(self._store_path)) as conn:
+            with conn:
+                cur = conn.execute(
+                    "INSERT OR IGNORE INTO committed_keys "
+                    "(idempotency_key, audit_hash, committed_at_utc) "
+                    "VALUES (?, ?, ?)",
+                    (key, audit_hash, committed_at_utc),
+                )
+                return cur.rowcount == 1
+
+    def evaluate_and_commit(
+        self,
+        action: StagingAction,
+        token: str,
+        *,
+        now_utc: str | datetime | None = None,
+    ) -> StagingVerdict:
         """Evaluates action against deterministic guardrails.
 
-        If approved, the idempotency key is consumed in the in-memory ledger.
+        If approved, the idempotency key is consumed in the ledger (SQLite or in-memory).
         If rejected, the action is illuminated (rejected) with clear provenance.
         """
-        now_utc = datetime.now(timezone.utc).isoformat()
+        eval_dt = (
+            _parse_utc_timestamp(now_utc)
+            if now_utc is not None
+            else datetime.now(timezone.utc)
+        )
+        eval_iso = eval_dt.isoformat()
         audit_hash = hashlib.sha256(action.canonical_bytes()).hexdigest()
 
         # 1. Cryptographic signature verification
         if not self.verify_signature(action, token):
-            verdict = StagingVerdict(
-                approved=False,
-                code="FORBIDDEN_INVALID_SIGNATURE",
-                reason="HMAC token mismatch or payload was tampered with.",
-                audit_hash=audit_hash,
-                evaluated_at_utc=now_utc,
+            return self._record(
+                False,
+                "FORBIDDEN_INVALID_SIGNATURE",
+                "HMAC token mismatch or payload was tampered with.",
+                audit_hash,
+                eval_iso,
             )
-            self._audit_ledger.append(verdict)
-            return verdict
 
-        # 2. Idempotency check
-        if action.idempotency_key in self._committed_keys:
-            verdict = StagingVerdict(
-                approved=False,
-                code="REJECTED_DUPLICATE_IDEMPOTENCY",
-                reason=f"Idempotency key '{action.idempotency_key}' has already been consumed.",
-                audit_hash=audit_hash,
-                evaluated_at_utc=now_utc,
+        # 2. Timestamp & TTL window validation (fail-closed)
+        try:
+            action_dt = _parse_utc_timestamp(action.timestamp_utc)
+        except (TypeError, ValueError):
+            return self._record(
+                False,
+                "REJECTED_INVALID_TIMESTAMP",
+                f"Invalid or timezone-naive action timestamp_utc: {action.timestamp_utc!r}.",
+                audit_hash,
+                eval_iso,
             )
-            self._audit_ledger.append(verdict)
-            return verdict
 
-        # 3. Mandatory reversibility guardrail
-        if action.risk_level == RiskLevel.IRREVERSIBLE and not action.rollback_plan:
-            verdict = StagingVerdict(
-                approved=False,
-                code="REJECTED_IRREVERSIBLE_WITHOUT_ROLLBACK",
-                reason="IRREVERSIBLE actions strictly require an executable rollback_plan.",
-                audit_hash=audit_hash,
-                evaluated_at_utc=now_utc,
+        age = (eval_dt - action_dt).total_seconds()
+        if age > self._ttl_seconds or age < -300.0:
+            return self._record(
+                False,
+                "REJECTED_EXPIRED_ACTION",
+                f"Action timestamp outside TTL window (age={age:.2f}s, ttl={self._ttl_seconds:.2f}s).",
+                audit_hash,
+                eval_iso,
             )
-            self._audit_ledger.append(verdict)
-            return verdict
 
-        # Approved and committed
-        self._committed_keys.add(action.idempotency_key)
-        verdict = StagingVerdict(
-            approved=True,
-            code="APPROVED_FOR_WRITEBACK",
-            reason="Action deterministically verified with tamper-proof signature and rollback contingency.",
-            audit_hash=audit_hash,
-            evaluated_at_utc=now_utc,
+        # 3. Idempotency pre-check (before mutating checks so failed actions don't burn keys)
+        if self._is_key_committed(action.idempotency_key):
+            return self._record(
+                False,
+                "REJECTED_DUPLICATE_IDEMPOTENCY",
+                f"Idempotency key '{action.idempotency_key}' has already been consumed.",
+                audit_hash,
+                eval_iso,
+            )
+
+        # 4. Mandatory reversibility & structural rollback guardrail
+        if action.risk_level == RiskLevel.IRREVERSIBLE:
+            if not action.rollback_plan:
+                return self._record(
+                    False,
+                    "REJECTED_IRREVERSIBLE_WITHOUT_ROLLBACK",
+                    "IRREVERSIBLE actions strictly require an executable rollback_plan.",
+                    audit_hash,
+                    eval_iso,
+                )
+            if not _has_valid_rollback_plan(action.rollback_plan):
+                return self._record(
+                    False,
+                    "REJECTED_INVALID_ROLLBACK_PLAN",
+                    "IRREVERSIBLE rollback_plan must define executable recovery fields without placeholders.",
+                    audit_hash,
+                    eval_iso,
+                )
+
+        # 5. Atomic commit of idempotency key
+        if not self._commit_key(action.idempotency_key, audit_hash, eval_iso):
+            return self._record(
+                False,
+                "REJECTED_DUPLICATE_IDEMPOTENCY",
+                f"Idempotency key '{action.idempotency_key}' has already been consumed.",
+                audit_hash,
+                eval_iso,
+            )
+
+        return self._record(
+            True,
+            "APPROVED_FOR_WRITEBACK",
+            "Action deterministically verified with tamper-proof signature and rollback contingency.",
+            audit_hash,
+            eval_iso,
         )
-        self._audit_ledger.append(verdict)
-        return verdict
 
     @property
     def audit_ledger(self) -> list[StagingVerdict]:
